@@ -30,6 +30,9 @@ final class BrowserOptions
         public ?string $outputDir = null,
         public int $fallbackMinTextLength = 300,
         public array $requiredFields = [],
+        public ?string $sessionName = null,
+        public ?string $cookieFile = null,
+        public array $allowedDomains = [],
     ) {
         $this->mode = self::normalizeMode($this->mode);
     }
@@ -63,6 +66,9 @@ final class BrowserOptions
             outputDir: self::nullableString($data['browser_output_dir'] ?? $data['browser-output-dir'] ?? $data['output_dir'] ?? null),
             fallbackMinTextLength: max(0, (int) ($data['fallback_min_text'] ?? $data['fallback-min-text'] ?? 300)),
             requiredFields: self::stringList($data['fallback_required_field'] ?? $data['fallback-required-field'] ?? []),
+            sessionName: self::nullableString($data['session'] ?? $data['browser_session'] ?? $data['browser-session'] ?? null),
+            cookieFile: self::nullableString($data['cookie_file'] ?? $data['cookie-file'] ?? null),
+            allowedDomains: self::stringList($data['allowed_domains'] ?? $data['domain'] ?? $data['domains'] ?? []),
         );
     }
 
@@ -108,6 +114,9 @@ final class BrowserOptions
             'output_dir' => $this->outputDir,
             'fallback_min_text_length' => $this->fallbackMinTextLength,
             'required_fields' => $this->requiredFields,
+            'session' => $this->sessionName,
+            'cookie_file' => $this->cookieFile,
+            'allowed_domains' => $this->allowedDomains,
         ];
     }
 

@@ -1,5 +1,5 @@
 @echo off
-REM MNB ScraperKit V3.3.0 - run professional pipeline on existing crawl JSON
+REM MNB ScraperKit V3.4.0 - run professional pipeline on existing crawl JSON
 set CRAWL_JSON=%1
 set OUTPUT_DIR=%2
 if "%CRAWL_JSON%"=="" set CRAWL_JSON=storage\crawl.json

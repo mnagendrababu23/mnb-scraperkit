@@ -1,8 +1,8 @@
-# MNB ScraperKit V3.3.0
+# MNB ScraperKit V3.4.0
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V3.3.0 is the Rule Builder and Auto-Profile Assistant Update. It adds HTML signal analysis, automatic profile suggestions, generated starter profile schemas, local rule testing, profile scaffolding, and rule doctor checks so users can build extraction workflows without editing PHP code.
+V3.4.0 is the Advanced Browser Sessions and Authorized Login Workflows Update. It adds safe browser session profiles, allowed-domain session guards, manual login assist instructions, cookie/session file handling, authenticated crawl options, and session test commands for websites where you have explicit permission to crawl.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,22 +16,27 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V3.3.0 update focus
+## V3.4.0 update focus
 
-V3.3.0 focuses on helping users create reliable extraction rules faster. After ScraperKit added profile schemas, ML-ready intelligence, dataset annotations, and evaluation tools, this release adds a rule-building layer that analyzes saved HTML or one URL, recommends a profile type, generates starter schemas, tests rules locally, and reports rule/schema problems before users run large crawls.
+V3.4.0 focuses on authorized browser workflows. After ScraperKit added optional browser-assisted crawling, rule generation, datasets, evaluation, and ML-ready intelligence, this release adds a safer session layer for owned sites, internal dashboards, client-approved portals, and other sources where the operator has permission.
 
-- Added `src/RuleBuilder/` with HTML signal analysis, auto-profile assistant, rule testing service, and profile rule doctor.
-- Added rule builder commands: `rule:analyze`, `rule:generate`, `rule:test`, and `rule:doctor`.
-- Added `profile:scaffold` for quickly creating starter profile schemas.
-- Added candidate selector discovery for common fields such as title, price, SKU, brand, company, location, deadline, DOI, authors, tender number, and description.
-- Added auto-profile suggestions for SEO, ecommerce, jobs, tender, and academic/article workflows.
-- Added generated starter schemas with required fields, optional fields, validators, transformations, dedupe keys, export columns, and extraction rules.
-- Added rule builder API route: `/api/v1/rule-builder/templates`.
-- Kept V3.2.0 evaluation/benchmarking/training quality, V3.1.0 dataset versioning/annotations, V3.0.0 ML-ready intelligence, V2.0.0 dashboard/admin UI, V1.9.0 API/webhooks, V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
+This release does **not** add CAPTCHA solving, stealth bypassing, credential harvesting, or unauthorized access features. Normal PHP HTTP crawling remains the default. Browser sessions are optional and domain-guarded.
+
+- Added browser session profile storage in `config/browser-profiles/`.
+- Added cookie/session artifact storage in `storage/browser-sessions/`.
+- Added session commands: `browser:session-create`, `browser:session-list`, `browser:session-show`, `browser:session-clear`, `browser:session-test`, and `browser:login`.
+- Added `--session=<name>` support for browser-enabled crawl/test workflows.
+- Added allowed-domain checks before using a saved browser session.
+- Added manual login assist instructions without storing passwords in configuration.
+- Added best-effort cookie import/export hooks for optional Panther/Chrome browser sessions.
+- Added browser session metadata to rendered page artifacts and crawl output.
+- Added CMD/PowerShell helper scripts for session create, login assist, and session test workflows.
+- Kept V3.3.0 rule builder/auto-profile assistant, V3.2.0 evaluation/benchmarking/training quality, V3.1.0 dataset versioning/annotations, V3.0.0 ML-ready intelligence, V2.0.0 dashboard/admin UI, V1.9.0 API/webhooks, V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
 
 ## Highlights
 
 - **Professional PHP CLI framework** built as a Composer package with Symfony Console commands.
+- **Advanced browser sessions for authorized workflows** with allowed-domain session profiles, manual login assist, cookie/session artifacts, session tests, and `--session` crawl support.
 - **Rule builder and auto-profile assistant** for analyzing HTML, suggesting profile types, generating starter schemas, testing rules, scaffolding profiles, and finding rule gaps.
 - **Evaluation, benchmarking, and training data quality layer** for field completeness, validation health, duplicate analysis, profile benchmarking, selector performance, annotation coverage, and training-ready exports.
 - **Dataset versioning and annotation layer** for dataset snapshots, quality summaries, JSON/CSV/JSONL exports, dataset diffs, and review labels.
@@ -56,7 +61,7 @@ V3.3.0 focuses on helping users create reliable extraction rules faster. After S
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V3.3.0 CLI/library release.
+This section lists the main functionality available in the current V3.4.0 CLI/library release.
 
 ### Package and CLI
 
@@ -66,6 +71,28 @@ This section lists the main functionality available in the current V3.3.0 CLI/li
 - Global binary support through `vendor/bin/mnb-scraper`.
 - Built-in command list and per-command help screens.
 - CMD, PowerShell, cron, Windows Task Scheduler, and server automation friendly scripts/workflows.
+
+### Advanced browser sessions and authorized login workflows
+
+- `browser:session-create <name> --domain=example.com --login-url=https://example.com/login` creates a domain-guarded browser session profile.
+- `browser:session-list` lists stored session profiles and cookie/session files.
+- `browser:session-show <name>` shows one session profile and its safety metadata.
+- `browser:session-clear <name>` removes session cookies and artifacts; add `--remove-profile` to remove the profile too.
+- `browser:login <name> --url=https://example.com/login` writes manual login instructions and prepares the session for an authorized login flow.
+- `browser:session-test <name> <url> --render` tests a session against an allowed URL using the optional browser adapter.
+- `crawl <url> --browser=auto --session=<name>` uses the session profile during browser fallback or browser rendering.
+- Session profiles require allowed domains and block URLs outside that allowlist.
+- Passwords are not stored by default. Session files are intended for authorized, user-controlled workflows only.
+- Cookie import/export is best-effort and depends on the optional browser adapter/driver support. Normal HTTP crawling still works without browser dependencies.
+
+Example:
+
+```bash
+php bin/mnb-scraper browser:session-create client_portal --domain=example.com --login-url=https://example.com/login
+php bin/mnb-scraper browser:login client_portal --url=https://example.com/login
+php bin/mnb-scraper browser:session-test client_portal https://example.com/dashboard --browser=always --render --json
+php bin/mnb-scraper crawl https://example.com/dashboard --browser=auto --session=client_portal --pipeline
+```
 
 ### Rule builder and auto-profile assistant
 
@@ -198,7 +225,7 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 - Plugin enable/disable controls by editing the manifest `enabled` flag.
 - Plugin doctor command for validating all discovered plugins.
 - Plugin-contributed profiles available to `profile:list`, `profile:show`, `extract:rules`, and pipeline/profile workflows.
-- Safe-by-default design: V3.3.0 does not automatically execute arbitrary plugin PHP code.
+- Safe-by-default design: V3.4.0 does not automatically execute arbitrary plugin PHP code.
 
 ### Lightweight API and webhooks
 
@@ -411,7 +438,7 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 ## Package direction
 
 - First public version: **1.0.0**
-- Current version: **3.3.0** — Rule builder and auto-profile assistant update
+- Current version: **3.4.0** — Rule builder and auto-profile assistant update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
@@ -1106,7 +1133,7 @@ ScraperKit focuses on practical export-ready outputs:
 - pipeline summaries
 - job manifest summaries
 
-PDF reports, Redis/distributed queues, and dedicated browser-worker orchestration are future upgrade areas. The current V3.3.0 release already includes CLI workflows, queue/worker commands, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
+PDF reports, Redis/distributed queues, and dedicated browser-worker orchestration are future upgrade areas. The current V3.4.0 release already includes CLI workflows, queue/worker commands, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
 
 ## Windows CMD
 
@@ -1133,7 +1160,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V3.3.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V3.4.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 

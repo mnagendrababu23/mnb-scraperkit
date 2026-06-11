@@ -8,6 +8,7 @@ use Mnb\ScraperKit\Browser\BrowserCrawlService;
 use Mnb\ScraperKit\Browser\BrowserFallbackDetector;
 use Mnb\ScraperKit\Browser\BrowserOptions;
 use Mnb\ScraperKit\Browser\BrowserPageResult;
+use Mnb\ScraperKit\Browser\BrowserSessionStore;
 use Mnb\ScraperKit\Api\ApiRouter;
 use Mnb\ScraperKit\Api\ApiToken;
 use Mnb\ScraperKit\Core\CrawlOptions;
@@ -113,6 +114,12 @@ final class NativeCliApplication
                 'list' => $this->listCommands(),
                 'crawl' => $this->crawl($args, $opts),
                 'browser:test' => $this->browserTest($args, $opts),
+                'browser:session-create' => $this->browserSessionCreate($args, $opts),
+                'browser:session-list' => $this->browserSessionList($args, $opts),
+                'browser:session-show' => $this->browserSessionShow($args, $opts),
+                'browser:session-clear' => $this->browserSessionClear($args, $opts),
+                'browser:session-test' => $this->browserSessionTest($args, $opts),
+                'browser:login' => $this->browserLogin($args, $opts),
                 'db:init' => $this->dbInit($args, $opts),
                 'db:test' => $this->dbTest($args, $opts),
                 'db:status' => $this->dbStatus($args, $opts),
@@ -234,7 +241,7 @@ final class NativeCliApplication
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 3.3.0 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 3.4.0 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -245,6 +252,12 @@ final class NativeCliApplication
         $commands = [
             'crawl <url>' => 'Crawl one URL/site with rules, presets, common data, optional browser fallback, and optional pipeline.',
             'browser:test <url>' => 'Diagnose browser fallback need and optionally render one URL with the optional browser adapter.',
+            'browser:session-create <name>' => 'Create an allowed-domain browser session profile for authorized login workflows.',
+            'browser:session-list' => 'List browser session profiles and cookie/session files.',
+            'browser:session-show <name>' => 'Show one browser session profile.',
+            'browser:session-clear <name>' => 'Clear session cookies/artifacts, optionally removing the profile.',
+            'browser:session-test <name> <url>' => 'Test an authorized browser session against an allowed URL.',
+            'browser:login <name>' => 'Create/update login instructions and optionally run a non-headless browser login assist.',
             'db:init' => 'Initialize SQLite/MySQL storage tables for jobs, pages, records, failures, validation issues, and exports.',
             'db:test' => 'Test database connection settings and show the detected PDO driver.',
             'db:status' => 'Show database table row counts.',
@@ -649,6 +662,180 @@ final class NativeCliApplication
             $this->outJson($data);
         }
         return empty($data['fallback_assessment']['should_use_browser']) ? 0 : 2;
+    }
+
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function browserSessionCreate(array $args, array $opts): int
+    {
+        $name = $args[0] ?? $this->optString($opts, 'name');
+        if (!$name) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper browser:session-create <name> --domain=example.com [--login-url=https://example.com/login]');
+        }
+        $domains = $this->stringList($this->opt($opts, 'domain', $this->opt($opts, 'domains', [])));
+        if ($domains === []) {
+            throw new \InvalidArgumentException('At least one --domain is required for safe authorized browser sessions.');
+        }
+        $store = $this->browserSessionStore();
+        $profile = $store->create((string) $name, $domains, $this->optString($opts, 'login-url'), [
+            'wait_selector' => $this->optString($opts, 'wait-selector'),
+            'browser_mode' => $this->optString($opts, 'browser', $this->optString($opts, 'browser-mode', 'auto') ?? 'auto'),
+            'timeout_ms' => (int) $this->opt($opts, 'browser-timeout-ms', $this->opt($opts, 'timeout-ms', 30000)),
+            'headless' => $this->bool($opts, 'no-headless') ? false : (array_key_exists('headless', $opts) ? $this->bool($opts, 'headless') : true),
+            'block_assets' => !$this->bool($opts, 'allow-assets'),
+        ]);
+        if ($this->bool($opts, 'json')) {
+            $this->outJson(['created' => true, 'profile' => $profile->toArray(), 'path' => $store->profilePath($profile->name)]);
+            return 0;
+        }
+        $this->out('Created browser session: ' . $profile->name);
+        $this->out('Allowed domains: ' . implode(', ', $profile->allowedDomains));
+        $this->out('Profile: ' . $store->profilePath($profile->name));
+        $this->out('Cookie file: ' . ($profile->cookieFile ?? ''));
+        $this->out('Passwords are not stored. Use browser:login for manual login assist.');
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function browserSessionList(array $args, array $opts): int
+    {
+        $store = $this->browserSessionStore();
+        $rows = $store->list();
+        if ($this->bool($opts, 'json')) {
+            $this->outJson(['profiles_dir' => $store->profilesDir(), 'sessions_dir' => $store->sessionsDir(), 'sessions' => $rows]);
+            return 0;
+        }
+        $this->out('Browser sessions: ' . count($rows));
+        $this->out('Profiles: ' . $store->profilesDir());
+        foreach ($rows as $row) {
+            $this->out(sprintf('  %-22s %-9s %s', (string) $row['name'], (string) $row['browser_mode'], implode(',', (array) $row['allowed_domains'])));
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function browserSessionShow(array $args, array $opts): int
+    {
+        $name = $args[0] ?? $this->optString($opts, 'session');
+        if (!$name) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper browser:session-show <name>');
+        }
+        $store = $this->browserSessionStore();
+        $profile = $store->load((string) $name);
+        $data = $profile->toArray();
+        $data['profile_path'] = $store->profilePath($profile->name);
+        $data['session_dir'] = $store->sessionDir($profile->name);
+        $data['cookie_file_exists'] = $profile->cookieFile ? is_file($profile->cookieFile) : false;
+        $this->outJson($data);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function browserSessionClear(array $args, array $opts): int
+    {
+        $name = $args[0] ?? $this->optString($opts, 'session');
+        if (!$name) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper browser:session-clear <name> [--remove-profile]');
+        }
+        $data = $this->browserSessionStore()->clear((string) $name, $this->bool($opts, 'remove-profile'));
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($data);
+        } else {
+            $this->out('Cleared browser session: ' . (string) $data['session']);
+            $this->out('Removed files: ' . count((array) $data['removed']));
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function browserSessionTest(array $args, array $opts): int
+    {
+        $session = $args[0] ?? $this->optString($opts, 'session');
+        $url = $args[1] ?? $this->optString($opts, 'url');
+        if (!$session || !$url) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper browser:session-test <session> <url> [--render] [--json]');
+        }
+        $opts['session'] = $session;
+        $opts['browser'] = $this->optString($opts, 'browser', 'auto') ?? 'auto';
+        $opts['url'] = $url;
+        $browserOptions = $this->browserOptionsFromCli($opts);
+        $crawlOptions = $this->crawlOptions($opts);
+        $store = $this->browserSessionStore();
+        $profile = $store->load((string) $session);
+        $store->assertUrlAllowed($profile, (string) $url);
+        $service = new BrowserCrawlService($this->config);
+        $data = [
+            'session' => $profile->toArray(),
+            'url' => $url,
+            'browser' => $browserOptions->toArray(),
+            'adapter_available' => $service->isAvailable($browserOptions),
+            'availability' => $service->availability($browserOptions),
+            'authorized_workflow_note' => 'Use only for owned/client-approved/authenticated sources. No CAPTCHA or access-control bypass is provided.',
+        ];
+        if ($this->bool($opts, 'render') || $browserOptions->mode === 'always') {
+            $rendered = $service->render((string) $url, $crawlOptions, $browserOptions);
+            $data['rendered'] = $rendered->toArray(!$this->bool($opts, 'no-html'));
+        }
+        $output = $this->optString($opts, 'output');
+        if ($output) {
+            $this->writeJson($output, $data);
+            $this->out('Output: ' . $output);
+        }
+        if ($this->bool($opts, 'json') || !$output) {
+            $this->outJson($data);
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function browserLogin(array $args, array $opts): int
+    {
+        $session = $args[0] ?? $this->optString($opts, 'session');
+        if (!$session) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper browser:login <session> --url=https://example.com/login');
+        }
+        $store = $this->browserSessionStore();
+        $profile = $store->load((string) $session);
+        $url = $this->optString($opts, 'url') ?: $profile->loginUrl;
+        if (!$url) {
+            throw new \InvalidArgumentException('A login URL is required with --url or stored in the session profile.');
+        }
+        $store->assertUrlAllowed($profile, (string) $url);
+        $profile->loginUrl = (string) $url;
+        $profile->headless = false;
+        $store->save($profile);
+        $instructions = $store->writeLoginInstructions($profile, (string) $url);
+        $data = [
+            'session' => $profile->name,
+            'login_url' => $url,
+            'instructions' => $instructions,
+            'cookie_file' => $profile->cookieFile,
+            'password_storage' => 'disabled_by_default',
+            'authorized_workflows_only' => true,
+        ];
+        if ($this->bool($opts, 'render')) {
+            $renderOpts = $opts;
+            $renderOpts['browser'] = 'always';
+            $renderOpts['headless'] = false;
+            $renderOpts['session'] = $profile->name;
+            $browserOptions = $this->browserOptionsFromCli($renderOpts);
+            $service = new BrowserCrawlService($this->config);
+            $data['adapter_available'] = $service->isAvailable($browserOptions);
+            $data['availability'] = $service->availability($browserOptions);
+            if ($service->isAvailable($browserOptions)) {
+                $data['rendered'] = $service->render((string) $url, $this->crawlOptions($renderOpts), $browserOptions)->toArray(false);
+            }
+        }
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($data);
+        } else {
+            $this->out('Browser login assist prepared for session: ' . $profile->name);
+            $this->out('Login URL: ' . (string) $url);
+            $this->out('Instructions: ' . $instructions);
+            $this->out('Cookie file: ' . ($profile->cookieFile ?? ''));
+            $this->out('Passwords are not stored. Use this only for authorized workflows.');
+        }
+        return 0;
     }
 
 
@@ -1088,7 +1275,7 @@ final class NativeCliApplication
         $manifest = $context['manifest'];
         $datasetDir = (string) ($manifest['_dataset_dir'] ?? $this->rootDir . '/storage/datasets');
         $output = $this->optString($opts, 'output') ?: rtrim($datasetDir, '/\\') . '/annotations-export.' . ($format === 'csv' ? 'csv' : ($format === 'json' ? 'json' : 'jsonl'));
-        $this->exportRows($rows, $output, $format, ['annotation_export_version' => '3.3.0', 'rows_total' => count($rows)]);
+        $this->exportRows($rows, $output, $format, ['annotation_export_version' => '3.4.0', 'rows_total' => count($rows)]);
         $this->outJson(['ok' => true, 'rows_exported' => count($rows), 'format' => $format, 'output' => $output]);
         return 0;
     }
@@ -1224,7 +1411,7 @@ final class NativeCliApplication
         $output = $this->optString($opts, 'output') ?: $this->storagePath('webhooks/test-' . date('Ymd-His') . '.json');
         $payload = [
             'message' => 'MNB ScraperKit webhook test event',
-            'version' => '3.3.0',
+            'version' => '3.4.0',
             'generated_at' => date(DATE_ATOM),
         ];
         $dispatcher = new WebhookDispatcher($this->safetyGuard());
@@ -2617,7 +2804,26 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         if ($this->bool($opts, 'browser-auto')) {
             $data['browser'] = 'auto';
         }
+        $sessionName = $this->optString($opts, 'session') ?: $this->optString($opts, 'browser-session');
+        if ($sessionName) {
+            $store = $this->browserSessionStore();
+            $session = $store->load($sessionName);
+            $data['session'] = $session->name;
+            $data['cookie_file'] = $session->cookieFile;
+            $data['allowed_domains'] = $session->allowedDomains;
+            $data['wait_selector'] ??= $session->waitSelector;
+            $data['browser'] = $data['browser'] ?? $session->browserMode;
+            $data['browser_mode'] = $data['browser_mode'] ?? $session->browserMode;
+            $data['browser_timeout_ms'] = $data['browser_timeout_ms'] ?? $session->timeoutMs;
+            $data['headless'] = $data['headless'] ?? $session->headless;
+            $data['block_assets'] = $data['block_assets'] ?? $session->blockAssets;
+        }
         return BrowserOptions::fromArray($data);
+    }
+
+    private function browserSessionStore(): BrowserSessionStore
+    {
+        return new BrowserSessionStore($this->rootDir);
     }
 
     /** @param array<string,mixed> $rules */
@@ -3739,7 +3945,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $result = (new DatabaseMigrator($pdo, $config->driver()))->migrate();
         $this->outJson([
             'ok' => true,
-            'version' => '3.3.0',
+            'version' => '3.4.0',
             'driver' => $result['driver'],
             'statements_executed' => $result['statements'],
             'tables' => $result['tables'],
@@ -3755,7 +3961,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $pdo = (new DatabaseConnectionFactory())->connect($config);
         $this->outJson([
             'ok' => true,
-            'version' => '3.3.0',
+            'version' => '3.4.0',
             'driver' => $config->driver(),
             'pdo_driver' => (string) $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME),
             'dsn' => $this->safeDsn($config->dsn),
@@ -4103,7 +4309,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '3.3.0',
+            'checkpoint_version' => '3.4.0',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),

@@ -21,7 +21,7 @@ use Mnb\ScraperKit\Scheduler\LocalScheduleStore;
  */
 final class DashboardDataCollector
 {
-    public const VERSION = '3.3.0';
+    public const VERSION = '3.4.0';
 
     public function __construct(private readonly string $rootDir)
     {

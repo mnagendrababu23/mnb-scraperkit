@@ -1,4 +1,4 @@
-# MNB ScraperKit V3.3.0 - enqueue due schedules and run queued jobs once
+# MNB ScraperKit V3.4.0 - enqueue due schedules and run queued jobs once
 $Root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 php "$Root/bin/mnb-scraper" schedule:run-due
 php "$Root/bin/mnb-scraper" worker:run --stop-when-empty

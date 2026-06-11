@@ -15,6 +15,12 @@ final class CommandRegistry
         return [
             'crawl' => 'Crawl one URL/site with safety rules, presets, common data, optional browser fallback, and optional professional pipeline.',
             'browser:test' => 'Diagnose browser fallback need and optionally render one URL with the optional browser adapter.',
+            'browser:session-create' => 'Create an allowed-domain browser session profile for authorized login workflows.',
+            'browser:session-list' => 'List browser session profiles and cookie/session files.',
+            'browser:session-show' => 'Show one browser session profile.',
+            'browser:session-clear' => 'Clear browser session cookies/artifacts, optionally removing the profile.',
+            'browser:session-test' => 'Test an authorized browser session against an allowed URL.',
+            'browser:login' => 'Prepare manual login assist instructions and optional browser render for an authorized session.',
             'db:init' => 'Initialize SQLite/MySQL storage tables for jobs, pages, records, failures, validation issues, and exports.',
             'db:test' => 'Test database connection settings and show the detected PDO driver.',
             'db:status' => 'Show database table row counts.',
@@ -360,6 +366,16 @@ final class CommandRegistry
             'dashboard-token',
             'recent',
             'refresh',
+            'session',
+            'browser-session',
+            'domain',
+            'domains',
+            'login-url',
+            'remove-profile',
+            'timeout-ms',
+            'no-headless',
+            'allow-assets',
+            'no-html',
             'theme',
         ];
     }
@@ -418,6 +434,10 @@ final class CommandRegistry
             'force',
             'print-command',
             'training-ready',
+            'remove-profile',
+            'no-headless',
+            'allow-assets',
+            'no-html',
         ];
     }
 }

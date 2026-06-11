@@ -29,7 +29,7 @@ final class PantherBrowserAdapter implements BrowserEngine, BrowserClientInterfa
 
     public function render(string $url, BrowserProfile $profile, BrowserOptions $options): BrowserPageResult
     {
-        $result = $this->open($url, $profile);
+        $result = $this->open($url, $profile, $options);
         if ($options->waitSelector) {
             $this->waitFor($options->waitSelector, max(1, (int) ceil($options->timeoutMs / 1000)));
         }
@@ -43,6 +43,7 @@ final class PantherBrowserAdapter implements BrowserEngine, BrowserClientInterfa
             }
             $this->screenshot($screenshotPath);
         }
+        $this->exportCookies($options);
         $this->close();
 
         return new BrowserPageResult(
@@ -59,7 +60,7 @@ final class PantherBrowserAdapter implements BrowserEngine, BrowserClientInterfa
         );
     }
 
-    public function open(string $url, BrowserProfile $profile): BrowserPageResult
+    public function open(string $url, BrowserProfile $profile, ?BrowserOptions $options = null): BrowserPageResult
     {
         if (!class_exists(Client::class)) {
             throw new \RuntimeException($this->availabilityMessage());
@@ -78,6 +79,7 @@ final class PantherBrowserAdapter implements BrowserEngine, BrowserClientInterfa
 
         $started = microtime(true);
         $this->client = Client::createChromeClient(null, $arguments);
+        $this->importCookies($options);
         $crawler = $this->client->request('GET', $url);
 
         if ($profile->waitAfterLoadMs > 0) {
@@ -144,6 +146,71 @@ final class PantherBrowserAdapter implements BrowserEngine, BrowserClientInterfa
         if ($this->client) {
             $this->client->quit();
             $this->client = null;
+        }
+    }
+
+
+    private function importCookies(?BrowserOptions $options): void
+    {
+        if (!$options || !$options->cookieFile || !is_file($options->cookieFile) || !$this->client) {
+            return;
+        }
+        $data = json_decode((string) file_get_contents($options->cookieFile), true);
+        $cookies = is_array($data['cookies'] ?? null) ? $data['cookies'] : (is_array($data) ? $data : []);
+        if ($cookies === [] || !method_exists($this->client, 'manage')) {
+            return;
+        }
+        $cookieClass = '\Facebook\WebDriver\Cookie';
+        foreach ($cookies as $cookie) {
+            if (!is_array($cookie) || empty($cookie['name'])) {
+                continue;
+            }
+            try {
+                if (class_exists($cookieClass)) {
+                    $object = new $cookieClass(
+                        (string) $cookie['name'],
+                        (string) ($cookie['value'] ?? ''),
+                        (string) ($cookie['path'] ?? '/'),
+                        isset($cookie['domain']) ? (string) $cookie['domain'] : null,
+                        isset($cookie['expiry']) ? (int) $cookie['expiry'] : null,
+                        (bool) ($cookie['secure'] ?? false),
+                        (bool) ($cookie['httpOnly'] ?? $cookie['http_only'] ?? false)
+                    );
+                    $this->client->manage()->addCookie($object);
+                } elseif (method_exists($this->client->manage(), 'addCookie')) {
+                    $this->client->manage()->addCookie($cookie);
+                }
+            } catch (\Throwable) {
+                // Cookie import is best-effort across browser driver versions.
+            }
+        }
+    }
+
+    private function exportCookies(BrowserOptions $options): void
+    {
+        if (!$options->cookieFile || !$this->client || !method_exists($this->client, 'manage')) {
+            return;
+        }
+        try {
+            $raw = $this->client->manage()->getCookies();
+            $cookies = [];
+            foreach ($raw as $cookie) {
+                if (is_object($cookie) && method_exists($cookie, 'toArray')) {
+                    $cookies[] = $cookie->toArray();
+                } elseif (is_array($cookie)) {
+                    $cookies[] = $cookie;
+                }
+            }
+            if (!is_dir(dirname($options->cookieFile))) {
+                mkdir(dirname($options->cookieFile), 0775, true);
+            }
+            file_put_contents($options->cookieFile, json_encode([
+                'cookies' => $cookies,
+                'saved_at' => date(DATE_ATOM),
+                'source' => 'mnb-scraperkit-browser-adapter',
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+        } catch (\Throwable) {
+            // Cookie export is optional and adapter-dependent.
         }
     }
 

@@ -15,7 +15,7 @@ return [
         'verify_ssl' => true,
         'same_domain' => true,
         'respect_robots' => true,
-        'user_agent' => 'MNB-ScraperKit/3.3.0 (+https://example.com)',
+        'user_agent' => 'MNB-ScraperKit/3.4.0 (+https://example.com)',
         'max_response_bytes' => 5242880,
         'skip_auth_links' => true,
         'avoid_duplicate_final_urls' => true,
@@ -132,6 +132,14 @@ return [
                 'block_assets' => true,
             ],
         ],
+    ],
+
+    'browser_sessions' => [
+        // Authorized workflows only. Sessions store cookies/profile metadata, not passwords.
+        'profiles_dir' => __DIR__ . '/browser-profiles',
+        'sessions_dir' => __DIR__ . '/../storage/browser-sessions',
+        'require_allowed_domains' => true,
+        'logout_path_patterns' => ['/logout*', '/signout*', '/sign-out*'],
     ],
 
     'storage' => [

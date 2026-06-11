@@ -10,6 +10,7 @@ use Mnb\ScraperKit\Core\HttpClient;
 use Mnb\ScraperKit\Core\RobotsPolicy;
 use Mnb\ScraperKit\Network\ExitPointManager;
 use Mnb\ScraperKit\Safety\UrlSafetyGuard;
+use Mnb\ScraperKit\Support\UrlNormalizer;
 
 final class BrowserCrawlService
 {
@@ -40,6 +41,7 @@ final class BrowserCrawlService
     {
         $guard = new UrlSafetyGuard((array) ($this->config['safety'] ?? []));
         $guard->assertAllowed($url);
+        $this->assertSessionDomains($url, $browserOptions);
 
         $network = (new ExitPointManager((array) ($this->config['network']['profiles'] ?? [])))
             ->select($crawlOptions->networkProfile ?? (string) ($this->config['network']['default'] ?? 'direct'));
@@ -55,10 +57,37 @@ final class BrowserCrawlService
         }
 
         $result = $client->render($url, $profile, $browserOptions);
+        if ($browserOptions->sessionName || $browserOptions->cookieFile || $browserOptions->allowedDomains !== []) {
+            $result->metadata['session'] = [
+                'name' => $browserOptions->sessionName,
+                'cookie_file' => $browserOptions->cookieFile,
+                'cookie_file_exists' => $browserOptions->cookieFile ? is_file($browserOptions->cookieFile) : false,
+                'allowed_domains' => $browserOptions->allowedDomains,
+            ];
+        }
         if ($browserOptions->outputDir) {
             $this->writeArtifacts($result, $browserOptions);
         }
         return $result;
+    }
+
+
+    private function assertSessionDomains(string $url, BrowserOptions $options): void
+    {
+        if ($options->allowedDomains === []) {
+            return;
+        }
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+        if ($host === '') {
+            throw new \RuntimeException('Browser session URL host is empty: ' . $url);
+        }
+        foreach ($options->allowedDomains as $domain) {
+            $domain = strtolower(trim((string) $domain));
+            if ($host === $domain || str_ends_with($host, '.' . $domain)) {
+                return;
+            }
+        }
+        throw new \RuntimeException(sprintf('Browser session domain guard blocked host "%s". Allowed domains: %s', $host, implode(', ', $options->allowedDomains)));
     }
 
     private function profile(BrowserOptions $options): BrowserProfile
