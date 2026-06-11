@@ -30,6 +30,13 @@ final class CommandRegistry
             'schedule:disable' => 'Disable one local schedule.',
             'monitor:summary' => 'Show queue, schedule, lock, and health monitoring summary.',
             'monitor:stale-locks' => 'Report stale worker locks that need attention.',
+            'plugin:list' => 'List installed and bundled config-only plugins.',
+            'plugin:show' => 'Show one plugin manifest with resolved assets.',
+            'plugin:validate' => 'Validate a plugin manifest and referenced assets.',
+            'plugin:install' => 'Install a plugin into storage/plugins.',
+            'plugin:enable' => 'Enable an installed plugin manifest.',
+            'plugin:disable' => 'Disable an installed plugin manifest.',
+            'plugin:doctor' => 'Validate all discovered plugins and report issues.',
             'http:test' => 'Test the HTTP engine, redirects, headers, and challenge/protection detection.',
             'bulk:crawl' => 'Crawl a URL list with gaps, pauses, checkpoint state, and resume support.',
             'url:process' => 'Process URLs sequentially with retry, method ladder, backoff, checkpoint, and resume.',
@@ -273,8 +280,13 @@ final class CommandRegistry
             'max-runs',
             'dry-run',
             'failed-jobs',
+            'all',
+            'force',
             'stale-lock-ttl',
             'ttl-seconds',
+            'plugin-dir',
+            'plugin-id',
+            'plugins-dir',
         ];
     }
 
@@ -328,6 +340,8 @@ final class CommandRegistry
             'use-cookie-jar',
             'dry-run',
             'failed-jobs',
+            'all',
+            'force',
         ];
     }
 }

@@ -1,0 +1,34 @@
+{
+  "plugin_id": "mnb.example.profile-addon",
+  "name": "Example Profile Add-on",
+  "version": "1.0.0",
+  "description": "Example config-only plugin that contributes one custom profile schema.",
+  "enabled": true,
+  "profiles": [
+    "profiles/research-paper.json"
+  ],
+  "rules": [],
+  "commands": [
+    {
+      "name": "example:research-profile",
+      "description": "Show the research-paper plugin profile.",
+      "target": "profile:show",
+      "args": ["research-paper"]
+    }
+  ],
+  "source_templates": {
+    "research_rss": {
+      "command": "source:rss",
+      "profile": "research-paper"
+    }
+  },
+  "export_templates": {
+    "research_csv": {
+      "command": "export:records",
+      "format": "csv"
+    }
+  },
+  "hooks": {
+    "before_pipeline": ["profile: research-paper"]
+  }
+}

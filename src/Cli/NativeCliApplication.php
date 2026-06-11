@@ -38,6 +38,9 @@ use Mnb\ScraperKit\Pipeline\PipelineOptions;
 use Mnb\ScraperKit\Pipeline\ProfessionalCrawlPipeline;
 use Mnb\ScraperKit\Profile\ProfileSchemaLoader;
 use Mnb\ScraperKit\Profile\ProfileSchemaValidator;
+use Mnb\ScraperKit\Plugin\PluginManager;
+use Mnb\ScraperKit\Plugin\PluginManifest;
+use Mnb\ScraperKit\Plugin\PluginValidator;
 use Mnb\ScraperKit\Queue\LocalJobQueue;
 use Mnb\ScraperKit\Retry\RetryPolicy;
 use Mnb\ScraperKit\Scheduler\LocalScheduleStore;
@@ -103,6 +106,13 @@ final class NativeCliApplication
                 'schedule:disable' => $this->scheduleDisable($args, $opts),
                 'monitor:summary' => $this->monitorSummary($args, $opts),
                 'monitor:stale-locks' => $this->monitorStaleLocks($args, $opts),
+                'plugin:list' => $this->pluginList($args, $opts),
+                'plugin:show' => $this->pluginShow($args, $opts),
+                'plugin:validate' => $this->pluginValidate($args, $opts),
+                'plugin:install' => $this->pluginInstall($args, $opts),
+                'plugin:enable' => $this->pluginEnable($args, $opts),
+                'plugin:disable' => $this->pluginDisable($args, $opts),
+                'plugin:doctor' => $this->pluginDoctor($args, $opts),
                 'http:test' => $this->httpTest($args, $opts),
                 'bulk:crawl' => $this->bulkCrawl($args, $opts),
                 'url:process', 'urls:process' => $this->urlProcess($args, $opts),
@@ -166,7 +176,7 @@ final class NativeCliApplication
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 1.7.0 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 1.8.0 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -192,6 +202,13 @@ final class NativeCliApplication
             'schedule:disable <schedule-id>' => 'Disable a local schedule.',
             'monitor:summary' => 'Show queue, schedule, lock, and health monitoring summary.',
             'monitor:stale-locks' => 'Report stale worker locks that need attention.',
+            'plugin:list' => 'List installed and bundled config-only plugins.',
+            'plugin:show <plugin-id>' => 'Show one plugin manifest with resolved assets.',
+            'plugin:validate <plugin-dir|mnb-plugin.json>' => 'Validate a plugin manifest and referenced assets.',
+            'plugin:install <plugin-dir|mnb-plugin.json>' => 'Install a plugin into storage/plugins.',
+            'plugin:enable <plugin-id>' => 'Enable an installed plugin manifest.',
+            'plugin:disable <plugin-id>' => 'Disable an installed plugin manifest.',
+            'plugin:doctor' => 'Validate all discovered plugins and report issues.',
             'http:test <url>' => 'Test native PHP HTTP engines: auto, curl, or stream/file_get_contents.',
             'bulk:crawl <urls.txt>' => 'Crawl many URLs with gaps, pauses, checkpoint, and resume.',
             'url:process <urls.txt>' => 'Process URLs one by one with retry, method ladder, checkpoint, and resume.',
@@ -735,12 +752,13 @@ final class NativeCliApplication
     {
         $items = $this->profileLoader()->list();
         if ($this->bool($opts, 'json')) {
-            $this->outJson(['profiles' => $items]);
+            $this->outJson(['profiles' => $items, 'plugin_profiles' => count($this->pluginManager($opts)->profileFiles(true))]);
             return 0;
         }
         $this->out('Available profile schemas:');
         foreach ($items as $item) {
-            $this->out(sprintf('  %-16s record=%-12s required=%d rules=%d', $item['name'], (string) ($item['record_type'] ?? ''), $item['required_fields'], $item['extraction_rules']));
+            $source = str_contains((string) ($item['path'] ?? ''), '/plugins/') || str_contains((string) ($item['path'] ?? ''), '\\plugins\\') ? 'plugin' : 'built-in';
+            $this->out(sprintf('  %-20s record=%-12s required=%d rules=%d source=%s', $item['name'], (string) ($item['record_type'] ?? ''), $item['required_fields'], $item['extraction_rules'], $source));
         }
         return 0;
     }
@@ -822,9 +840,167 @@ final class NativeCliApplication
         return 0;
     }
 
-    private function profileLoader(): ProfileSchemaLoader
+    private function profileLoader(array $opts = []): ProfileSchemaLoader
     {
-        return new ProfileSchemaLoader($this->rootDir . '/config/profiles');
+        return new ProfileSchemaLoader($this->rootDir . '/config/profiles', $this->pluginManager($opts)->profileFiles(true));
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function pluginList(array $args, array $opts): int
+    {
+        $manager = $this->pluginManager($opts);
+        $plugins = array_map(static fn (PluginManifest $manifest): array => $manifest->toArray(false), $manager->list(!$this->bool($opts, 'all')));
+        if ($this->bool($opts, 'json')) {
+            $this->outJson(['plugin_dirs' => $manager->pluginDirs(), 'plugins' => $plugins]);
+            return 0;
+        }
+        $this->out('Plugins:');
+        if ($plugins === []) {
+            $this->out('  No plugins found. Add plugins under plugins/ or storage/plugins/.');
+            return 0;
+        }
+        foreach ($plugins as $plugin) {
+            $this->out(sprintf(
+                '  %-34s %-8s enabled=%s profiles=%d commands=%d',
+                $plugin['plugin_id'],
+                $plugin['version'],
+                ($plugin['enabled'] ?? false) ? 'yes' : 'no',
+                count((array) ($plugin['profiles'] ?? [])),
+                count((array) ($plugin['commands'] ?? []))
+            ));
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function pluginShow(array $args, array $opts): int
+    {
+        $pluginId = $args[0] ?? $this->optString($opts, 'plugin-id');
+        if (!$pluginId) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper plugin:show <plugin-id>');
+        }
+        $manifest = $this->pluginManager($opts)->get($pluginId);
+        if (!$manifest instanceof PluginManifest) {
+            throw new \RuntimeException('Plugin not found: ' . $pluginId);
+        }
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($manifest->toArray(true));
+            return 0;
+        }
+        $data = $manifest->toArray(true);
+        $this->out('Plugin: ' . $data['plugin_id']);
+        $this->out('Name: ' . $data['name']);
+        $this->out('Version: ' . $data['version']);
+        $this->out('Enabled: ' . (($data['enabled'] ?? false) ? 'yes' : 'no'));
+        $this->out('Description: ' . ($data['description'] ?? ''));
+        $this->out('Manifest: ' . ($data['manifest_file'] ?? ''));
+        $this->out('Profiles: ' . count((array) ($data['resolved_profiles'] ?? [])));
+        foreach ((array) ($data['resolved_profiles'] ?? []) as $profile) {
+            $this->out('  - ' . $profile);
+        }
+        $this->out('Command aliases: ' . count((array) ($data['commands'] ?? [])));
+        foreach ((array) ($data['commands'] ?? []) as $command) {
+            if (is_array($command)) {
+                $this->out('  - ' . (string) ($command['name'] ?? '') . ' -> ' . (string) ($command['target'] ?? ''));
+            }
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function pluginValidate(array $args, array $opts): int
+    {
+        $path = $args[0] ?? $this->optString($opts, 'file');
+        if (!$path) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper plugin:validate <plugin-dir|mnb-plugin.json>');
+        }
+        $manager = $this->pluginManager($opts);
+        $manifestFile = $manager->resolveManifestFile($path);
+        $result = (new PluginValidator())->validateFile($manifestFile);
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($result + ['manifest_file' => $manifestFile]);
+            return $result['valid'] ? 0 : 2;
+        }
+        if ($result['valid']) {
+            $this->out('Plugin manifest is valid: ' . $manifestFile);
+            return 0;
+        }
+        $this->err('Plugin manifest has issues: ' . $manifestFile);
+        foreach ($result['issues'] as $issue) {
+            $this->err(sprintf('  - %s [%s] %s', $issue['field'], $issue['rule'], $issue['message']));
+        }
+        return 2;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function pluginInstall(array $args, array $opts): int
+    {
+        $path = $args[0] ?? $this->optString($opts, 'file');
+        if (!$path) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper plugin:install <plugin-dir|mnb-plugin.json> [--plugin-id=id] [--force]');
+        }
+        $result = $this->pluginManager($opts)->install($path, $this->optString($opts, 'plugin-id'), $this->bool($opts, 'force'));
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($result);
+            return 0;
+        }
+        $this->out('Plugin installed: ' . $result['plugin_id']);
+        $this->out('Destination: ' . $result['destination']);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function pluginEnable(array $args, array $opts): int
+    {
+        $pluginId = $args[0] ?? $this->optString($opts, 'plugin-id');
+        if (!$pluginId) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper plugin:enable <plugin-id>');
+        }
+        $result = $this->pluginManager($opts)->setEnabled($pluginId, true);
+        $this->bool($opts, 'json') ? $this->outJson($result) : $this->out('Plugin enabled: ' . $result['plugin_id']);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function pluginDisable(array $args, array $opts): int
+    {
+        $pluginId = $args[0] ?? $this->optString($opts, 'plugin-id');
+        if (!$pluginId) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper plugin:disable <plugin-id>');
+        }
+        $result = $this->pluginManager($opts)->setEnabled($pluginId, false);
+        $this->bool($opts, 'json') ? $this->outJson($result) : $this->out('Plugin disabled: ' . $result['plugin_id']);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function pluginDoctor(array $args, array $opts): int
+    {
+        $result = $this->pluginManager($opts)->doctor();
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($result);
+            return $result['invalid'] === 0 ? 0 : 2;
+        }
+        $this->out(sprintf('Plugins checked: %d valid=%d invalid=%d', $result['checked'], $result['valid'], $result['invalid']));
+        foreach ($result['plugins'] as $plugin) {
+            $this->out('  - ' . ($plugin['manifest_file'] ?? '') . ' valid=' . (($plugin['valid'] ?? false) ? 'yes' : 'no'));
+            foreach ((array) ($plugin['issues'] ?? []) as $issue) {
+                if (is_array($issue)) {
+                    $this->out(sprintf('      %s [%s] %s', $issue['field'] ?? '', $issue['rule'] ?? '', $issue['message'] ?? ''));
+                }
+            }
+        }
+        return $result['invalid'] === 0 ? 0 : 2;
+    }
+
+    /** @param array<string,mixed> $opts */
+    private function pluginManager(array $opts = []): PluginManager
+    {
+        $dirs = [$this->rootDir . '/plugins', $this->rootDir . '/storage/plugins'];
+        foreach ($this->stringList($opts['plugin-dir'] ?? $opts['plugins-dir'] ?? []) as $dir) {
+            $dirs[] = $dir;
+        }
+        return new PluginManager($this->rootDir, array_values(array_unique($dirs)));
     }
 
     /** @param array<int,string> $args @param array<string,mixed> $opts */
@@ -2690,7 +2866,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $result = (new DatabaseMigrator($pdo, $config->driver()))->migrate();
         $this->outJson([
             'ok' => true,
-            'version' => '1.7.0',
+            'version' => '1.8.0',
             'driver' => $result['driver'],
             'statements_executed' => $result['statements'],
             'tables' => $result['tables'],
@@ -2706,7 +2882,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $pdo = (new DatabaseConnectionFactory())->connect($config);
         $this->outJson([
             'ok' => true,
-            'version' => '1.7.0',
+            'version' => '1.8.0',
             'driver' => $config->driver(),
             'pdo_driver' => (string) $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME),
             'dsn' => $this->safeDsn($config->dsn),
@@ -2920,7 +3096,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '1.7.0',
+            'checkpoint_version' => '1.8.0',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),

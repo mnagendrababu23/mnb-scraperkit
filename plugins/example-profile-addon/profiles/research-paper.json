@@ -1,0 +1,25 @@
+{
+  "profile": "research-paper",
+  "record_type": "article",
+  "required_fields": ["title", "url"],
+  "optional_fields": ["authors", "doi", "published_at", "abstract", "pdf_url"],
+  "dedupe_keys": ["doi", "url", "title"],
+  "validators": {
+    "doi": "doi",
+    "url": "url",
+    "pdf_url": "url"
+  },
+  "transformations": {
+    "title": ["normalize_space"],
+    "doi": ["lowercase", "trim"],
+    "url": ["clean_url"],
+    "pdf_url": ["clean_url"]
+  },
+  "export_columns": ["record_id", "title", "authors", "doi", "published_at", "url", "pdf_url", "quality_score"],
+  "extraction_rules": {
+    "title": {"fallback": [{"og": "title"}, "h1", "title"]},
+    "doi": {"regex": "10\\.[0-9]{4,9}/[-._;()/:A-Z0-9]+"},
+    "abstract": {"css": ".abstract, #abstract, section.abstract"},
+    "pdf_url": {"css": "a[href$='.pdf']", "attr": "href", "url": true}
+  }
+}

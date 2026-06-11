@@ -21,6 +21,8 @@ use Mnb\ScraperKit\Pipeline\PipelineOptions;
 use Mnb\ScraperKit\Pipeline\ProfessionalCrawlPipeline;
 use Mnb\ScraperKit\Profile\ProfileSchemaLoader;
 use Mnb\ScraperKit\Profile\ProfileSchemaValidator;
+use Mnb\ScraperKit\Plugin\PluginManager;
+use Mnb\ScraperKit\Plugin\PluginValidator;
 use Mnb\ScraperKit\Queue\LocalJobQueue;
 use Mnb\ScraperKit\Retry\RetryPolicy;
 use Mnb\ScraperKit\Scheduler\LocalScheduleStore;
@@ -53,7 +55,7 @@ $tests['database config defaults to local SQLite and schema exposes storage tabl
     assert(count(DatabaseSchema::statements('mysql')) >= 6, 'MySQL schema statements missing');
 };
 
-$tests['database command registry exposes v1.7.0 database commands and options'] = function (): void {
+$tests['database command registry exposes v1.8.0 database commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['db:init', 'db:test', 'db:status', 'db:save-crawl', 'db:save-pipeline', 'db:export'] as $command) {
         assert(isset($commands[$command]), 'missing database command: ' . $command);
@@ -64,15 +66,62 @@ $tests['database command registry exposes v1.7.0 database commands and options']
     }
 };
 
-$tests['v1.7.0 command registry exposes retry scheduling and monitoring commands'] = function (): void {
+$tests['v1.8.0 command registry exposes retry scheduling and monitoring commands'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['retry:plan', 'queue:retry-safe', 'schedule:create', 'schedule:list', 'schedule:show', 'schedule:run-due', 'schedule:enable', 'schedule:disable', 'monitor:summary', 'monitor:stale-locks'] as $command) {
-        assert(isset($commands[$command]), 'missing v1.7.0 command: ' . $command);
+        assert(isset($commands[$command]), 'missing v1.8.0 command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['command', 'arg', 'schedule-id', 'every-minutes', 'every-hours', 'dry-run', 'failed-jobs', 'ttl-seconds'] as $option) {
-        assert(in_array($option, $options, true), 'missing v1.7.0 option: ' . $option);
+        assert(in_array($option, $options, true), 'missing v1.8.0 option: ' . $option);
     }
+};
+
+
+$tests['v1.8.0 plugin command registry exposes plugin commands and options'] = function (): void {
+    $commands = CommandRegistry::commands();
+    foreach (['plugin:list', 'plugin:show', 'plugin:validate', 'plugin:install', 'plugin:enable', 'plugin:disable', 'plugin:doctor'] as $command) {
+        assert(isset($commands[$command]), 'missing v1.8.0 plugin command: ' . $command);
+    }
+    $options = CommandRegistry::optionNames();
+    foreach (['plugin-dir', 'plugin-id', 'plugins-dir', 'all', 'force'] as $option) {
+        assert(in_array($option, $options, true), 'missing plugin option: ' . $option);
+    }
+};
+
+$tests['plugin manager discovers validates and exposes plugin profile schemas'] = function (): void {
+    $root = dirname(__DIR__);
+    $manager = new PluginManager($root);
+    $plugin = $manager->get('mnb.example.profile-addon');
+    assert($plugin !== null, 'example plugin should be discoverable');
+    assert($plugin->enabled === true, 'example plugin should be enabled');
+    assert(count($plugin->resolvedProfiles()) === 1, 'example plugin profile should resolve');
+    $validation = (new PluginValidator())->validateFile($root . '/plugins/example-profile-addon/mnb-plugin.json');
+    assert(($validation['valid'] ?? false) === true, 'example plugin manifest should validate');
+    assert(count($manager->profileFiles(true)) >= 1, 'plugin manager should expose profile files');
+
+    $loader = new ProfileSchemaLoader($root . '/config/profiles', $manager->profileFiles(true));
+    $schema = $loader->load('research-paper');
+    assert($schema->profile === 'research-paper', 'plugin profile not loadable');
+    assert($schema->recordType === 'article', 'plugin record type mismatch');
+};
+
+$tests['native plugin commands list show validate and doctor bundled plugin'] = function (): void {
+    $root = dirname(__DIR__);
+    $config = is_file($root . '/config/scraper.php') ? require $root . '/config/scraper.php' : [];
+    $app = new NativeCliApplication($config, $root);
+    ob_start();
+    $listCode = $app->run(['mnb-scraper', 'plugin:list']);
+    $showCode = $app->run(['mnb-scraper', 'plugin:show', 'mnb.example.profile-addon']);
+    $validateCode = $app->run(['mnb-scraper', 'plugin:validate', $root . '/plugins/example-profile-addon']);
+    $doctorCode = $app->run(['mnb-scraper', 'plugin:doctor']);
+    $profileCode = $app->run(['mnb-scraper', 'profile:show', 'research-paper', '--json']);
+    ob_end_clean();
+    assert($listCode === 0, 'plugin:list failed');
+    assert($showCode === 0, 'plugin:show failed');
+    assert($validateCode === 0, 'plugin:validate failed');
+    assert($doctorCode === 0, 'plugin:doctor failed');
+    assert($profileCode === 0, 'plugin profile should be usable through profile:show');
 };
 
 $tests['retry policy allows temporary failures and blocks policy failures'] = function (): void {
@@ -199,7 +248,7 @@ $tests['failure classifier maps common crawl failures'] = function (): void {
     assert(FailureClassifier::fromSafetyMessage('URL safety check failed: private/reserved IP targets are blocked.') === 'private_ip_blocked');
 };
 
-$tests['rate limiter accepts v1.7.0 pacing options without sleeping unnecessarily'] = function (): void {
+$tests['rate limiter accepts v1.8.0 pacing options without sleeping unnecessarily'] = function (): void {
     $limiter = new RateLimiter();
     $options = CrawlOptions::fromArray([
         'delay_ms' => 0,
@@ -217,7 +266,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
     mkdir($dir, 0775, true);
     $checkpoint = $dir . '/checkpoint.json';
     file_put_contents($checkpoint, json_encode([
-        'checkpoint_version' => '1.7.0',
+        'checkpoint_version' => '1.8.0',
         'updated_at' => '2026-01-01T00:00:00+00:00',
         'queues' => [
             'pending' => ['https://example.com/pending'],
@@ -231,7 +280,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
 
     $manifestPath = JobManifest::write($dir, 'bulk-crawl', [], ['checkpoint' => $checkpoint], []);
     $manifest = JobManifest::read($manifestPath);
-    assert(($manifest['version'] ?? null) === '1.7.0');
+    assert(($manifest['version'] ?? null) === '1.8.0');
     assert(($manifest['resume']['counts']['pending'] ?? null) === 1);
     assert(($manifest['resume']['last_processed_url'] ?? null) === 'https://example.com/done');
 };
@@ -419,7 +468,7 @@ $tests['export and report upgrade creates XML, HTML summary and ZIP bundle'] = f
     mkdir($dir . '/logs', 0775, true);
 
     file_put_contents($dir . '/job-manifest.json', json_encode([
-        'version' => '1.7.0',
+        'version' => '1.8.0',
         'job_id' => 'test-job',
         'type' => 'crawl',
         'resume' => ['counts' => ['completed' => 1, 'failed' => 1]],

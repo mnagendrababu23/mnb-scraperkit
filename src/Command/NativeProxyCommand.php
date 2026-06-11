@@ -13,7 +13,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
- * Symfony command wrapper around the stable V1.7.0 native engine command runner.
+ * Symfony command wrapper around the stable V1.8.0 native engine command runner.
  *
  * The crawler/pipeline core remains framework-independent. Symfony Console is the
  * public CLI layer for Composer/Packagist users: command discovery, --help,

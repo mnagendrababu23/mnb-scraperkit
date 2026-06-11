@@ -1,8 +1,8 @@
-# MNB ScraperKit V1.7.0
+# MNB ScraperKit V1.8.0
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V1.7.0 is the Advanced Retry, Scheduling, and Monitoring Update. It adds safe retry planning, local job schedules, due-schedule enqueueing, queue health summaries, and stale worker lock diagnostics while keeping ScraperKit lightweight and file/database storage optional.
+V1.8.0 is the Plugin System Update. It adds config-only plugins, plugin manifests, plugin validation, plugin installation, plugin enable/disable controls, and plugin-contributed profile schemas while keeping ScraperKit lightweight and safe by default.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,21 +16,22 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V1.7.0 update focus
+## V1.8.0 update focus
 
-V1.7.0 focuses on operational reliability for long-running crawl automation. It improves how failed work is retried, how jobs are scheduled, and how users can monitor queue/worker health without adding Redis, a dashboard, or a required database.
+V1.8.0 focuses on safe extensibility. It lets users package reusable profiles, extractor rules, command aliases, source templates, and export templates as plugins without editing ScraperKit core files.
 
-- Added safe retry planning through `retry:plan` with retry eligibility, backoff delay, failure type counts, and recommended next actions.
-- Added `queue:retry-safe` to move only retry-eligible failed jobs back to pending.
-- Added local schedule commands: `schedule:create`, `schedule:list`, `schedule:show`, `schedule:run-due`, `schedule:enable`, and `schedule:disable`.
-- Added monitoring commands: `monitor:summary` and `monitor:stale-locks`.
-- Added file-based schedule storage under `storage/schedules/`.
-- Added conservative retry policy defaults for temporary failures such as timeout, DNS/SSL issues, 429, and 5xx responses.
-- Kept V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
+- Added a config-only plugin manifest format: `mnb-plugin.json`.
+- Added bundled plugin discovery from `plugins/` and installed plugin discovery from `storage/plugins/`.
+- Added plugin commands: `plugin:list`, `plugin:show`, `plugin:validate`, `plugin:install`, `plugin:enable`, `plugin:disable`, and `plugin:doctor`.
+- Added plugin-contributed profile schema discovery in `profile:list`, `profile:show`, `extract:rules`, and pipeline/profile workflows.
+- Added example plugin: `plugins/example-profile-addon` with a `research-paper` profile.
+- Kept plugin execution safe by default: V1.8.0 does not auto-run arbitrary plugin PHP code.
+- Kept V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
 
 ## Highlights
 
 - **Professional PHP CLI framework** built as a Composer package with Symfony Console commands.
+- **Plugin system** for config-only add-ons with reusable profile schemas, extractor rule files, source templates, export templates, command aliases, validation, install, enable/disable, and doctor checks.
 - **Advanced retry, scheduling, and monitoring** with safe retry plans, local schedules, due-job enqueueing, health summaries, and stale lock diagnostics.
 - **Optional database storage layer** using PDO with SQLite and MySQL/MariaDB support for jobs, pages, records, failures, validation issues, and export metadata.
 - **Optional browser-assisted crawling** for JavaScript-heavy pages using `--browser=auto` or `--browser=always`, with optional rendered HTML and screenshot artifacts.
@@ -49,7 +50,7 @@ V1.7.0 focuses on operational reliability for long-running crawl automation. It 
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V1.7.0 CLI/library release.
+This section lists the main functionality available in the current V1.8.0 CLI/library release.
 
 ### Package and CLI
 
@@ -116,6 +117,17 @@ This section lists the main functionality available in the current V1.7.0 CLI/li
 - Multi-value fields using `many: true` or `[]` rule suffix.
 - Common data extraction for emails, phones, metadata, links, documents, and profile-oriented data.
 - Common data type/profile listing command.
+
+### Plugin system
+
+- Config-only plugins using `mnb-plugin.json`.
+- Bundled plugins in `plugins/` and installed plugins in `storage/plugins/`.
+- Plugin validation that checks required metadata and referenced profile/rule files.
+- Plugin install command that copies a plugin into `storage/plugins/`.
+- Plugin enable/disable controls by editing the manifest `enabled` flag.
+- Plugin doctor command for validating all discovered plugins.
+- Plugin-contributed profiles available to `profile:list`, `profile:show`, `extract:rules`, and pipeline/profile workflows.
+- Safe-by-default design: V1.8.0 does not automatically execute arbitrary plugin PHP code.
 
 ### Advanced retry, scheduling, and monitoring
 
@@ -311,11 +323,11 @@ This section lists the main functionality available in the current V1.7.0 CLI/li
 ## Package direction
 
 - First public version: **1.0.0**
-- Current version: **1.7.0** — advanced retry, scheduling, and monitoring update
+- Current version: **1.8.0** — plugin system update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
-- Reusable PHP core classes for crawler, HTTP, parser, profile schemas, extractor rules, pipeline, manifest, checkpoint, exporter, reports, bundles, and source connectors
+- Reusable PHP core classes for crawler, HTTP, parser, profile schemas, extractor rules, pipeline, manifest, checkpoint, exporter, reports, bundles, source connectors, queue workers, scheduling, monitoring, database storage, browser fallback, and plugins
 - CMD, PowerShell, cron, Windows Task Scheduler, and server worker friendly
 - Clean release package without `vendor/` or generated crawl outputs
 - Single documentation file: this `README.md`
@@ -333,6 +345,66 @@ This section lists the main functionality available in the current V1.7.0 CLI/li
 - `symfony/panther` optional, only for browser-assisted crawling
 - Chrome/Chromium optional, only for browser-assisted crawling
 
+
+## Plugin system examples
+
+List discovered plugins:
+
+```bash
+php bin/mnb-scraper plugin:list
+php bin/mnb-scraper plugin:list --json
+```
+
+Show the bundled example plugin:
+
+```bash
+php bin/mnb-scraper plugin:show mnb.example.profile-addon
+```
+
+Validate a plugin before installing or publishing it:
+
+```bash
+php bin/mnb-scraper plugin:validate plugins/example-profile-addon
+php bin/mnb-scraper plugin:doctor
+```
+
+Install a local plugin into `storage/plugins/`:
+
+```bash
+php bin/mnb-scraper plugin:install path/to/my-plugin
+php bin/mnb-scraper plugin:disable my.plugin.id
+php bin/mnb-scraper plugin:enable my.plugin.id
+```
+
+Minimal plugin manifest shape:
+
+```json
+{
+  "plugin_id": "vendor.project-addon",
+  "name": "Project Add-on",
+  "version": "1.0.0",
+  "description": "Reusable profile and extractor rules for one project.",
+  "enabled": true,
+  "profiles": ["profiles/project-profile.json"],
+  "rules": [],
+  "commands": [
+    {
+      "name": "project:profile",
+      "description": "Show the project profile.",
+      "target": "profile:show",
+      "args": ["project-profile"]
+    }
+  ]
+}
+```
+
+After a plugin contributes a profile, the profile is available through normal profile commands:
+
+```bash
+php bin/mnb-scraper profile:list
+php bin/mnb-scraper profile:show research-paper
+php bin/mnb-scraper extract:rules https://example.com/article --profile=research-paper
+```
 
 ## Profile schema and extractor rule examples
 
@@ -488,6 +560,13 @@ robots:test <url>           Inspect robots.txt decision
 encoding:test <url>         Test encoding detection/conversion
 common:extract <url>        Extract common data patterns
 common:types                List common data types and profiles
+plugin:list                 List discovered plugins
+plugin:show <plugin-id>     Show one plugin manifest
+plugin:validate <path>      Validate a plugin manifest
+plugin:install <path>       Install a plugin into storage/plugins
+plugin:enable <plugin-id>   Enable an installed plugin
+plugin:disable <plugin-id>  Disable an installed plugin
+plugin:doctor               Validate all discovered plugins
 report:failed <crawl.json>  Build failed/skipped URL report
 pipeline:run <crawl.json>   Run professional record pipeline
 retry:failed <crawl.json>   Create retry URL list
@@ -899,7 +978,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V1.7.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V1.8.0 plugin system package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 
