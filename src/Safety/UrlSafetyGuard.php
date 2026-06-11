@@ -13,6 +13,11 @@ final class UrlSafetyGuard
 
     public function assertAllowed(string $url): void
     {
+        $maxLength = (int) ($this->config['max_url_length'] ?? 4096);
+        if ($maxLength > 0 && strlen($url) > $maxLength) {
+            throw new \RuntimeException('URL safety check failed: URL is too long.');
+        }
+
         $parts = parse_url($url);
         if (!is_array($parts)) {
             throw new \RuntimeException('URL safety check failed: invalid URL.');
@@ -21,6 +26,10 @@ final class UrlSafetyGuard
         $scheme = strtolower((string) ($parts['scheme'] ?? ''));
         if (!in_array($scheme, ['http', 'https'], true)) {
             throw new \RuntimeException('URL safety check failed: only http and https URLs are allowed.');
+        }
+
+        if (($this->config['block_userinfo'] ?? true) && (isset($parts['user']) || isset($parts['pass']))) {
+            throw new \RuntimeException('URL safety check failed: userinfo credentials in URLs are blocked.');
         }
 
         $host = (string) ($parts['host'] ?? '');
@@ -45,7 +54,7 @@ final class UrlSafetyGuard
             return;
         }
 
-        foreach ($this->resolveHostIps($host) as $ip) {
+        foreach ($this->candidateIps($host) as $ip) {
             if (!$this->isPublicIp($ip)) {
                 throw new \RuntimeException('URL safety check failed: private/reserved IP targets are blocked.');
             }
@@ -58,8 +67,51 @@ final class UrlSafetyGuard
             || $host === 'localhost.localdomain'
             || str_ends_with($host, '.localhost')
             || $host === '127.0.0.1'
+            || str_starts_with($host, '127.')
             || $host === '::1'
             || $host === '0.0.0.0';
+    }
+
+    /** @return array<int,string> */
+    private function candidateIps(string $host): array
+    {
+        $ips = [];
+        $literal = $this->normalizeIpLiteral($host);
+        if ($literal !== null) {
+            $ips[] = $literal;
+        }
+
+        foreach ($this->resolveHostIps($host) as $ip) {
+            $ips[] = $ip;
+        }
+
+        return array_values(array_unique($ips));
+    }
+
+    private function normalizeIpLiteral(string $host): ?string
+    {
+        $clean = trim($host, '[]');
+        if (filter_var($clean, FILTER_VALIDATE_IP)) {
+            return $clean;
+        }
+
+        // Decimal dword IPv4 form, for example http://2130706433/ for 127.0.0.1.
+        if (preg_match('/^\d+$/', $clean) === 1) {
+            $num = (int) $clean;
+            if ($num >= 0 && $num <= 0xFFFFFFFF) {
+                return long2ip($num) ?: null;
+            }
+        }
+
+        // Hex dword IPv4 form, for example http://0x7f000001/.
+        if (preg_match('/^0x[0-9a-f]+$/i', $clean) === 1) {
+            $num = intval($clean, 16);
+            if ($num >= 0 && $num <= 0xFFFFFFFF) {
+                return long2ip($num) ?: null;
+            }
+        }
+
+        return null;
     }
 
     /** @return array<int,string> */

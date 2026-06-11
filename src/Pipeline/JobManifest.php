@@ -6,7 +6,7 @@ namespace Mnb\ScraperKit\Pipeline;
 
 final class JobManifest
 {
-    public const VERSION = '1.0.0';
+    public const VERSION = '1.0.1';
 
     /**
      * @param array<string,mixed> $settings
@@ -137,12 +137,56 @@ final class JobManifest
     /** @param array<string,mixed> $outputs @return array<string,mixed> */
     private static function resumeSection(array $outputs): array
     {
+        $checkpoint = isset($outputs['checkpoint']) ? (string) $outputs['checkpoint'] : null;
+        $queues = [
+            'pending' => [],
+            'completed' => [],
+            'failed' => [],
+            'skipped' => [],
+            'challenge' => [],
+            'retry' => [],
+        ];
+        $counts = [
+            'pending' => 0,
+            'completed' => 0,
+            'failed' => 0,
+            'skipped' => 0,
+            'challenge' => 0,
+            'retry' => 0,
+        ];
+        $lastProcessedUrl = null;
+        $lastCheckpointAt = null;
+
+        if ($checkpoint && is_file($checkpoint)) {
+            $data = json_decode((string) file_get_contents($checkpoint), true);
+            if (is_array($data)) {
+                $checkpointQueues = is_array($data['queues'] ?? null) ? $data['queues'] : [];
+                foreach ($queues as $name => $_) {
+                    if (isset($checkpointQueues[$name]) && is_array($checkpointQueues[$name])) {
+                        $queues[$name] = array_values(array_filter(array_map(static fn ($v): string => trim((string) $v), $checkpointQueues[$name])));
+                    }
+                }
+                $checkpointCounts = is_array($data['counts'] ?? null) ? $data['counts'] : [];
+                foreach ($counts as $name => $_) {
+                    $counts[$name] = isset($checkpointCounts[$name]) ? (int) $checkpointCounts[$name] : count($queues[$name]);
+                }
+                $lastCheckpointAt = isset($data['updated_at']) ? (string) $data['updated_at'] : null;
+                $results = is_array($data['results'] ?? null) ? $data['results'] : [];
+                if ($results !== []) {
+                    $last = end($results);
+                    if (is_array($last) && isset($last['url'])) {
+                        $lastProcessedUrl = (string) $last['url'];
+                    }
+                }
+            }
+        }
+
         return [
-            'checkpoint_file' => $outputs['checkpoint'] ?? null,
-            'pending_queue' => null,
-            'completed_queue' => null,
-            'failed_queue' => null,
-            'skipped_queue' => null,
+            'checkpoint_file' => $checkpoint,
+            'last_checkpoint_at' => $lastCheckpointAt,
+            'last_processed_url' => $lastProcessedUrl,
+            'queues' => $queues,
+            'counts' => $counts,
         ];
     }
 

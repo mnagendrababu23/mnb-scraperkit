@@ -77,7 +77,7 @@ final class Scraper
                 $safetyGuard->assertAllowed($url);
             } catch (\RuntimeException $e) {
                 $visited[$url] = true;
-                $result->addPage(new PageResult(url: $url, error: $e->getMessage(), failureType: 'safety_blocked', depth: $depth));
+                $result->addPage(new PageResult(url: $url, error: $e->getMessage(), failureType: FailureClassifier::fromSafetyMessage($e->getMessage()), depth: $depth));
                 continue;
             }
             $visited[$url] = true;
@@ -108,19 +108,34 @@ final class Scraper
                 continue;
             }
 
-            $rateLimiter->wait($options->delayMs);
+            $rateLimiter->waitFor($url, $options);
             $this->logger->info('Fetching URL', ['url' => $url, 'depth' => $depth]);
-            $response = $client->get($url, $options);
+            try {
+                $response = $client->get($url, $options);
+            } catch (\RuntimeException $e) {
+                $failureType = FailureClassifier::fromSafetyMessage($e->getMessage());
+                $result->addPage(new PageResult(
+                    url: $url,
+                    error: $e->getMessage(),
+                    failureType: $failureType,
+                    depth: $depth,
+                    robots: $robotsDecision->toArray(),
+                ));
+                $rateLimiter->registerOutcome($failureType, $options);
+                continue;
+            }
 
             $rawFinalUrl = $response->finalUrl;
             $cleanFinalUrl = $this->cleanFinalUrl($rawFinalUrl, $options);
             $baseUrl = $cleanFinalUrl ?: $rawFinalUrl ?: $url;
             $normalizedFinal = $this->urlNormalizer->normalize($baseUrl);
-            $failureType = $urlFilter->classifyFailure($rawFinalUrl, $response->error, $options);
+            $failureType = $urlFilter->classifyFailure($rawFinalUrl, $response->error, $options, $response->statusCode, $response->curlErrno);
             $failureType ??= $this->classifyHttpStatus($response->statusCode);
+            $rateLimiter->registerOutcome($failureType, $options);
 
             $finalSkipReason = $urlFilter->finalUrlSkipReason($url, $rawFinalUrl, $normalizedStart, $options);
             if ($finalSkipReason) {
+                $failureType ??= 'final_domain_guard';
                 $result->addPage(new PageResult(
                     url: $url,
                     finalUrl: $cleanFinalUrl,
@@ -305,18 +320,7 @@ final class Scraper
 
     private function classifyHttpStatus(int $statusCode): ?string
     {
-        return match (true) {
-            $statusCode === 0 => 'http_no_response',
-            $statusCode === 400 => 'http_400_bad_request',
-            $statusCode === 401 => 'http_401_unauthorized',
-            $statusCode === 403 => 'http_403_forbidden',
-            $statusCode === 404 => 'http_404_not_found',
-            $statusCode === 408 => 'http_408_timeout',
-            $statusCode === 429 => 'http_429_rate_limited',
-            $statusCode >= 500 => 'http_5xx_server_error',
-            $statusCode >= 400 => 'http_4xx_client_error',
-            default => null,
-        };
+        return FailureClassifier::fromStatus($statusCode);
     }
 
     private function cleanFinalUrl(?string $url, CrawlOptions $options): ?string

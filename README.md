@@ -1,8 +1,8 @@
-# MNB ScraperKit V1.0
+# MNB ScraperKit V1.0.1
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V1.0 is the first public release. It is packaged as a Composer library with a Symfony Console command-line interface, while the crawler core remains reusable framework-independent PHP code.
+V1.0.1 is the stability, safety, and quality update for the first public release. It is packaged as a Composer library with a Symfony Console command-line interface, while the crawler core remains reusable framework-independent PHP code.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,11 +16,22 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
+## V1.0.1 update focus
+
+V1.0.1 focuses on stability, safety, and quality before adding larger features.
+
+- Stronger HTTP-layer URL safety for every outgoing request and redirect.
+- Better SSRF protection for localhost, private/reserved IPs, numeric IPv4 forms, and URL userinfo credentials.
+- Improved failure classification for timeout, DNS, SSL, redirect loop, private IP block, unsupported scheme, body limit, HTTP 4xx/5xx, robots block, and final-domain guard cases.
+- Smarter pacing support with delay jitter, pause-after-N-URLs, and cooldown-after-repeated-failures options.
+- Better checkpoint and manifest resume metadata, including pending, completed, failed, skipped, challenge, and retry queue summaries.
+- Expanded tests for safety, failure classification, checkpoint/manifest metadata, and pipeline behavior.
+
 ## Highlights
 
 - **Professional PHP CLI framework** built as a Composer package with Symfony Console commands.
-- **Safe crawling controls** including URL safety checks, redirect safety, scope rules, robots-aware behavior, and private IP protection.
-- **Bulk crawling support** for processing many URLs with pacing, checkpointing, failed queues, skipped queues, and resume support.
+- **Safe crawling controls** including URL safety checks, redirect safety, scope rules, robots-aware behavior, userinfo blocking, URL length limits, and private/reserved IP protection.
+- **Bulk crawling support** for processing many URLs with pacing, random jitter, cooldowns, checkpointing, failed queues, skipped queues, and resume support.
 - **Manifest-driven jobs** for reproducible crawl configuration, including input URLs, scope, pacing, extraction profile, output settings, and resume state.
 - **Professional crawl pipeline** that converts raw page results into normalized records with metadata, validation, deduplication, transformation, quality scoring, and exports.
 - **Common data profiles** for academic, journal, conference, ecommerce, government, tender, jobs, SEO, contact, and document-focused extraction workflows.
@@ -31,6 +42,7 @@ The strongest part of the library is the **professional crawl pipeline**. It tur
 ## Package direction
 
 - First public version: **1.0.0**
+- Current version: **1.0.1** — stability, safety, and quality update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
@@ -221,13 +233,29 @@ Bulk and URL-processing checkpoints include these queue groups:
 
 This makes long jobs easier to resume, audit, and troubleshoot.
 
+Useful pacing and safety-related options:
+
+```bash
+php bin/mnb-scraper crawl "https://example.com" \
+  --max-pages=20 \
+  --depth=1 \
+  --delay-ms=1000 \
+  --delay-jitter-ms=300 \
+  --pause-after-urls=10 \
+  --pause-seconds=30 \
+  --cooldown-after-failures=3 \
+  --cooldown-seconds=60
+```
+
 ## Safety defaults
 
 ScraperKit is safe by default:
 
 - only HTTP/HTTPS URLs are allowed
 - localhost targets are blocked
-- private, reserved, and link-local IP targets are blocked
+- URL userinfo credentials are blocked
+- private, reserved, link-local, and metadata IP targets are blocked
+- numeric IPv4 host forms are normalized and checked
 - redirects are checked by the HTTP layer
 - robots policy is respected unless explicitly disabled
 - auth/login/cart style URLs are skipped by default
@@ -276,7 +304,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V1.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V1.0.1 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 

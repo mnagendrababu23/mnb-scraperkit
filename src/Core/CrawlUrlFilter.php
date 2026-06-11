@@ -82,24 +82,19 @@ final class CrawlUrlFilter
         return null;
     }
 
-    public function classifyFailure(?string $finalUrl, ?string $error, CrawlOptions $options): ?string
+    public function classifyFailure(?string $finalUrl, ?string $error, CrawlOptions $options, int $statusCode = 0, int $curlErrno = 0): ?string
     {
         if ($finalUrl) {
             $finalHost = strtolower((string) parse_url($finalUrl, PHP_URL_HOST));
             if ($finalHost !== '' && $this->hostMatchesAny($finalHost, $options->identityProviderHostPatterns)) {
                 return 'auth_or_cookie_redirect';
             }
+            if ($finalHost !== '' && $this->hostMatchesAny($finalHost, $options->skipFinalHostPatterns)) {
+                return 'final_domain_guard';
+            }
         }
 
-        if ($error && stripos($error, 'maximum') !== false && stripos($error, 'redirect') !== false) {
-            return 'redirect_limit';
-        }
-
-        if ($error) {
-            return 'http_client_error';
-        }
-
-        return null;
+        return FailureClassifier::fromHttp($error, $statusCode, $curlErrno);
     }
 
     private function matchesAnyPath(string $url, array $patterns): bool

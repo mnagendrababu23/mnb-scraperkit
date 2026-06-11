@@ -96,7 +96,7 @@ final class NativeCliApplication
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 1.0.0 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 1.0.1 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -1151,6 +1151,12 @@ final class NativeCliApplication
             'depth' => 'max_depth',
             'max-depth' => 'max_depth',
             'delay-ms' => 'delay_ms',
+            'delay-jitter-ms' => 'delay_jitter_ms',
+            'jitter-ms' => 'delay_jitter_ms',
+            'pause-after-urls' => 'pause_after_urls',
+            'pause-seconds' => 'pause_seconds',
+            'cooldown-after-failures' => 'cooldown_after_failures',
+            'cooldown-seconds' => 'cooldown_seconds',
             'timeout' => 'timeout_seconds',
             'timeout-seconds' => 'timeout_seconds',
             'http-engine' => 'http_engine',
@@ -1504,7 +1510,7 @@ final class NativeCliApplication
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '1.0.0',
+            'checkpoint_version' => '1.0.1',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),
