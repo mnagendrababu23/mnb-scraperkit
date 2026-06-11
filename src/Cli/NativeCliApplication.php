@@ -57,6 +57,7 @@ use Mnb\ScraperKit\Pipeline\PipelineOptions;
 use Mnb\ScraperKit\Pipeline\ProfessionalCrawlPipeline;
 use Mnb\ScraperKit\Profile\ProfileSchemaLoader;
 use Mnb\ScraperKit\Profile\ProfileSchemaValidator;
+use Mnb\ScraperKit\RuleBuilder\RuleBuilderService;
 use Mnb\ScraperKit\Plugin\PluginManager;
 use Mnb\ScraperKit\Plugin\PluginManifest;
 use Mnb\ScraperKit\Plugin\PluginValidator;
@@ -172,6 +173,11 @@ final class NativeCliApplication
                 'encoding:test' => $this->encodingTest($args, $opts),
                 'common:extract' => $this->commonExtract($args, $opts),
                 'common:types' => $this->commonTypes($opts),
+                'rule:analyze' => $this->ruleAnalyze($args, $opts),
+                'rule:generate' => $this->ruleGenerate($args, $opts),
+                'rule:test' => $this->ruleTest($args, $opts),
+                'rule:doctor' => $this->ruleDoctor($args, $opts),
+                'profile:scaffold' => $this->profileScaffold($args, $opts),
                 'profile:list' => $this->profileList($opts),
                 'profile:show' => $this->profileShow($args, $opts),
                 'profile:validate' => $this->profileValidate($args, $opts),
@@ -228,7 +234,7 @@ final class NativeCliApplication
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 3.2.0 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 3.3.0 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -299,6 +305,11 @@ final class NativeCliApplication
             'encoding:test <url>' => 'Fetch one URL and report detected encoding.',
             'common:extract <url>' => 'Extract common data patterns from one URL.',
             'common:types' => 'List supported common data types and profiles.',
+            'rule:analyze <html-file|url>' => 'Analyze a saved HTML page or URL and show signals for rule/profile generation.',
+            'rule:generate <html-file|url>' => 'Generate a starter profile schema from HTML using the auto-profile assistant.',
+            'rule:test <html-file|url>' => 'Test profile/rules-file extraction against saved HTML or one URL.',
+            'rule:doctor <profile|profile.json>' => 'Check profile schema quality and optional sample extraction results.',
+            'profile:scaffold <name>' => 'Create a starter profile schema without editing PHP code.',
             'profile:list' => 'List available profile schema files.',
             'profile:show <profile>' => 'Show one profile schema with fields, validators, transformations, dedupe keys, and rules.',
             'profile:validate <profile.json>' => 'Validate a profile schema JSON file.',
@@ -1077,7 +1088,7 @@ final class NativeCliApplication
         $manifest = $context['manifest'];
         $datasetDir = (string) ($manifest['_dataset_dir'] ?? $this->rootDir . '/storage/datasets');
         $output = $this->optString($opts, 'output') ?: rtrim($datasetDir, '/\\') . '/annotations-export.' . ($format === 'csv' ? 'csv' : ($format === 'json' ? 'json' : 'jsonl'));
-        $this->exportRows($rows, $output, $format, ['annotation_export_version' => '3.2.0', 'rows_total' => count($rows)]);
+        $this->exportRows($rows, $output, $format, ['annotation_export_version' => '3.3.0', 'rows_total' => count($rows)]);
         $this->outJson(['ok' => true, 'rows_exported' => count($rows), 'format' => $format, 'output' => $output]);
         return 0;
     }
@@ -1213,7 +1224,7 @@ final class NativeCliApplication
         $output = $this->optString($opts, 'output') ?: $this->storagePath('webhooks/test-' . date('Ymd-His') . '.json');
         $payload = [
             'message' => 'MNB ScraperKit webhook test event',
-            'version' => '3.2.0',
+            'version' => '3.3.0',
             'generated_at' => date(DATE_ATOM),
         ];
         $dispatcher = new WebhookDispatcher($this->safetyGuard());
@@ -1457,6 +1468,125 @@ final class NativeCliApplication
         return 0;
     }
 
+
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function ruleAnalyze(array $args, array $opts): int
+    {
+        $input = $args[0] ?? $this->optString($opts, 'input');
+        if (!$input) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper rule:analyze <html-file|url> [--base-url=https://example.com]');
+        }
+        [$html, $baseUrl, $source] = $this->htmlInput($input, $opts);
+        $data = (new RuleBuilderService())->analyze($html, $baseUrl);
+        $data['source'] = $source;
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($data);
+            return 0;
+        }
+        $assistant = (array) ($data['assistant'] ?? []);
+        $this->out('Rule analysis source: ' . $source);
+        $this->out('Suggested profile: ' . (string) ($assistant['suggested_profile'] ?? 'seo') . ' confidence=' . (string) ($assistant['confidence'] ?? ''));
+        $this->out('Title: ' . (string) ($data['title'] ?? ''));
+        $this->out('Text length: ' . (string) ($data['text_length'] ?? 0));
+        $this->out('Detected JSON-LD types: ' . implode(', ', (array) ($data['json_ld_types'] ?? [])));
+        $this->out('Top keyword scores:');
+        foreach (array_slice((array) ($data['keywords'] ?? []), 0, 5, true) as $name => $score) {
+            $this->out(sprintf('  - %-12s %s', (string) $name, (string) $score));
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function ruleGenerate(array $args, array $opts): int
+    {
+        $input = $args[0] ?? $this->optString($opts, 'input');
+        if (!$input) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper rule:generate <html-file|url> [--profile=auto] [--name=my-profile] [--output=config/profiles/my-profile.json]');
+        }
+        [$html, $baseUrl, $source] = $this->htmlInput($input, $opts);
+        $profile = $this->optString($opts, 'profile', 'auto') ?? 'auto';
+        $name = $this->optString($opts, 'name') ?: $this->optString($opts, 'profile-name');
+        $schema = (new RuleBuilderService())->generateSchema($html, $baseUrl, $profile, $name);
+        $schema['_source'] = $source;
+        $output = $this->optString($opts, 'output');
+        if ($output) {
+            $path = $this->resolveOutputPath($output);
+            $this->writeJson($path, $schema);
+            $this->out('Generated profile schema: ' . $path);
+            return 0;
+        }
+        $this->outJson($schema);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function ruleTest(array $args, array $opts): int
+    {
+        $input = $args[0] ?? $this->optString($opts, 'input');
+        if (!$input) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper rule:test <html-file|url> --profile=ecommerce|--profile-file=file.json|--rules-file=rules.json');
+        }
+        [$html, $baseUrl, $source] = $this->htmlInput($input, $opts);
+        $rules = $this->rulesFromOptions($opts);
+        if ($rules === []) {
+            throw new \InvalidArgumentException('No extraction rules found. Use --profile, --profile-file, --rules-file, or --rule=name=selector.');
+        }
+        $data = (new RuleBuilderService())->testRules($html, $rules, $baseUrl);
+        $data['source'] = $source;
+        $this->outJson($data);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function ruleDoctor(array $args, array $opts): int
+    {
+        $profile = $args[0] ?? $this->optString($opts, 'profile') ?? $this->optString($opts, 'profile-file');
+        if (!$profile) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper rule:doctor <profile|profile.json> [--input=sample.html]');
+        }
+        $schema = $this->profileLoader()->load($profile);
+        $html = null;
+        $baseUrl = $this->optString($opts, 'base-url', 'https://example.com/') ?? 'https://example.com/';
+        $input = $this->optString($opts, 'input');
+        if ($input) {
+            [$html, $baseUrl] = $this->htmlInput($input, $opts);
+        }
+        $data = (new RuleBuilderService())->doctor($schema, $html, $baseUrl);
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($data);
+            return ($data['valid_schema'] ?? false) ? 0 : 2;
+        }
+        $this->out('Profile rule doctor: ' . (string) ($data['profile'] ?? $profile));
+        $this->out('Status: ' . (string) ($data['status'] ?? 'unknown'));
+        $this->out('Rules: ' . (string) ($data['rules_total'] ?? 0));
+        $this->out('Issues: ' . count((array) ($data['issues'] ?? [])) . ' Warnings: ' . count((array) ($data['warnings'] ?? [])));
+        if (($data['missing_required_on_sample'] ?? []) !== []) {
+            $this->out('Missing required on sample: ' . implode(', ', (array) $data['missing_required_on_sample']));
+        }
+        return ($data['valid_schema'] ?? false) ? 0 : 2;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function profileScaffold(array $args, array $opts): int
+    {
+        $name = $args[0] ?? $this->optString($opts, 'name');
+        if (!$name) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper profile:scaffold <name> [--profile=seo] [--output=config/profiles/name.json]');
+        }
+        $profile = $this->optString($opts, 'profile', 'seo') ?? 'seo';
+        $html = '<html><head><title>Sample</title><meta name="description" content="Sample"></head><body><h1>Sample</h1></body></html>';
+        $schema = (new RuleBuilderService())->generateSchema($html, 'https://example.com/', $profile, $name);
+        $output = $this->optString($opts, 'output', 'config/profiles/' . preg_replace('/[^a-z0-9_.-]+/i', '-', $name) . '.json');
+        if ($output) {
+            $path = $this->resolveOutputPath($output);
+            $this->writeJson($path, $schema);
+            $this->out('Scaffolded profile schema: ' . $path);
+            return 0;
+        }
+        $this->outJson($schema);
+        return 0;
+    }
 
     /** @param array<string,mixed> $opts */
     private function profileList(array $opts): int
@@ -3609,7 +3739,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $result = (new DatabaseMigrator($pdo, $config->driver()))->migrate();
         $this->outJson([
             'ok' => true,
-            'version' => '3.2.0',
+            'version' => '3.3.0',
             'driver' => $result['driver'],
             'statements_executed' => $result['statements'],
             'tables' => $result['tables'],
@@ -3625,7 +3755,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $pdo = (new DatabaseConnectionFactory())->connect($config);
         $this->outJson([
             'ok' => true,
-            'version' => '3.2.0',
+            'version' => '3.3.0',
             'driver' => $config->driver(),
             'pdo_driver' => (string) $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME),
             'dsn' => $this->safeDsn($config->dsn),
@@ -3843,6 +3973,44 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         return preg_replace('/(password|passwd|pwd)=([^;]+)/i', '$1=****', $dsn) ?? $dsn;
     }
 
+
+    /** @param array<string,mixed> $opts @return array{0:string,1:string,2:string} */
+    private function htmlInput(string $input, array $opts): array
+    {
+        $baseUrl = $this->optString($opts, 'base-url', 'https://example.com/') ?? 'https://example.com/';
+        if (preg_match('#^https?://#i', $input)) {
+            $options = $this->crawlOptions($opts);
+            $options->maxPages = 1;
+            $options->maxDepth = 0;
+            $result = (new Scraper($this->config, new Logger()))->crawl($input, $options, []);
+            $page = $result->pages()[0] ?? null;
+            if (!$page instanceof PageResult) {
+                throw new \RuntimeException('Could not fetch URL for rule builder: ' . $input);
+            }
+            $html = (string) ($page->html ?? '');
+            if ($html === '') {
+                throw new \RuntimeException('Fetched URL did not include HTML. Retry with --include-html or use a saved HTML file.');
+            }
+            return [$html, (string) ($page->finalUrl ?: $input), $input];
+        }
+        $path = is_file($input) ? $input : $this->rootDir . '/' . ltrim($input, '/\\');
+        if (!is_file($path)) {
+            throw new \RuntimeException('HTML input not found: ' . $input);
+        }
+        return [(string) file_get_contents($path), $baseUrl, $path];
+    }
+
+    private function resolveOutputPath(string $output): string
+    {
+        if (preg_match('#^([A-Za-z]:)?[\\\\/]#', $output)) {
+            $path = $output;
+        } else {
+            $path = $this->rootDir . '/' . ltrim($output, '/\\');
+        }
+        $this->ensureDir(dirname($path));
+        return $path;
+    }
+
     /** @param array<string,mixed> $opts */
     private function opt(array $opts, string $key, mixed $default = null): mixed
     {
@@ -3935,7 +4103,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '3.2.0',
+            'checkpoint_version' => '3.3.0',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),

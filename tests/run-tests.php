@@ -50,6 +50,9 @@ use Mnb\ScraperKit\Report\ProjectBundleExporter;
 use Mnb\ScraperKit\Report\RecordExportService;
 use Mnb\ScraperKit\Report\ReportDataCollector;
 use Mnb\ScraperKit\Report\ReportExporter;
+use Mnb\ScraperKit\RuleBuilder\RuleBuilderService;
+use Mnb\ScraperKit\RuleBuilder\HtmlSignalAnalyzer;
+use Mnb\ScraperKit\RuleBuilder\AutoProfileAssistant;
 use Mnb\ScraperKit\Safety\UrlSafetyGuard;
 use Mnb\ScraperKit\Source\Sitemap\SitemapReader;
 use Mnb\ScraperKit\Source\Csv\CsvUrlSourceReader;
@@ -61,14 +64,14 @@ use Mnb\ScraperKit\Webhook\WebhookEndpointStore;
 $tests = [];
 
 
-$tests['v3.2.0 dataset command registry exposes dataset and annotation commands'] = function (): void {
+$tests['v3.3.0 dataset command registry exposes dataset and annotation commands'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['dataset:create', 'dataset:list', 'dataset:show', 'dataset:diff', 'dataset:export', 'annotation:init', 'annotation:add'] as $command) {
-        assert(isset($commands[$command]), 'missing v3.2.0 dataset command: ' . $command);
+        assert(isset($commands[$command]), 'missing v3.3.0 dataset command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['datasets-dir', 'dataset-dir', 'dataset-id', 'record-id', 'label', 'note', 'old', 'new', 'annotations'] as $option) {
-        assert(in_array($option, $options, true), 'missing v3.2.0 dataset option: ' . $option);
+        assert(in_array($option, $options, true), 'missing v3.3.0 dataset option: ' . $option);
     }
 };
 
@@ -191,7 +194,7 @@ $tests['database config defaults to local SQLite and schema exposes storage tabl
     assert(count(DatabaseSchema::statements('mysql')) >= 6, 'MySQL schema statements missing');
 };
 
-$tests['database command registry exposes v3.2.0 database commands and options'] = function (): void {
+$tests['database command registry exposes v3.3.0 database commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['db:init', 'db:test', 'db:status', 'db:save-crawl', 'db:save-pipeline', 'db:export'] as $command) {
         assert(isset($commands[$command]), 'missing database command: ' . $command);
@@ -202,22 +205,22 @@ $tests['database command registry exposes v3.2.0 database commands and options']
     }
 };
 
-$tests['v3.2.0 command registry exposes retry scheduling and monitoring commands'] = function (): void {
+$tests['v3.3.0 command registry exposes retry scheduling and monitoring commands'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['retry:plan', 'queue:retry-safe', 'schedule:create', 'schedule:list', 'schedule:show', 'schedule:run-due', 'schedule:enable', 'schedule:disable', 'monitor:summary', 'monitor:stale-locks'] as $command) {
-        assert(isset($commands[$command]), 'missing v3.2.0 command: ' . $command);
+        assert(isset($commands[$command]), 'missing v3.3.0 command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['command', 'arg', 'schedule-id', 'every-minutes', 'every-hours', 'dry-run', 'failed-jobs', 'ttl-seconds'] as $option) {
-        assert(in_array($option, $options, true), 'missing v3.2.0 option: ' . $option);
+        assert(in_array($option, $options, true), 'missing v3.3.0 option: ' . $option);
     }
 };
 
 
-$tests['v3.2.0 plugin command registry exposes plugin commands and options'] = function (): void {
+$tests['v3.3.0 plugin command registry exposes plugin commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['plugin:list', 'plugin:show', 'plugin:validate', 'plugin:install', 'plugin:enable', 'plugin:disable', 'plugin:doctor'] as $command) {
-        assert(isset($commands[$command]), 'missing v3.2.0 plugin command: ' . $command);
+        assert(isset($commands[$command]), 'missing v3.3.0 plugin command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['plugin-dir', 'plugin-id', 'plugins-dir', 'all', 'force'] as $option) {
@@ -294,14 +297,14 @@ $tests['local schedule store creates due schedules and monitoring snapshot repor
 
 
 
-$tests['v3.2.0 API and webhook command registry exposes automation commands and options'] = function (): void {
+$tests['v3.3.0 API and webhook command registry exposes automation commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['api:routes', 'api:token', 'api:serve', 'webhook:list', 'webhook:test', 'webhook:send'] as $command) {
-        assert(isset($commands[$command]), 'missing v3.2.0 command: ' . $command);
+        assert(isset($commands[$command]), 'missing v3.3.0 command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['host', 'port', 'prefix', 'print-command', 'webhook-url', 'webhook-header', 'webhook-secret', 'config', 'payload'] as $option) {
-        assert(in_array($option, $options, true), 'missing v3.2.0 option: ' . $option);
+        assert(in_array($option, $options, true), 'missing v3.3.0 option: ' . $option);
     }
 };
 
@@ -360,7 +363,7 @@ $tests['native API and webhook commands run without network by default'] = funct
 };
 
 
-$tests['v3.2.0 dashboard command registry exposes dashboard commands and options'] = function (): void {
+$tests['v3.3.0 dashboard command registry exposes dashboard commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['dashboard:status', 'dashboard:build', 'dashboard:serve'] as $command) {
         assert(isset($commands[$command]), 'missing dashboard command: ' . $command);
@@ -379,7 +382,7 @@ $tests['dashboard collector and renderer expose local operations state'] = funct
     $scheduleStore = new LocalScheduleStore($root);
     $scheduleStore->create(['schedule_id' => 'dashboard-schedule', 'command' => 'crawl', 'args' => ['https://example.com'], 'interval_seconds' => 60]);
     $data = (new DashboardDataCollector($root))->collect();
-    assert(($data['dashboard_version'] ?? null) === '3.2.0', 'dashboard version mismatch');
+    assert(($data['dashboard_version'] ?? null) === '3.3.0', 'dashboard version mismatch');
     assert(($data['queue']['counts']['pending'] ?? 0) === 1, 'dashboard queue count mismatch');
     assert(($data['schedules']['total'] ?? 0) === 1, 'dashboard schedule count mismatch');
     $html = (new DashboardRenderer())->render($data);
@@ -394,7 +397,7 @@ $tests['API router exposes dashboard summary route'] = function (): void {
     $router = new ApiRouter($root, $token);
     $response = $router->handle('GET', '/api/v1/dashboard', ['Authorization' => 'Bearer ' . $token]);
     assert($response->status === 200, 'dashboard API route failed');
-    assert(($response->body['dashboard']['dashboard_version'] ?? null) === '3.2.0', 'dashboard API version mismatch');
+    assert(($response->body['dashboard']['dashboard_version'] ?? null) === '3.3.0', 'dashboard API version mismatch');
 };
 
 $tests['native dashboard commands run without starting server'] = function (): void {
@@ -504,7 +507,7 @@ $tests['failure classifier maps common crawl failures'] = function (): void {
     assert(FailureClassifier::fromSafetyMessage('URL safety check failed: private/reserved IP targets are blocked.') === 'private_ip_blocked');
 };
 
-$tests['rate limiter accepts v3.2.0 pacing options without sleeping unnecessarily'] = function (): void {
+$tests['rate limiter accepts v3.3.0 pacing options without sleeping unnecessarily'] = function (): void {
     $limiter = new RateLimiter();
     $options = CrawlOptions::fromArray([
         'delay_ms' => 0,
@@ -522,7 +525,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
     mkdir($dir, 0775, true);
     $checkpoint = $dir . '/checkpoint.json';
     file_put_contents($checkpoint, json_encode([
-        'checkpoint_version' => '3.2.0',
+        'checkpoint_version' => '3.3.0',
         'updated_at' => '2026-01-01T00:00:00+00:00',
         'queues' => [
             'pending' => ['https://example.com/pending'],
@@ -536,7 +539,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
 
     $manifestPath = JobManifest::write($dir, 'bulk-crawl', [], ['checkpoint' => $checkpoint], []);
     $manifest = JobManifest::read($manifestPath);
-    assert(($manifest['version'] ?? null) === '3.2.0');
+    assert(($manifest['version'] ?? null) === '3.3.0');
     assert(($manifest['resume']['counts']['pending'] ?? null) === 1);
     assert(($manifest['resume']['last_processed_url'] ?? null) === 'https://example.com/done');
 };
@@ -724,7 +727,7 @@ $tests['export and report upgrade creates XML, HTML summary and ZIP bundle'] = f
     mkdir($dir . '/logs', 0775, true);
 
     file_put_contents($dir . '/job-manifest.json', json_encode([
-        'version' => '3.2.0',
+        'version' => '3.3.0',
         'job_id' => 'test-job',
         'type' => 'crawl',
         'resume' => ['counts' => ['completed' => 1, 'failed' => 1]],
@@ -768,7 +771,7 @@ $tests['export and report upgrade creates XML, HTML summary and ZIP bundle'] = f
 };
 
 
-$tests['v3.2.0 intelligence features classify quality priority and selector suggestions'] = function (): void {
+$tests['v3.3.0 intelligence features classify quality priority and selector suggestions'] = function (): void {
     $dir = sys_get_temp_dir() . '/mnb_intel_' . bin2hex(random_bytes(4));
     mkdir($dir, 0775, true);
     $crawlFile = $dir . '/crawl.json';
@@ -811,7 +814,7 @@ $tests['v3.2.0 intelligence features classify quality priority and selector sugg
     assert(isset($suggestions['suggestions']['price']), 'selector suggestions missing price group');
 };
 
-$tests['v3.2.0 command registry exposes intelligence commands and options'] = function (): void {
+$tests['v3.3.0 command registry exposes intelligence commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['intelligence:doctor', 'intelligence:analyze', 'intelligence:classify', 'intelligence:quality', 'intelligence:priority', 'intelligence:selectors'] as $command) {
         assert(isset($commands[$command]), 'missing intelligence command: ' . $command);
@@ -823,18 +826,18 @@ $tests['v3.2.0 command registry exposes intelligence commands and options'] = fu
 };
 
 
-$tests['v3.2.0 evaluation command registry exposes benchmarking and training data commands'] = function (): void {
+$tests['v3.3.0 evaluation command registry exposes benchmarking and training data commands'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['eval:dataset', 'eval:pipeline', 'eval:profile', 'eval:selectors', 'benchmark:profile', 'benchmark:compare', 'annotation:stats', 'annotation:coverage', 'annotation:export'] as $command) {
-        assert(isset($commands[$command]), 'missing v3.2.0 evaluation command: ' . $command);
+        assert(isset($commands[$command]), 'missing v3.3.0 evaluation command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['training-ready', 'training-type', 'evaluation-file', 'annotations-file', 'dataset', 'compare-with'] as $option) {
-        assert(in_array($option, $options, true), 'missing v3.2.0 evaluation option: ' . $option);
+        assert(in_array($option, $options, true), 'missing v3.3.0 evaluation option: ' . $option);
     }
 };
 
-$tests['v3.2.0 dataset evaluator reports field matrix annotation coverage and readiness'] = function (): void {
+$tests['v3.3.0 dataset evaluator reports field matrix annotation coverage and readiness'] = function (): void {
     $records = [[
         'dataset_record_id' => 'r1',
         'record_type' => 'product',
@@ -862,7 +865,7 @@ $tests['v3.2.0 dataset evaluator reports field matrix annotation coverage and re
     assert(in_array('price', $fields, true), 'field quality matrix missing price');
 };
 
-$tests['v3.2.0 benchmark selector and annotation quality helpers work'] = function (): void {
+$tests['v3.3.0 benchmark selector and annotation quality helpers work'] = function (): void {
     $records = [[
         'dataset_record_id' => 'r1',
         'record_type' => 'article',
@@ -886,7 +889,7 @@ $tests['v3.2.0 benchmark selector and annotation quality helpers work'] = functi
     assert(($stats['coverage_percent'] ?? 0) === 100.0, 'annotation quality coverage mismatch');
 };
 
-$tests['native v3.2.0 evaluation commands run on dataset snapshots'] = function (): void {
+$tests['native v3.3.0 evaluation commands run on dataset snapshots'] = function (): void {
     $root = sys_get_temp_dir() . '/mnb_eval_cli_' . bin2hex(random_bytes(4));
     mkdir($root, 0775, true);
     $input = $root . '/records.json';
@@ -909,6 +912,85 @@ $tests['native v3.2.0 evaluation commands run on dataset snapshots'] = function 
     assert($app->run(['mnb-scraper', 'annotation:stats', 'eval_cli', '--datasets-dir=' . $root . '/storage/datasets', '--json']) === 0, 'annotation stats command failed');
     assert($app->run(['mnb-scraper', 'dataset:export', 'eval_cli', '--datasets-dir=' . $root . '/storage/datasets', '--format=jsonl', '--training-ready']) === 0, 'training-ready export command failed');
     assert(is_file($datasetDir . '/training-ready.jsonl'), 'training-ready JSONL export missing');
+};
+
+
+$tests['v3.3.0 rule builder analyzes HTML and generates auto profile schema'] = function (): void {
+    if (!class_exists('DOMDocument')) {
+        assert(true);
+        return;
+    }
+    $html = '<html><head><title>Phone X</title><meta property="og:title" content="Phone X"><script type="application/ld+json">{"@type":"Product","name":"Phone X"}</script></head><body><h1 class="product-title">Phone X</h1><span class="price">₹12,999</span><span class="sku">SKU: PX-1</span><div class="brand">MNB</div></body></html>';
+    $signals = (new HtmlSignalAnalyzer())->analyze($html, 'https://example.com/product');
+    assert(($signals['assistant'] ?? null) === null, 'raw analyzer should not attach assistant');
+    $suggestion = (new AutoProfileAssistant())->suggest($signals);
+    assert(($suggestion['suggested_profile'] ?? '') === 'ecommerce', 'auto assistant should suggest ecommerce');
+    $schema = (new RuleBuilderService())->generateSchema($html, 'https://example.com/product', 'auto', 'auto-product');
+    assert(($schema['profile'] ?? '') === 'auto-product', 'generated profile name mismatch');
+    assert(($schema['record_type'] ?? '') === 'product', 'generated record type mismatch');
+    assert(isset($schema['extraction_rules']['price']), 'generated price rule missing');
+};
+
+$tests['v3.3.0 rule builder tests rules and doctor reports profile quality'] = function (): void {
+    if (!class_exists('DOMDocument')) {
+        assert(true);
+        return;
+    }
+    $html = '<html><body><h1 class="product-title">Phone X</h1><span class="price">₹12,999</span><span itemprop="sku">PX-1</span></body></html>';
+    $service = new RuleBuilderService();
+    $schema = $service->generateSchema($html, 'https://example.com/product', 'ecommerce', 'auto-product');
+    $test = $service->testRules($html, (array) $schema['extraction_rules'], 'https://example.com/product');
+    assert(($test['fields']['title'] ?? '') === 'Phone X', 'rule test should extract title');
+    assert(isset($test['fields']['price']), 'rule test should extract price');
+    $doctor = $service->doctor(\Mnb\ScraperKit\Profile\ProfileSchema::fromArray($schema), $html, 'https://example.com/product');
+    assert(($doctor['valid_schema'] ?? false) === true, 'doctor should accept generated profile schema');
+    assert(($doctor['rules_total'] ?? 0) >= 3, 'doctor rule count too low');
+};
+
+$tests['native v3.3.0 rule builder commands run on saved HTML'] = function (): void {
+    if (!class_exists('DOMDocument')) {
+        assert(true);
+        return;
+    }
+    $root = sys_get_temp_dir() . '/mnb_rule_cli_' . bin2hex(random_bytes(4));
+    mkdir($root, 0775, true);
+    mkdir($root . '/config/profiles', 0775, true);
+    $htmlFile = $root . '/sample.html';
+    file_put_contents($htmlFile, '<html><head><title>Phone X</title></head><body><h1 class="product-title">Phone X</h1><span class="price">₹12,999</span><span itemprop="sku">PX-1</span></body></html>');
+    $app = new NativeCliApplication([], $root);
+    ob_start();
+    $analyze = $app->run(['mnb-scraper', 'rule:analyze', $htmlFile, '--json']);
+    $generate = $app->run(['mnb-scraper', 'rule:generate', $htmlFile, '--profile=ecommerce', '--name=cli-product', '--output=config/profiles/cli-product.json']);
+    $test = $app->run(['mnb-scraper', 'rule:test', $htmlFile, '--profile-file=' . $root . '/config/profiles/cli-product.json']);
+    $doctor = $app->run(['mnb-scraper', 'rule:doctor', $root . '/config/profiles/cli-product.json', '--input=' . $htmlFile, '--json']);
+    $scaffold = $app->run(['mnb-scraper', 'profile:scaffold', 'cli-seo', '--profile=seo']);
+    ob_end_clean();
+    foreach (['analyze' => $analyze, 'generate' => $generate, 'test' => $test, 'doctor' => $doctor, 'scaffold' => $scaffold] as $name => $code) {
+        assert($code === 0, 'native rule builder command failed: ' . $name);
+    }
+    assert(is_file($root . '/config/profiles/cli-product.json'), 'generated CLI profile missing');
+    assert(is_file($root . '/config/profiles/cli-seo.json'), 'scaffolded profile missing');
+};
+
+$tests['v3.3.0 command registry exposes rule builder commands and options'] = function (): void {
+    $commands = CommandRegistry::commands();
+    foreach (['rule:analyze', 'rule:generate', 'rule:test', 'rule:doctor', 'profile:scaffold'] as $command) {
+        assert(isset($commands[$command]), 'missing rule builder command: ' . $command);
+    }
+    $options = CommandRegistry::optionNames();
+    foreach (['base-url', 'name', 'profile-name', 'profile-file', 'rules-file', 'output'] as $option) {
+        assert(in_array($option, $options, true), 'missing rule builder option: ' . $option);
+    }
+};
+
+$tests['v3.3.0 API exposes rule builder templates route'] = function (): void {
+    $root = sys_get_temp_dir() . '/mnb_rule_api_' . bin2hex(random_bytes(4));
+    mkdir($root, 0775, true);
+    $token = ApiToken::generate('rule');
+    $router = new ApiRouter($root, $token);
+    $response = $router->handle('GET', '/api/v1/rule-builder/templates', ['Authorization' => 'Bearer ' . $token]);
+    assert($response->status === 200, 'rule builder API route status mismatch');
+    assert(in_array('ecommerce', (array) ($response->body['templates'] ?? []), true), 'rule builder templates missing ecommerce');
 };
 
 $passed = 0;

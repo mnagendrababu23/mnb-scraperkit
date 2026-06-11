@@ -1,8 +1,8 @@
-# MNB ScraperKit V3.2.0
+# MNB ScraperKit V3.3.0
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V3.2.0 is the Evaluation, Benchmarking, and Training Data Quality Update. It adds measurable dataset quality reports, field completeness matrices, profile benchmarks, selector performance checks, annotation coverage tools, and training-ready JSONL/CSV exports.
+V3.3.0 is the Rule Builder and Auto-Profile Assistant Update. It adds HTML signal analysis, automatic profile suggestions, generated starter profile schemas, local rule testing, profile scaffolding, and rule doctor checks so users can build extraction workflows without editing PHP code.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,22 +16,23 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V3.2.0 update focus
+## V3.3.0 update focus
 
-V3.2.0 focuses on making ScraperKit's dataset and ML-ready workflows measurable. After users create datasets and annotations, they can now evaluate field completeness, validation health, duplicate rate, selector/profile performance, annotation coverage, and training readiness before exporting data for review or ML workflows.
+V3.3.0 focuses on helping users create reliable extraction rules faster. After ScraperKit added profile schemas, ML-ready intelligence, dataset annotations, and evaluation tools, this release adds a rule-building layer that analyzes saved HTML or one URL, recommends a profile type, generates starter schemas, tests rules locally, and reports rule/schema problems before users run large crawls.
 
-- Added `src/Evaluation/` with dataset evaluator, profile benchmark, selector performance evaluator, annotation quality helper, and evaluation exporter.
-- Added evaluation commands: `eval:dataset`, `eval:pipeline`, `eval:profile`, and `eval:selectors`.
-- Added benchmark commands: `benchmark:profile` and `benchmark:compare`.
-- Added annotation QA commands: `annotation:stats`, `annotation:coverage`, and `annotation:export`.
-- Upgraded `dataset:export` with `--training-ready` and `--training-type=classification|quality|validation` for JSON, CSV, and JSONL outputs.
-- Added field quality matrix reports with completeness percentage, missing percentage, missing examples, duplicate counts, low-quality examples, annotation coverage, and training-readiness score.
-- Added dataset evaluation API route: `/api/v1/datasets/{dataset_id}/evaluation`.
-- Kept V3.1.0 dataset versioning/annotations, V3.0.0 ML-ready intelligence, V2.0.0 dashboard/admin UI, V1.9.0 API/webhooks, V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
+- Added `src/RuleBuilder/` with HTML signal analysis, auto-profile assistant, rule testing service, and profile rule doctor.
+- Added rule builder commands: `rule:analyze`, `rule:generate`, `rule:test`, and `rule:doctor`.
+- Added `profile:scaffold` for quickly creating starter profile schemas.
+- Added candidate selector discovery for common fields such as title, price, SKU, brand, company, location, deadline, DOI, authors, tender number, and description.
+- Added auto-profile suggestions for SEO, ecommerce, jobs, tender, and academic/article workflows.
+- Added generated starter schemas with required fields, optional fields, validators, transformations, dedupe keys, export columns, and extraction rules.
+- Added rule builder API route: `/api/v1/rule-builder/templates`.
+- Kept V3.2.0 evaluation/benchmarking/training quality, V3.1.0 dataset versioning/annotations, V3.0.0 ML-ready intelligence, V2.0.0 dashboard/admin UI, V1.9.0 API/webhooks, V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
 
 ## Highlights
 
 - **Professional PHP CLI framework** built as a Composer package with Symfony Console commands.
+- **Rule builder and auto-profile assistant** for analyzing HTML, suggesting profile types, generating starter schemas, testing rules, scaffolding profiles, and finding rule gaps.
 - **Evaluation, benchmarking, and training data quality layer** for field completeness, validation health, duplicate analysis, profile benchmarking, selector performance, annotation coverage, and training-ready exports.
 - **Dataset versioning and annotation layer** for dataset snapshots, quality summaries, JSON/CSV/JSONL exports, dataset diffs, and review labels.
 - **ML-ready intelligence layer** for feature extraction, page classification, quality prediction, URL priority scoring, and selector suggestions.
@@ -55,7 +56,7 @@ V3.2.0 focuses on making ScraperKit's dataset and ML-ready workflows measurable.
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V3.2.0 CLI/library release.
+This section lists the main functionality available in the current V3.3.0 CLI/library release.
 
 ### Package and CLI
 
@@ -65,6 +66,26 @@ This section lists the main functionality available in the current V3.2.0 CLI/li
 - Global binary support through `vendor/bin/mnb-scraper`.
 - Built-in command list and per-command help screens.
 - CMD, PowerShell, cron, Windows Task Scheduler, and server automation friendly scripts/workflows.
+
+### Rule builder and auto-profile assistant
+
+- `rule:analyze <html-file|url>` inspects saved HTML or one URL and reports title, metadata, headings, JSON-LD types, keyword signals, candidate selectors, and suggested profile type.
+- `rule:generate <html-file|url> --profile=auto --name=my-profile --output=config/profiles/my-profile.json` creates a starter profile schema.
+- `rule:test <html-file|url> --profile=my-profile` tests existing/generated extraction rules locally before running a crawl.
+- `rule:doctor <profile|profile.json> --input=sample.html` checks profile schema validity, missing required-field rules, undeclared rule fields, and sample extraction gaps.
+- `profile:scaffold <name> --profile=seo|ecommerce|jobs|tender|academic` creates a new profile schema template.
+- Auto-profile suggestions currently target SEO/page, ecommerce/product, jobs, tender/government notice, and academic/article workflows.
+- Generated schemas include required fields, optional fields, validators, transformations, dedupe keys, export columns, and extraction rules.
+- Rule builder works with saved HTML files first, so users can develop selectors safely without repeatedly hitting websites.
+
+Example:
+
+```bash
+php bin/mnb-scraper rule:analyze examples/sample-product-page.html --json
+php bin/mnb-scraper rule:generate examples/sample-product-page.html --profile=auto --name=my-product --output=config/profiles/my-product.json
+php bin/mnb-scraper rule:test examples/sample-product-page.html --profile-file=config/profiles/my-product.json
+php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples/sample-product-page.html
+```
 
 ### Evaluation, benchmarking, and training data quality
 
@@ -177,7 +198,7 @@ This section lists the main functionality available in the current V3.2.0 CLI/li
 - Plugin enable/disable controls by editing the manifest `enabled` flag.
 - Plugin doctor command for validating all discovered plugins.
 - Plugin-contributed profiles available to `profile:list`, `profile:show`, `extract:rules`, and pipeline/profile workflows.
-- Safe-by-default design: V3.2.0 does not automatically execute arbitrary plugin PHP code.
+- Safe-by-default design: V3.3.0 does not automatically execute arbitrary plugin PHP code.
 
 ### Lightweight API and webhooks
 
@@ -390,7 +411,7 @@ This section lists the main functionality available in the current V3.2.0 CLI/li
 ## Package direction
 
 - First public version: **1.0.0**
-- Current version: **3.2.0** — Evaluation, benchmarking, and training data quality update
+- Current version: **3.3.0** — Rule builder and auto-profile assistant update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
@@ -1085,7 +1106,7 @@ ScraperKit focuses on practical export-ready outputs:
 - pipeline summaries
 - job manifest summaries
 
-PDF reports, Redis/distributed queues, and dedicated browser-worker orchestration are future upgrade areas. The current V3.2.0 release already includes CLI workflows, queue/worker commands, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
+PDF reports, Redis/distributed queues, and dedicated browser-worker orchestration are future upgrade areas. The current V3.3.0 release already includes CLI workflows, queue/worker commands, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
 
 ## Windows CMD
 
@@ -1112,7 +1133,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V3.2.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V3.3.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 

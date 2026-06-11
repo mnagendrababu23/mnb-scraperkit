@@ -12,6 +12,7 @@ use Mnb\ScraperKit\Monitoring\MonitoringSnapshot;
 use Mnb\ScraperKit\Plugin\PluginManager;
 use Mnb\ScraperKit\Profile\ProfileSchemaLoader;
 use Mnb\ScraperKit\Queue\LocalJobQueue;
+use Mnb\ScraperKit\RuleBuilder\AutoProfileAssistant;
 
 /**
  * Lightweight read-mostly JSON API router used by the optional api:serve command.
@@ -22,7 +23,7 @@ use Mnb\ScraperKit\Queue\LocalJobQueue;
  */
 final class ApiRouter
 {
-    public const VERSION = '3.2.0';
+    public const VERSION = '3.3.0';
 
     public function __construct(
         private readonly string $rootDir,
@@ -48,6 +49,7 @@ final class ApiRouter
             ['method' => 'GET', 'path' => '/api/v1/datasets', 'description' => 'List local dataset snapshots.'],
             ['method' => 'GET', 'path' => '/api/v1/datasets/{dataset_id}', 'description' => 'Read one dataset manifest.'],
             ['method' => 'GET', 'path' => '/api/v1/datasets/{dataset_id}/evaluation', 'description' => 'Evaluate one dataset for quality, completeness, and training readiness.'],
+            ['method' => 'GET', 'path' => '/api/v1/rule-builder/templates', 'description' => 'List auto-profile rule builder template names and assistant version.'],
         ];
     }
 
@@ -163,6 +165,16 @@ final class ApiRouter
             return new ApiResponse(200, [
                 'ok' => true,
                 'dashboard' => (new DashboardDataCollector($this->rootDir))->collect(),
+            ]);
+        }
+
+
+        if ($method === 'GET' && $path === '/api/v1/rule-builder/templates') {
+            return new ApiResponse(200, [
+                'ok' => true,
+                'rule_builder_version' => self::VERSION,
+                'templates' => ['auto', 'seo', 'ecommerce', 'jobs', 'tender', 'academic'],
+                'commands' => ['rule:analyze', 'rule:generate', 'rule:test', 'rule:doctor', 'profile:scaffold'],
             ]);
         }
 
