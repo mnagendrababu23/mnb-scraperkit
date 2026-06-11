@@ -1,9 +1,9 @@
 {
     "name": "mnb/scraperkit",
-    "description": "MNB ScraperKit V1.9.0 - professional PHP crawling and data extraction framework with Symfony Console commands, safe crawling, source connectors, reports, profiles, queue workers, browser fallback, database storage, monitoring, plugins, lightweight API, and webhooks.",
+    "description": "MNB ScraperKit V2.0.0 - professional PHP crawling and data extraction framework with Symfony Console commands, safe crawling, source connectors, reports, profiles, queue workers, browser fallback, database storage, monitoring, plugins, API/webhooks, and local dashboard UI.",
     "type": "library",
     "license": "MIT",
-    "version": "1.9.0",
+    "version": "2.0.0",
     "require": {
         "php": ">=8.2",
         "ext-dom": "*",
@@ -100,6 +100,13 @@
         "webhook-notifications",
         "local-dashboard",
         "automation-api",
-        "health-check-api"
+        "health-check-api",
+        "dashboard",
+        "admin-dashboard",
+        "dashboard-ui",
+        "operations-dashboard",
+        "queue-dashboard",
+        "scheduler-dashboard",
+        "html-dashboard"
     ]
 }

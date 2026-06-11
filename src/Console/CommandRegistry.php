@@ -40,6 +40,9 @@ final class CommandRegistry
             'api:routes' => 'List lightweight JSON API routes for local dashboards and automation.',
             'api:token' => 'Generate a local API Bearer token for api:serve.',
             'api:serve' => 'Serve the optional lightweight JSON API using PHP built-in server.',
+            'dashboard:status' => 'Show dashboard health, URLs, and read-only data availability.',
+            'dashboard:build' => 'Build a static HTML dashboard snapshot from local queue/schedule/plugin/profile data.',
+            'dashboard:serve' => 'Serve the optional local HTML admin dashboard using PHP built-in server.',
             'webhook:list' => 'List webhook endpoints from config/webhooks.json or a custom config file.',
             'webhook:test' => 'Create or send a test webhook event.',
             'webhook:send' => 'Send one JSON payload as a webhook event to an endpoint.',
@@ -302,6 +305,10 @@ final class CommandRegistry
             'webhook-secret',
             'config',
             'payload',
+            'dashboard-token',
+            'recent',
+            'refresh',
+            'theme',
         ];
     }
 

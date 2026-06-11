@@ -16,6 +16,8 @@ use Mnb\ScraperKit\Database\DatabaseConnectionFactory;
 use Mnb\ScraperKit\Database\DatabaseMigrator;
 use Mnb\ScraperKit\Database\DatabaseRepository;
 use Mnb\ScraperKit\Database\DatabaseSchema;
+use Mnb\ScraperKit\Dashboard\DashboardDataCollector;
+use Mnb\ScraperKit\Dashboard\DashboardRenderer;
 use Mnb\ScraperKit\Core\CrawlResult;
 use Mnb\ScraperKit\Core\HttpClient;
 use Mnb\ScraperKit\Core\RobotsPolicy;
@@ -120,6 +122,9 @@ final class NativeCliApplication
                 'api:routes' => $this->apiRoutes($args, $opts),
                 'api:token' => $this->apiToken($args, $opts),
                 'api:serve' => $this->apiServe($args, $opts),
+                'dashboard:status' => $this->dashboardStatus($args, $opts),
+                'dashboard:build' => $this->dashboardBuild($args, $opts),
+                'dashboard:serve' => $this->dashboardServe($args, $opts),
                 'webhook:list' => $this->webhookList($args, $opts),
                 'webhook:test' => $this->webhookTest($args, $opts),
                 'webhook:send' => $this->webhookSend($args, $opts),
@@ -186,7 +191,7 @@ final class NativeCliApplication
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 1.9.0 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 2.0.0 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -222,6 +227,9 @@ final class NativeCliApplication
             'api:routes' => 'List lightweight JSON API routes for local dashboards and automation.',
             'api:token' => 'Generate a local API Bearer token for api:serve.',
             'api:serve' => 'Serve the optional lightweight JSON API using PHP built-in server.',
+            'dashboard:status' => 'Show dashboard health, URLs, and read-only data availability.',
+            'dashboard:build' => 'Build a static HTML dashboard snapshot from local queue/schedule/plugin/profile data.',
+            'dashboard:serve' => 'Serve the optional local HTML admin dashboard using PHP built-in server.',
             'webhook:list' => 'List webhook endpoints from config/webhooks.json or a custom config file.',
             'webhook:test' => 'Create or send a test webhook event.',
             'webhook:send <payload.json>' => 'Send a JSON payload as a webhook event to one endpoint.',
@@ -641,6 +649,98 @@ final class NativeCliApplication
     }
 
     /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function dashboardStatus(array $args, array $opts): int
+    {
+        $collector = new DashboardDataCollector($this->rootDir);
+        $data = $collector->collect(
+            (int) ($this->optString($opts, 'recent', '20') ?? '20'),
+            (int) ($this->optString($opts, 'ttl-seconds', '900') ?? '900')
+        );
+        $status = [
+            'ok' => true,
+            'dashboard_version' => DashboardDataCollector::VERSION,
+            'health' => $data['health'] ?? 'unknown',
+            'queue_counts' => $data['queue']['counts'] ?? [],
+            'schedule_counts' => $data['monitor']['schedule_counts'] ?? [],
+            'profiles_total' => $data['profiles']['total'] ?? 0,
+            'plugins_total' => $data['plugins']['total'] ?? 0,
+            'html_path' => $this->rootDir . '/public/dashboard.php',
+            'json_path' => '/dashboard.json',
+            'token_env' => 'MNB_SCRAPERKIT_DASHBOARD_TOKEN',
+        ];
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($status);
+            return 0;
+        }
+        $this->out('MNB ScraperKit Dashboard ' . DashboardDataCollector::VERSION);
+        $this->out('Health: ' . (string) $status['health']);
+        $this->out('Queue: ' . json_encode($status['queue_counts'], JSON_UNESCAPED_SLASHES));
+        $this->out('Schedules: ' . json_encode($status['schedule_counts'], JSON_UNESCAPED_SLASHES));
+        $this->out('Profiles: ' . (string) $status['profiles_total'] . ' | Plugins: ' . (string) $status['plugins_total']);
+        $this->out('Serve with: php bin/mnb-scraper dashboard:serve');
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function dashboardBuild(array $args, array $opts): int
+    {
+        $output = $this->optString($opts, 'output') ?: $this->storagePath('dashboard/index.html');
+        $refresh = (int) ($this->optString($opts, 'refresh', '0') ?? '0');
+        $data = (new DashboardDataCollector($this->rootDir))->collect(
+            (int) ($this->optString($opts, 'recent', '20') ?? '20'),
+            (int) ($this->optString($opts, 'ttl-seconds', '900') ?? '900')
+        );
+        $html = (new DashboardRenderer())->render($data, ['refresh_seconds' => $refresh]);
+        $this->ensureDir(dirname($output));
+        file_put_contents($output, $html);
+        $result = [
+            'ok' => true,
+            'dashboard_version' => DashboardDataCollector::VERSION,
+            'output' => $output,
+            'bytes' => filesize($output) ?: strlen($html),
+        ];
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($result);
+        } else {
+            $this->out('Dashboard written: ' . $output);
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function dashboardServe(array $args, array $opts): int
+    {
+        $host = $this->optString($opts, 'host', '127.0.0.1') ?? '127.0.0.1';
+        $port = (int) ($this->optString($opts, 'port', '8788') ?? '8788');
+        $router = $this->rootDir . '/public/dashboard.php';
+        if (!is_file($router)) {
+            $router = dirname(__DIR__, 2) . '/public/dashboard.php';
+        }
+        if (!is_file($router)) {
+            throw new \RuntimeException('Dashboard router file missing: ' . $router);
+        }
+        $command = PHP_BINARY . ' -S ' . escapeshellarg($host . ':' . $port) . ' ' . escapeshellarg($router);
+        $data = [
+            'ok' => true,
+            'dashboard_version' => DashboardDataCollector::VERSION,
+            'url' => 'http://' . $host . ':' . $port . '/dashboard',
+            'json_url' => 'http://' . $host . ':' . $port . '/dashboard.json',
+            'router' => $router,
+            'command' => $command,
+            'token_env' => 'MNB_SCRAPERKIT_DASHBOARD_TOKEN',
+        ];
+        if ($this->bool($opts, 'json') || $this->bool($opts, 'dry-run') || $this->bool($opts, 'print-command')) {
+            $this->outJson($data);
+            return 0;
+        }
+        $this->out('Starting MNB ScraperKit Dashboard. Press Ctrl+C to stop.');
+        $this->out('Dashboard URL: ' . $data['url']);
+        $this->out('Set MNB_SCRAPERKIT_DASHBOARD_TOKEN to require a token.');
+        passthru($command, $exitCode);
+        return (int) $exitCode;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
     private function webhookList(array $args, array $opts): int
     {
         $configPath = $this->optString($opts, 'config');
@@ -664,7 +764,7 @@ final class NativeCliApplication
         $output = $this->optString($opts, 'output') ?: $this->storagePath('webhooks/test-' . date('Ymd-His') . '.json');
         $payload = [
             'message' => 'MNB ScraperKit webhook test event',
-            'version' => '1.9.0',
+            'version' => '2.0.0',
             'generated_at' => date(DATE_ATOM),
         ];
         $dispatcher = new WebhookDispatcher($this->safetyGuard());
@@ -3028,7 +3128,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $result = (new DatabaseMigrator($pdo, $config->driver()))->migrate();
         $this->outJson([
             'ok' => true,
-            'version' => '1.9.0',
+            'version' => '2.0.0',
             'driver' => $result['driver'],
             'statements_executed' => $result['statements'],
             'tables' => $result['tables'],
@@ -3044,7 +3144,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $pdo = (new DatabaseConnectionFactory())->connect($config);
         $this->outJson([
             'ok' => true,
-            'version' => '1.9.0',
+            'version' => '2.0.0',
             'driver' => $config->driver(),
             'pdo_driver' => (string) $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME),
             'dsn' => $this->safeDsn($config->dsn),
@@ -3258,7 +3358,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '1.9.0',
+            'checkpoint_version' => '2.0.0',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),

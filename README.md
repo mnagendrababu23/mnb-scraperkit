@@ -1,8 +1,8 @@
-# MNB ScraperKit V1.9.0
+# MNB ScraperKit V2.0.0
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V1.9.0 is the API and Webhook Automation Update. It adds an optional lightweight JSON API, API token generation, API route discovery, a PHP built-in server entry point, webhook event testing, webhook payload sending, and local webhook event files for automation/debugging while keeping the core CLI package lightweight.
+V2.0.0 is the Dashboard and Admin UI Update. It adds an optional dependency-free local HTML dashboard, static dashboard snapshots, dashboard JSON output, dashboard serve/build/status commands, and consolidated read-only operations views for queue jobs, schedules, workers, profiles, plugins, API routes, and system health.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,23 +16,23 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V1.9.0 update focus
+## V2.0.0 update focus
 
-V1.9.0 focuses on automation integration. It gives users a small API layer and webhook utilities for local dashboards, internal automation, worker monitoring, external notifications, and script-to-script integration without requiring Laravel, Symfony HTTP Kernel, Redis, or a permanent daemon.
+V2.0.0 focuses on visibility and operations. It gives users a lightweight local dashboard without requiring Laravel, Symfony HTTP Kernel, Node, Redis, or a database. The dashboard reads the same local queue, schedule, monitor, profile, plugin, and API metadata used by CLI commands.
 
-- Added optional lightweight JSON API router under `public/api-router.php`.
-- Added API commands: `api:routes`, `api:token`, and `api:serve`.
-- Added API endpoints for health, version, command metadata, queue status, job listing, job creation, monitoring summary, plugin listing, and profile listing.
-- Added Bearer-token support through `MNB_SCRAPERKIT_API_TOKEN`.
-- Added webhook commands: `webhook:list`, `webhook:test`, and `webhook:send`.
-- Added local webhook event output for safe testing without network calls.
-- Added webhook endpoint config reader for `config/webhooks.json`.
-- Kept V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
+- Added dependency-free dashboard classes: `DashboardDataCollector` and `DashboardRenderer`.
+- Added `public/dashboard.php` for local HTML dashboard and `/dashboard.json` machine-readable snapshots.
+- Added dashboard commands: `dashboard:status`, `dashboard:build`, and `dashboard:serve`.
+- Added static dashboard snapshot generation for sharing or archiving local job state.
+- Added dashboard server helper scripts for CMD and PowerShell.
+- Added optional dashboard token protection using `MNB_SCRAPERKIT_DASHBOARD_TOKEN`.
+- Added API dashboard endpoint: `/api/v1/dashboard`.
+- Kept V1.9.0 API/webhooks, V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
 
 ## Highlights
 
 - **Professional PHP CLI framework** built as a Composer package with Symfony Console commands.
-- **Lightweight API and webhook layer** for local dashboards, internal automation, queue/job monitoring, API job creation, health checks, and notification hooks.
+- **Local dashboard and admin UI** for queue jobs, schedules, workers, profiles, plugins, API routes, and system health.
 - **Plugin system** for config-only add-ons with reusable profile schemas, extractor rule files, source templates, export templates, command aliases, validation, install, enable/disable, and doctor checks.
 - **Advanced retry, scheduling, and monitoring** with safe retry plans, local schedules, due-job enqueueing, health summaries, and stale lock diagnostics.
 - **Optional database storage layer** using PDO with SQLite and MySQL/MariaDB support for jobs, pages, records, failures, validation issues, and export metadata.
@@ -47,12 +47,12 @@ V1.9.0 focuses on automation integration. It gives users a small API layer and w
 - **Professional exports and reports** including JSON, CSV, XML, HTML summaries, failed URL reports, validation issue reports, and ZIP project bundles.
 - **Automation friendly** for PHP CLI, CMD, PowerShell, cron, Windows Task Scheduler, and server-side workflows.
 - **Source connector system** for collecting crawl targets from sitemaps, RSS/Atom feeds, CSV files, JSON files, generic JSON APIs, PLOS, and Elsevier/ScienceDirect.
-- **Future-ready architecture** designed for later expansion into dashboards, Redis queues, richer reports, browser-worker orchestration, and ML-assisted intelligence.
+- **Future-ready architecture** designed for later expansion into richer dashboards, Redis queues, browser-worker orchestration, role-based access, and ML-assisted intelligence.
 
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V1.9.0 CLI/library release.
+This section lists the main functionality available in the current V2.0.0 CLI/library release.
 
 ### Package and CLI
 
@@ -62,6 +62,17 @@ This section lists the main functionality available in the current V1.9.0 CLI/li
 - Global binary support through `vendor/bin/mnb-scraper`.
 - Built-in command list and per-command help screens.
 - CMD, PowerShell, cron, Windows Task Scheduler, and server automation friendly scripts/workflows.
+
+### Dashboard and local admin UI
+
+- Optional dependency-free HTML dashboard under `public/dashboard.php`.
+- `dashboard:serve` command for running the local admin dashboard with PHP built-in server.
+- `dashboard:build` command for writing static HTML dashboard snapshots.
+- `dashboard:status` command for checking dashboard health and available data.
+- `/dashboard.json` output for machine-readable dashboard snapshots.
+- Consolidated dashboard view for queue counts, recent jobs, schedules, stale locks, profiles, plugins, command count, and API route count.
+- Optional token protection through `MNB_SCRAPERKIT_DASHBOARD_TOKEN`.
+- CMD and PowerShell dashboard server helper scripts.
 
 ### Crawling and HTTP
 
@@ -129,7 +140,7 @@ This section lists the main functionality available in the current V1.9.0 CLI/li
 - Plugin enable/disable controls by editing the manifest `enabled` flag.
 - Plugin doctor command for validating all discovered plugins.
 - Plugin-contributed profiles available to `profile:list`, `profile:show`, `extract:rules`, and pipeline/profile workflows.
-- Safe-by-default design: V1.9.0 does not automatically execute arbitrary plugin PHP code.
+- Safe-by-default design: V2.0.0 does not automatically execute arbitrary plugin PHP code.
 
 ### Lightweight API and webhooks
 
@@ -337,12 +348,12 @@ This section lists the main functionality available in the current V1.9.0 CLI/li
 
 - Optional browser-assisted crawling layer for JavaScript-rendered pages.
 - Network profile and exit-point manager classes for future network policy expansion.
-- Modular architecture ready for future dashboard, Redis queues, richer reports, browser-worker orchestration, and ML-assisted intelligence.
+- Modular architecture ready for richer admin dashboards, Redis queues, browser-worker orchestration, role-based access, and ML-assisted intelligence.
 
 ## Package direction
 
 - First public version: **1.0.0**
-- Current version: **1.9.0** — API and webhook automation update
+- Current version: **2.0.0** — Dashboard and admin UI update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
@@ -1064,7 +1075,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V1.9.0 API and webhook automation package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V2.0.0 dashboard and admin UI package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 
@@ -1093,3 +1104,39 @@ composer test
 ## License
 
 MIT License. See `LICENSE`.
+
+
+## Dashboard usage
+
+Start the local dashboard server:
+
+```bash
+php bin/mnb-scraper dashboard:serve
+```
+
+Open:
+
+```text
+http://127.0.0.1:8788/dashboard
+```
+
+Build a static dashboard snapshot:
+
+```bash
+php bin/mnb-scraper dashboard:build --output=storage/dashboard/index.html
+```
+
+Check dashboard status from CLI:
+
+```bash
+php bin/mnb-scraper dashboard:status --json
+```
+
+Protect the dashboard when exposing it outside localhost:
+
+```bash
+set MNB_SCRAPERKIT_DASHBOARD_TOKEN=your-token-here
+php bin/mnb-scraper dashboard:serve
+```
+
+Then send `Authorization: Bearer your-token-here` or use `?token=your-token-here` for local testing.

@@ -14,6 +14,8 @@ use Mnb\ScraperKit\Console\CommandRegistry;
 use Mnb\ScraperKit\Cli\NativeCliApplication;
 use Mnb\ScraperKit\Database\DatabaseConfig;
 use Mnb\ScraperKit\Database\DatabaseSchema;
+use Mnb\ScraperKit\Dashboard\DashboardDataCollector;
+use Mnb\ScraperKit\Dashboard\DashboardRenderer;
 use Mnb\ScraperKit\Core\FailureClassifier;
 use Mnb\ScraperKit\Core\PageResult;
 use Mnb\ScraperKit\Core\RateLimiter;
@@ -59,7 +61,7 @@ $tests['database config defaults to local SQLite and schema exposes storage tabl
     assert(count(DatabaseSchema::statements('mysql')) >= 6, 'MySQL schema statements missing');
 };
 
-$tests['database command registry exposes v1.9.0 database commands and options'] = function (): void {
+$tests['database command registry exposes v2.0.0 database commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['db:init', 'db:test', 'db:status', 'db:save-crawl', 'db:save-pipeline', 'db:export'] as $command) {
         assert(isset($commands[$command]), 'missing database command: ' . $command);
@@ -70,22 +72,22 @@ $tests['database command registry exposes v1.9.0 database commands and options']
     }
 };
 
-$tests['v1.9.0 command registry exposes retry scheduling and monitoring commands'] = function (): void {
+$tests['v2.0.0 command registry exposes retry scheduling and monitoring commands'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['retry:plan', 'queue:retry-safe', 'schedule:create', 'schedule:list', 'schedule:show', 'schedule:run-due', 'schedule:enable', 'schedule:disable', 'monitor:summary', 'monitor:stale-locks'] as $command) {
-        assert(isset($commands[$command]), 'missing v1.9.0 command: ' . $command);
+        assert(isset($commands[$command]), 'missing v2.0.0 command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['command', 'arg', 'schedule-id', 'every-minutes', 'every-hours', 'dry-run', 'failed-jobs', 'ttl-seconds'] as $option) {
-        assert(in_array($option, $options, true), 'missing v1.9.0 option: ' . $option);
+        assert(in_array($option, $options, true), 'missing v2.0.0 option: ' . $option);
     }
 };
 
 
-$tests['v1.9.0 plugin command registry exposes plugin commands and options'] = function (): void {
+$tests['v2.0.0 plugin command registry exposes plugin commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['plugin:list', 'plugin:show', 'plugin:validate', 'plugin:install', 'plugin:enable', 'plugin:disable', 'plugin:doctor'] as $command) {
-        assert(isset($commands[$command]), 'missing v1.9.0 plugin command: ' . $command);
+        assert(isset($commands[$command]), 'missing v2.0.0 plugin command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['plugin-dir', 'plugin-id', 'plugins-dir', 'all', 'force'] as $option) {
@@ -162,14 +164,14 @@ $tests['local schedule store creates due schedules and monitoring snapshot repor
 
 
 
-$tests['v1.9.0 API and webhook command registry exposes automation commands and options'] = function (): void {
+$tests['v2.0.0 API and webhook command registry exposes automation commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['api:routes', 'api:token', 'api:serve', 'webhook:list', 'webhook:test', 'webhook:send'] as $command) {
-        assert(isset($commands[$command]), 'missing v1.9.0 command: ' . $command);
+        assert(isset($commands[$command]), 'missing v2.0.0 command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['host', 'port', 'prefix', 'print-command', 'webhook-url', 'webhook-header', 'webhook-secret', 'config', 'payload'] as $option) {
-        assert(in_array($option, $options, true), 'missing v1.9.0 option: ' . $option);
+        assert(in_array($option, $options, true), 'missing v2.0.0 option: ' . $option);
     }
 };
 
@@ -225,6 +227,60 @@ $tests['native API and webhook commands run without network by default'] = funct
     assert($tokenCode === 0, 'api:token failed');
     assert($serveCode === 0, 'api:serve dry-run failed');
     assert($webhookCode === 0, 'webhook:test failed');
+};
+
+
+$tests['v2.0.0 dashboard command registry exposes dashboard commands and options'] = function (): void {
+    $commands = CommandRegistry::commands();
+    foreach (['dashboard:status', 'dashboard:build', 'dashboard:serve'] as $command) {
+        assert(isset($commands[$command]), 'missing dashboard command: ' . $command);
+    }
+    $options = CommandRegistry::optionNames();
+    foreach (['dashboard-token', 'recent', 'refresh', 'host', 'port', 'print-command'] as $option) {
+        assert(in_array($option, $options, true), 'missing dashboard option: ' . $option);
+    }
+};
+
+$tests['dashboard collector and renderer expose local operations state'] = function (): void {
+    $root = sys_get_temp_dir() . '/mnb_dashboard_' . bin2hex(random_bytes(4));
+    mkdir($root, 0775, true);
+    $queue = new LocalJobQueue($root);
+    $queue->create(['job_id' => 'dashboard-job', 'command' => 'crawl', 'args' => ['https://example.com']]);
+    $scheduleStore = new LocalScheduleStore($root);
+    $scheduleStore->create(['schedule_id' => 'dashboard-schedule', 'command' => 'crawl', 'args' => ['https://example.com'], 'interval_seconds' => 60]);
+    $data = (new DashboardDataCollector($root))->collect();
+    assert(($data['dashboard_version'] ?? null) === '2.0.0', 'dashboard version mismatch');
+    assert(($data['queue']['counts']['pending'] ?? 0) === 1, 'dashboard queue count mismatch');
+    assert(($data['schedules']['total'] ?? 0) === 1, 'dashboard schedule count mismatch');
+    $html = (new DashboardRenderer())->render($data);
+    assert(str_contains($html, 'MNB ScraperKit Dashboard'), 'dashboard HTML title missing');
+    assert(str_contains($html, 'dashboard-job'), 'dashboard recent job missing');
+};
+
+$tests['API router exposes dashboard summary route'] = function (): void {
+    $root = sys_get_temp_dir() . '/mnb_api_dashboard_' . bin2hex(random_bytes(4));
+    mkdir($root, 0775, true);
+    $token = ApiToken::generate('test');
+    $router = new ApiRouter($root, $token);
+    $response = $router->handle('GET', '/api/v1/dashboard', ['Authorization' => 'Bearer ' . $token]);
+    assert($response->status === 200, 'dashboard API route failed');
+    assert(($response->body['dashboard']['dashboard_version'] ?? null) === '2.0.0', 'dashboard API version mismatch');
+};
+
+$tests['native dashboard commands run without starting server'] = function (): void {
+    $root = sys_get_temp_dir() . '/mnb_dashboard_cli_' . bin2hex(random_bytes(4));
+    mkdir($root, 0775, true);
+    $config = is_file(dirname(__DIR__) . '/config/scraper.php') ? require dirname(__DIR__) . '/config/scraper.php' : [];
+    $app = new NativeCliApplication($config, $root);
+    $output = $root . '/storage/dashboard/index.html';
+    ob_start();
+    $statusCode = $app->run(['mnb-scraper', 'dashboard:status', '--json']);
+    $buildCode = $app->run(['mnb-scraper', 'dashboard:build', '--output=' . $output, '--json']);
+    $serveCode = $app->run(['mnb-scraper', 'dashboard:serve', '--dry-run', '--json']);
+    ob_end_clean();
+    assert($statusCode === 0, 'dashboard:status failed');
+    assert($buildCode === 0 && is_file($output), 'dashboard:build failed');
+    assert($serveCode === 0, 'dashboard:serve dry-run failed');
 };
 
 $tests['Symfony command option registry has no duplicate option names'] = function (): void {
@@ -318,7 +374,7 @@ $tests['failure classifier maps common crawl failures'] = function (): void {
     assert(FailureClassifier::fromSafetyMessage('URL safety check failed: private/reserved IP targets are blocked.') === 'private_ip_blocked');
 };
 
-$tests['rate limiter accepts v1.9.0 pacing options without sleeping unnecessarily'] = function (): void {
+$tests['rate limiter accepts v2.0.0 pacing options without sleeping unnecessarily'] = function (): void {
     $limiter = new RateLimiter();
     $options = CrawlOptions::fromArray([
         'delay_ms' => 0,
@@ -336,7 +392,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
     mkdir($dir, 0775, true);
     $checkpoint = $dir . '/checkpoint.json';
     file_put_contents($checkpoint, json_encode([
-        'checkpoint_version' => '1.9.0',
+        'checkpoint_version' => '2.0.0',
         'updated_at' => '2026-01-01T00:00:00+00:00',
         'queues' => [
             'pending' => ['https://example.com/pending'],
@@ -350,7 +406,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
 
     $manifestPath = JobManifest::write($dir, 'bulk-crawl', [], ['checkpoint' => $checkpoint], []);
     $manifest = JobManifest::read($manifestPath);
-    assert(($manifest['version'] ?? null) === '1.9.0');
+    assert(($manifest['version'] ?? null) === '2.0.0');
     assert(($manifest['resume']['counts']['pending'] ?? null) === 1);
     assert(($manifest['resume']['last_processed_url'] ?? null) === 'https://example.com/done');
 };
@@ -538,7 +594,7 @@ $tests['export and report upgrade creates XML, HTML summary and ZIP bundle'] = f
     mkdir($dir . '/logs', 0775, true);
 
     file_put_contents($dir . '/job-manifest.json', json_encode([
-        'version' => '1.9.0',
+        'version' => '2.0.0',
         'job_id' => 'test-job',
         'type' => 'crawl',
         'resume' => ['counts' => ['completed' => 1, 'failed' => 1]],

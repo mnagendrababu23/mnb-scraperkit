@@ -1,3 +1,3 @@
 @echo off
-REM MNB ScraperKit V1.9.0 browser fallback diagnostic example
+REM MNB ScraperKit V2.0.0 browser fallback diagnostic example
 php "%~dp0..\bin\mnb-scraper" browser:test %* --browser=auto

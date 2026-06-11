@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Mnb\ScraperKit\Api;
 
 use Mnb\ScraperKit\Console\CommandRegistry;
+use Mnb\ScraperKit\Dashboard\DashboardDataCollector;
 use Mnb\ScraperKit\Monitoring\MonitoringSnapshot;
 use Mnb\ScraperKit\Plugin\PluginManager;
 use Mnb\ScraperKit\Profile\ProfileSchemaLoader;
@@ -19,7 +20,7 @@ use Mnb\ScraperKit\Queue\LocalJobQueue;
  */
 final class ApiRouter
 {
-    public const VERSION = '1.9.0';
+    public const VERSION = '2.0.0';
 
     public function __construct(
         private readonly string $rootDir,
@@ -41,6 +42,7 @@ final class ApiRouter
             ['method' => 'GET', 'path' => '/api/v1/monitor/summary', 'description' => 'Monitoring snapshot for queue, schedules, and locks.'],
             ['method' => 'GET', 'path' => '/api/v1/plugins', 'description' => 'List discovered config-only plugins.'],
             ['method' => 'GET', 'path' => '/api/v1/profiles', 'description' => 'List built-in and plugin profile schemas.'],
+            ['method' => 'GET', 'path' => '/api/v1/dashboard', 'description' => 'Read consolidated dashboard data for local admin screens.'],
         ];
     }
 
@@ -150,6 +152,13 @@ final class ApiRouter
             $manager = new PluginManager($this->rootDir);
             $loader = new ProfileSchemaLoader($this->rootDir . '/config/profiles', $manager->profileFiles(true));
             return new ApiResponse(200, ['ok' => true, 'profiles' => $loader->list()]);
+        }
+
+        if ($method === 'GET' && $path === '/api/v1/dashboard') {
+            return new ApiResponse(200, [
+                'ok' => true,
+                'dashboard' => (new DashboardDataCollector($this->rootDir))->collect(),
+            ]);
         }
 
         return new ApiResponse(404, [
