@@ -1,8 +1,8 @@
-# MNB ScraperKit V3.7.0
+# MNB ScraperKit V3.8.0
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V3.7.0 is the Project Templates and Preset Packs Update. It adds ready-to-run project scaffolds, workflow templates, preset packs, project manifests, generated command files, and API-ready template metadata so users can start SEO, ecommerce, academic, and tender monitoring projects without manually wiring every command.
+V3.8.0 is the Security Audit and Compliance Toolkit Update. It adds release hygiene checks, secret scanning, responsible crawling policy output, browser-session safety review, plugin/config checks, API/dashboard surface review, and JSON/HTML compliance reports for safer public releases and internal automation.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,23 +16,24 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V3.7.0 update focus
+## V3.8.0 update focus
 
-V3.7.0 focuses on project startup speed and repeatable workflow setup. Instead of forcing users to assemble source connectors, profile schemas, job manifests, reports, datasets, and evaluation commands by hand, this release provides bundled project templates and preset packs.
+V3.8.0 focuses on security posture, release readiness, and responsible crawling compliance. It helps maintainers and professional users check a project/package before publishing, deploying, or running scheduled crawls.
 
-Templates and preset packs are configuration-only. They create local project folders, sample URL/source files, command cheat sheets, and job manifests. They do not run crawls automatically and they do not add unsafe behavior.
+The toolkit is read-only by default. It scans local files and configuration, reports risks, and generates policy/compliance output. It does not bypass robots policies, CAPTCHA, authentication, paywalls, private networks, or access controls.
 
-- Added project templates in `config/project-templates/` for SEO audits, ecommerce monitoring, academic metadata, and tender/government notice monitoring.
-- Added preset packs in `config/preset-packs/` for grouped profile/template workflows.
-- Added commands: `template:list`, `template:show`, `template:validate`, `template:create`, `preset:list`, `preset:show`, `preset:validate`, and `preset:install`.
-- Added generated project manifests: `mnb-project.json`.
-- Added generated preset manifests: `mnb-preset-pack.json`.
-- Added API routes for project template and preset pack discovery.
-- Kept V3.7.0 advanced export connectors, V3.5.0 distributed workers/Redis queue, V3.4.0 browser sessions/authorized login workflows, V3.3.0 rule builder/auto-profile assistant, V3.2.0 evaluation/benchmarking/training quality, V3.1.0 dataset versioning/annotations, V3.0.0 ML-ready intelligence, V2.0.0 dashboard/admin UI, V1.9.0 API/webhooks, V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
+- Added security audit layer under `src/Security/`.
+- Added commands: `security:audit`, `security:doctor`, `security:secrets-scan`, `security:policy`, and `compliance:report`.
+- Added responsible crawling policy template: `config/compliance-policy.example.json`.
+- Added checks for release hygiene, extra docs, committed `vendor/`, generated storage files, local env files, config JSON validity, browser-session domain guards, plugin PHP files, public API/dashboard surfaces, and common secret patterns.
+- Added JSON and HTML compliance/security reports.
+- Added API routes for security audit and compliance report summaries.
+- Kept V3.7.0 project templates/preset packs, V3.6.0 advanced export connectors, V3.5.0 distributed workers/Redis queue, V3.4.0 browser sessions/authorized login workflows, V3.3.0 rule builder/auto-profile assistant, V3.2.0 evaluation/benchmarking/training quality, V3.1.0 dataset versioning/annotations, V3.0.0 ML-ready intelligence, V2.0.0 dashboard/admin UI, V1.9.0 API/webhooks, V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
 
 ## Highlights
 
 - **Professional PHP CLI framework** built as a Composer package with Symfony Console commands.
+- **Security audit and compliance toolkit** for release hygiene, secret scanning, responsible crawling policy checks, browser-session safety review, plugin/config checks, and JSON/HTML compliance reports.
 - **Project templates and preset packs** for ready-to-run SEO, ecommerce, academic, tender, and research workflows with generated command files and job manifests.
 - **Advanced export connectors** for local artifact delivery, webhook payload automation, checksum manifests, connector validation, and downstream workflow handoff.
 - **Distributed workers and optional Redis queue** with adapter auto-selection, file fallback, job leases, heartbeats, distributed worker loops, and multi-worker deployment support.
@@ -61,7 +62,7 @@ Templates and preset packs are configuration-only. They create local project fol
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V3.7.0 CLI/library release.
+This section lists the main functionality available in the current V3.8.0 CLI/library release.
 
 ### Package and CLI
 
@@ -71,6 +72,25 @@ This section lists the main functionality available in the current V3.7.0 CLI/li
 - Global binary support through `vendor/bin/mnb-scraper`.
 - Built-in command list and per-command help screens.
 - CMD, PowerShell, cron, Windows Task Scheduler, and server automation friendly scripts/workflows.
+
+### Security audit and compliance toolkit
+
+- `security:audit` runs a package/project audit for release hygiene, secrets, config validity, browser sessions, plugins, generated storage files, and public API/dashboard surfaces.
+- `security:doctor` prints a concise security score and recommended actions.
+- `security:secrets-scan` scans local files for common committed secret patterns.
+- `security:policy` prints or writes a responsible crawling policy template.
+- `compliance:report` generates JSON or HTML compliance output for maintainers, internal teams, and release reviews.
+- `config/compliance-policy.example.json` documents safe defaults for responsible crawling, release hygiene, and secret handling.
+- API routes expose read-only security/compliance summaries for local admin/dashboard integrations.
+
+Example:
+
+```bash
+php bin/mnb-scraper security:audit --format=html --output=storage/security-audit.html
+php bin/mnb-scraper security:doctor
+php bin/mnb-scraper security:secrets-scan
+php bin/mnb-scraper compliance:report --format=html --output=storage/compliance-report.html
+```
 
 ### Project templates and preset packs
 
@@ -290,7 +310,7 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 - Plugin enable/disable controls by editing the manifest `enabled` flag.
 - Plugin doctor command for validating all discovered plugins.
 - Plugin-contributed profiles available to `profile:list`, `profile:show`, `extract:rules`, and pipeline/profile workflows.
-- Safe-by-default design: V3.7.0 does not automatically execute arbitrary plugin PHP code.
+- Safe-by-default design: V3.8.0 does not automatically execute arbitrary plugin PHP code.
 
 ### Lightweight API and webhooks
 
@@ -506,7 +526,7 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 ## Package direction
 
 - First public version: **1.0.0**
-- Current version: **3.7.0** — Advanced export connectors update
+- Current version: **3.8.0** — Advanced export connectors update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
@@ -1201,7 +1221,7 @@ ScraperKit focuses on practical export-ready outputs:
 - pipeline summaries
 - job manifest summaries
 
-PDF reports and richer role-based enterprise orchestration remain future upgrade areas. The current V3.7.0 release already includes CLI workflows, source connectors, exports/reports/bundles, export delivery connectors, local and distributed queue/worker commands, optional Redis queue support, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
+PDF reports and richer role-based enterprise orchestration remain future upgrade areas. The current V3.8.0 release already includes CLI workflows, source connectors, exports/reports/bundles, export delivery connectors, local and distributed queue/worker commands, optional Redis queue support, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
 
 ## Windows CMD
 
@@ -1228,7 +1248,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V3.7.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V3.8.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 

@@ -9,7 +9,7 @@
     {"path": "README.txt", "type": "text", "content": "{{project_name}}\nTender monitor starter. Add public/authorized notice URLs to urls.txt. Review robots and scope before crawling.\n"},
     {"path": "urls.txt", "type": "text", "content": "https://example.com/tenders\n"},
     {"path": "commands.txt", "type": "text", "content": "php bin/mnb-scraper bulk:crawl urls.txt --profile=tender --pipeline --job-dir=storage/{{project_name}} --gap-ms=1500\nphp bin/mnb-scraper export:failed storage/{{project_name}}/crawl.json --format=csv --output=storage/{{project_name}}/failed.csv\nphp bin/mnb-scraper report:summary storage/{{project_name}} --format=html --output=storage/{{project_name}}/summary.html\n"},
-    {"path": "jobs/tender-monitor-job.json", "type": "json", "content": {"job_version": "3.7.0", "name": "{{project_name}}", "command": "bulk:crawl", "args": ["urls.txt"], "options": {"profile": "tender", "pipeline": true, "job-dir": "storage/{{project_name}}", "gap-ms": 1500}}}
+    {"path": "jobs/tender-monitor-job.json", "type": "json", "content": {"job_version": "3.8.0", "name": "{{project_name}}", "command": "bulk:crawl", "args": ["urls.txt"], "options": {"profile": "tender", "pipeline": true, "job-dir": "storage/{{project_name}}", "gap-ms": 1500}}}
   ],
   "next_commands": ["php bin/mnb-scraper job:run jobs/tender-monitor-job.json", "php bin/mnb-scraper report:summary storage/{{project_name}} --format=html"]
 }

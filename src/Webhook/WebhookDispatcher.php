@@ -11,7 +11,7 @@ use Mnb\ScraperKit\Safety\UrlSafetyGuard;
  */
 final class WebhookDispatcher
 {
-    public const VERSION = '3.7.0';
+    public const VERSION = '3.8.0';
 
     public function __construct(private readonly ?UrlSafetyGuard $guard = null)
     {

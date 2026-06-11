@@ -25,7 +25,7 @@
       "path": "jobs/seo-audit-job.json",
       "type": "json",
       "content": {
-        "job_version": "3.7.0",
+        "job_version": "3.8.0",
         "name": "{{project_name}}",
         "command": "bulk:crawl",
         "args": ["urls.txt"],

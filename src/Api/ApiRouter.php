@@ -18,6 +18,8 @@ use Mnb\ScraperKit\Profile\ProfileSchemaLoader;
 use Mnb\ScraperKit\Queue\LocalJobQueue;
 use Mnb\ScraperKit\RuleBuilder\AutoProfileAssistant;
 use Mnb\ScraperKit\Template\TemplateCatalog;
+use Mnb\ScraperKit\Security\SecurityAuditScanner;
+use Mnb\ScraperKit\Security\ComplianceReportBuilder;
 
 /**
  * Lightweight read-mostly JSON API router used by the optional api:serve command.
@@ -28,7 +30,7 @@ use Mnb\ScraperKit\Template\TemplateCatalog;
  */
 final class ApiRouter
 {
-    public const VERSION = '3.7.0';
+    public const VERSION = '3.8.0';
 
     public function __construct(
         private readonly string $rootDir,
@@ -64,6 +66,8 @@ final class ApiRouter
             ['method' => 'GET', 'path' => '/api/v1/project-templates/{template_id}', 'description' => 'Read one project template manifest.'],
             ['method' => 'GET', 'path' => '/api/v1/preset-packs', 'description' => 'List bundled preset packs.'],
             ['method' => 'GET', 'path' => '/api/v1/preset-packs/{pack_id}', 'description' => 'Read one preset pack manifest.'],
+            ['method' => 'GET', 'path' => '/api/v1/security/audit', 'description' => 'Run read-only security audit summary for local admin/API consumers.'],
+            ['method' => 'GET', 'path' => '/api/v1/compliance/report', 'description' => 'Run read-only responsible crawling/compliance report.'],
             ['method' => 'GET', 'path' => '/api/v1/browser/sessions/{name}', 'description' => 'Read one authorized browser session profile.'],
         ];
     }
@@ -254,6 +258,21 @@ final class ApiRouter
             return new ApiResponse(200, [
                 'ok' => true,
                 'preset_pack' => $catalog->presetPack(rawurldecode($m[1]))->toArray(),
+            ]);
+        }
+
+
+        if ($method === 'GET' && $path === '/api/v1/security/audit') {
+            return new ApiResponse(200, [
+                'ok' => true,
+                'security' => (new SecurityAuditScanner($this->rootDir))->audit(),
+            ]);
+        }
+
+        if ($method === 'GET' && $path === '/api/v1/compliance/report') {
+            return new ApiResponse(200, [
+                'ok' => true,
+                'compliance' => (new ComplianceReportBuilder($this->rootDir))->build(),
             ]);
         }
 

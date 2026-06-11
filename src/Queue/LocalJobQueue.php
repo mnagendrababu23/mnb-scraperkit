@@ -13,7 +13,7 @@ namespace Mnb\ScraperKit\Queue;
  */
 final class LocalJobQueue
 {
-    public const VERSION = '3.7.0';
+    public const VERSION = '3.8.0';
 
     /** @var list<string> */
     public const STATES = ['pending', 'running', 'completed', 'failed', 'paused', 'cancelled', 'retry'];

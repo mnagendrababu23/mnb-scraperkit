@@ -6,7 +6,7 @@ namespace Mnb\ScraperKit\Pipeline;
 
 final class JobManifest
 {
-    public const VERSION = '3.7.0';
+    public const VERSION = '3.8.0';
 
     /**
      * @param array<string,mixed> $settings

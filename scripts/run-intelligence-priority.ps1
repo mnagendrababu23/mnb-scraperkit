@@ -1,2 +1,2 @@
-# MNB ScraperKit V3.7.0 - prioritize URLs before crawling
+# MNB ScraperKit V3.8.0 - prioritize URLs before crawling
 php "$PSScriptRoot/../bin/mnb-scraper" intelligence:priority @args

@@ -1,0 +1,23 @@
+{
+  "policy_version": "3.8.0",
+  "name": "MNB ScraperKit Responsible Crawling Policy",
+  "responsible_crawling": {
+    "respect_robots_when_enabled": true,
+    "require_allowed_domains_for_browser_sessions": true,
+    "block_private_networks_by_default": true,
+    "avoid_captcha_or_stealth_bypass": true,
+    "manual_login_only_for_authorized_workflows": true,
+    "do_not_store_passwords_by_default": true
+  },
+  "release_hygiene": {
+    "do_not_commit_vendor": true,
+    "do_not_commit_generated_storage_outputs": true,
+    "do_not_commit_local_env_files": true,
+    "single_readme_documentation": true
+  },
+  "secrets": {
+    "use_environment_variables": true,
+    "scan_before_release": true,
+    "rotate_any_accidentally_committed_secret": true
+  }
+}

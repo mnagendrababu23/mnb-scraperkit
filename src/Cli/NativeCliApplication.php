@@ -77,6 +77,10 @@ use Mnb\ScraperKit\Report\RecordExportService;
 use Mnb\ScraperKit\Report\ReportDataCollector;
 use Mnb\ScraperKit\Report\ReportExporter;
 use Mnb\ScraperKit\Safety\UrlSafetyGuard;
+use Mnb\ScraperKit\Security\CompliancePolicy;
+use Mnb\ScraperKit\Security\ComplianceReportBuilder;
+use Mnb\ScraperKit\Security\SecretScanner;
+use Mnb\ScraperKit\Security\SecurityAuditScanner;
 use Mnb\ScraperKit\Storage\CsvExporter;
 use Mnb\ScraperKit\Storage\JsonExporter;
 use Mnb\ScraperKit\Webhook\WebhookDispatcher;
@@ -242,6 +246,11 @@ final class NativeCliApplication
                 'preset:show' => $this->presetShow($args, $opts),
                 'preset:validate' => $this->presetValidate($args, $opts),
                 'preset:install' => $this->presetInstall($args, $opts),
+                'security:audit' => $this->securityAudit($args, $opts),
+                'security:doctor' => $this->securityDoctor($args, $opts),
+                'security:secrets-scan' => $this->securitySecretsScan($args, $opts),
+                'security:policy' => $this->securityPolicy($args, $opts),
+                'compliance:report' => $this->complianceReport($args, $opts),
                 'validate:records' => $this->validateRecords($args, $opts),
                 'job:summary' => $this->jobSummary($args, $opts),
                 'job:run' => $this->jobRun($args, $opts),
@@ -272,7 +281,7 @@ final class NativeCliApplication
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 3.7.0 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 3.8.0 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -388,6 +397,26 @@ final class NativeCliApplication
             'pipeline:run <crawl.json>' => 'Run professional record pipeline on crawl JSON.',
             'retry:failed <crawl.json>' => 'Create retry URL list from failed pages.',
             'export:records <records.json>' => 'Export pipeline records to JSON, CSV, XML, or HTML.',
+            'export:validation <records.json>' => 'Export validation issues from pipeline output as JSON, CSV, or XML.',
+            'export:connector-list' => 'List configured export delivery connectors for local folders and webhook automation.',
+            'export:connector-show <connector>' => 'Show one export connector configuration.',
+            'export:connector-validate' => 'Validate export connector configuration.',
+            'export:connector-test <connector>' => 'Dry-run an export connector delivery with a generated sample artifact.',
+            'export:deliver <connector>' => 'Deliver selected export/report/dataset files through a configured connector.',
+            'export:manifest <file>' => 'Build a checksum manifest for selected export artifacts.',
+            'template:list' => 'List bundled project templates for common crawl/extract/report workflows.',
+            'template:show <template>' => 'Show one project template manifest.',
+            'template:validate <template>' => 'Validate one project template manifest.',
+            'template:create <template>' => 'Create a ready-to-run project workspace from a template.',
+            'preset:list' => 'List bundled preset packs that group profiles, templates, and workflow examples.',
+            'preset:show <pack>' => 'Show one preset pack manifest.',
+            'preset:validate <pack>' => 'Validate one preset pack manifest.',
+            'preset:install <pack>' => 'Install one preset pack into a project folder.',
+            'security:audit' => 'Run package/project security audit for release hygiene, secrets, configs, sessions, plugins, and public surfaces.',
+            'security:doctor' => 'Show concise security posture summary and recommended release actions.',
+            'security:secrets-scan' => 'Scan project files for common committed secret patterns before release.',
+            'security:policy' => 'Write or show the responsible crawling and release compliance policy template.',
+            'compliance:report' => 'Generate a JSON or HTML responsible crawling/compliance report from the security audit.',
             'validate:records <records.json>' => 'Validate records using required fields.',
             'job:summary <job-dir>' => 'Show job manifest and pipeline/crawl summaries.',
             'job:run <job-id|job.json>' => 'Run one queued job by ID, or run a legacy JSON job config file.',
@@ -711,7 +740,7 @@ final class NativeCliApplication
     {
         $templates = array_map(static fn($template): array => $template->summary(), (new TemplateCatalog($this->rootDir))->templates());
         if ($this->bool($opts, 'json')) {
-            $this->outJson(['ok' => true, 'template_version' => '3.7.0', 'templates' => $templates]);
+            $this->outJson(['ok' => true, 'template_version' => '3.8.0', 'templates' => $templates]);
             return 0;
         }
         $this->out('Project templates:');
@@ -779,7 +808,7 @@ final class NativeCliApplication
     {
         $packs = array_map(static fn($pack): array => $pack->summary(), (new TemplateCatalog($this->rootDir))->presetPacks());
         if ($this->bool($opts, 'json')) {
-            $this->outJson(['ok' => true, 'preset_pack_version' => '3.7.0', 'preset_packs' => $packs]);
+            $this->outJson(['ok' => true, 'preset_pack_version' => '3.8.0', 'preset_packs' => $packs]);
             return 0;
         }
         $this->out('Preset packs:');
@@ -832,6 +861,104 @@ final class NativeCliApplication
             }
         }
         return 0;
+    }
+
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function securityAudit(array $args, array $opts): int
+    {
+        $policy = $this->optString($opts, 'policy') ?: $this->optString($opts, 'config');
+        $format = strtolower($this->optString($opts, 'format', 'json') ?? 'json');
+        $output = $this->optString($opts, 'output');
+        $report = (new SecurityAuditScanner($this->rootDir))->audit($policy);
+        if ($format === 'html') {
+            $html = (new ComplianceReportBuilder($this->rootDir))->renderHtml([
+                'policy_name' => (string) ($report['policy']['name'] ?? 'MNB ScraperKit Responsible Crawling Policy'),
+                'score' => (int) ($report['score'] ?? 0),
+                'status' => (string) ($report['status'] ?? ''),
+                'summary' => (array) ($report['summary'] ?? []),
+                'findings' => (array) ($report['findings'] ?? []),
+            ]);
+            $output ??= $this->storagePath('security-audit-' . date('Ymd-His') . '.html');
+            $this->ensureDir(dirname($output));
+            file_put_contents($output, $html);
+            $this->out('Security audit HTML: ' . $output);
+        } elseif ($output) {
+            $this->writeJson($output, $report);
+            $this->out('Security audit JSON: ' . $output);
+        } else {
+            $this->outJson($report);
+        }
+        return !empty($report['ok']) ? 0 : ($this->bool($opts, 'fail-on-high') ? 2 : 0);
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function securityDoctor(array $args, array $opts): int
+    {
+        $report = (new SecurityAuditScanner($this->rootDir))->audit($this->optString($opts, 'policy') ?: $this->optString($opts, 'config'));
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($report);
+            return !empty($report['ok']) ? 0 : 2;
+        }
+        $summary = (array) ($report['summary'] ?? []);
+        $this->out('MNB ScraperKit security doctor');
+        $this->out('Score: ' . (string) ($report['score'] ?? 0) . ' / 100');
+        $this->out('Status: ' . (string) ($report['status'] ?? 'unknown'));
+        $this->out(sprintf('Findings: critical=%d high=%d medium=%d low=%d total=%d', (int) ($summary['critical'] ?? 0), (int) ($summary['high'] ?? 0), (int) ($summary['medium'] ?? 0), (int) ($summary['low'] ?? 0), (int) ($summary['total'] ?? 0)));
+        foreach (array_slice((array) ($report['recommendations'] ?? []), 0, 5) as $recommendation) {
+            $this->out('  - ' . (string) $recommendation);
+        }
+        return !empty($report['ok']) ? 0 : 2;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function securitySecretsScan(array $args, array $opts): int
+    {
+        $root = $args[0] ?? $this->optString($opts, 'dir') ?? $this->rootDir;
+        $result = (new SecretScanner())->scan((string) $root);
+        $output = $this->optString($opts, 'output');
+        if ($output) {
+            $this->writeJson($output, $result);
+            $this->out('Secrets scan JSON: ' . $output);
+        } else {
+            $this->outJson($result);
+        }
+        return !empty($result['ok']) ? 0 : 2;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function securityPolicy(array $args, array $opts): int
+    {
+        $output = $this->optString($opts, 'output');
+        if ($output) {
+            CompliancePolicy::writeExample($output);
+            $this->out('Security/compliance policy written: ' . $output);
+            return 0;
+        }
+        $this->outJson(CompliancePolicy::defaults());
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function complianceReport(array $args, array $opts): int
+    {
+        $policy = $this->optString($opts, 'policy') ?: $this->optString($opts, 'config');
+        $format = strtolower($this->optString($opts, 'format', 'json') ?? 'json');
+        $output = $this->optString($opts, 'output');
+        $builder = new ComplianceReportBuilder($this->rootDir);
+        $report = $builder->build($policy);
+        if ($format === 'html') {
+            $output ??= $this->storagePath('compliance-report-' . date('Ymd-His') . '.html');
+            $this->ensureDir(dirname($output));
+            file_put_contents($output, $builder->renderHtml($report));
+            $this->out('Compliance report HTML: ' . $output);
+        } elseif ($output) {
+            $this->writeJson($output, $report);
+            $this->out('Compliance report JSON: ' . $output);
+        } else {
+            $this->outJson($report);
+        }
+        return !empty($report['ok']) ? 0 : 2;
     }
 
     /** @param array<int,string> $args @param array<string,mixed> $opts */
@@ -1444,7 +1571,7 @@ final class NativeCliApplication
         $manifest = $context['manifest'];
         $datasetDir = (string) ($manifest['_dataset_dir'] ?? $this->rootDir . '/storage/datasets');
         $output = $this->optString($opts, 'output') ?: rtrim($datasetDir, '/\\') . '/annotations-export.' . ($format === 'csv' ? 'csv' : ($format === 'json' ? 'json' : 'jsonl'));
-        $this->exportRows($rows, $output, $format, ['annotation_export_version' => '3.7.0', 'rows_total' => count($rows)]);
+        $this->exportRows($rows, $output, $format, ['annotation_export_version' => '3.8.0', 'rows_total' => count($rows)]);
         $this->outJson(['ok' => true, 'rows_exported' => count($rows), 'format' => $format, 'output' => $output]);
         return 0;
     }
@@ -1580,7 +1707,7 @@ final class NativeCliApplication
         $output = $this->optString($opts, 'output') ?: $this->storagePath('webhooks/test-' . date('Ymd-His') . '.json');
         $payload = [
             'message' => 'MNB ScraperKit webhook test event',
-            'version' => '3.7.0',
+            'version' => '3.8.0',
             'generated_at' => date(DATE_ATOM),
         ];
         $dispatcher = new WebhookDispatcher($this->safetyGuard());
@@ -2351,7 +2478,7 @@ final class NativeCliApplication
         $store = new ExportConnectorStore($this->rootDir);
         $connectors = $store->list($this->optString($opts, 'config'));
         $data = [
-            'export_connector_version' => '3.7.0',
+            'export_connector_version' => '3.8.0',
             'connectors_total' => count($connectors),
             'connectors' => $connectors,
         ];
@@ -2379,7 +2506,7 @@ final class NativeCliApplication
             throw new \InvalidArgumentException('Usage: php bin/mnb-scraper export:connector-show <connector-id>');
         }
         $connector = (new ExportConnectorStore($this->rootDir))->show($id, $this->optString($opts, 'config'));
-        $this->outJson(['ok' => true, 'export_connector_version' => '3.7.0', 'connector' => $connector]);
+        $this->outJson(['ok' => true, 'export_connector_version' => '3.8.0', 'connector' => $connector]);
         return 0;
     }
 
@@ -2408,7 +2535,7 @@ final class NativeCliApplication
         $sample = $this->storagePath('export-connector-test/sample-export.json');
         $this->writeJson($sample, [
             'export_connector_test' => true,
-            'version' => '3.7.0',
+            'version' => '3.8.0',
             'generated_at' => date(DATE_ATOM),
             'message' => 'Sample export artifact for connector dry run.',
         ]);
@@ -4257,7 +4384,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $result = (new DatabaseMigrator($pdo, $config->driver()))->migrate();
         $this->outJson([
             'ok' => true,
-            'version' => '3.7.0',
+            'version' => '3.8.0',
             'driver' => $result['driver'],
             'statements_executed' => $result['statements'],
             'tables' => $result['tables'],
@@ -4273,7 +4400,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $pdo = (new DatabaseConnectionFactory())->connect($config);
         $this->outJson([
             'ok' => true,
-            'version' => '3.7.0',
+            'version' => '3.8.0',
             'driver' => $config->driver(),
             'pdo_driver' => (string) $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME),
             'dsn' => $this->safeDsn($config->dsn),
@@ -4834,7 +4961,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '3.7.0',
+            'checkpoint_version' => '3.8.0',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),

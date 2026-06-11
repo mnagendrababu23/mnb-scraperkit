@@ -1,2 +1,2 @@
-# MNB ScraperKit V3.7.0 - test authorized browser session
+# MNB ScraperKit V3.8.0 - test authorized browser session
 php "$PSScriptRoot/../bin/mnb-scraper" browser:session-test client_portal https://example.com/dashboard --browser=auto --json

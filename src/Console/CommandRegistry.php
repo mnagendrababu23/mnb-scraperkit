@@ -135,6 +135,11 @@ final class CommandRegistry
             'preset:show' => 'Show one preset pack manifest.',
             'preset:validate' => 'Validate one preset pack manifest.',
             'preset:install' => 'Install one preset pack into a project folder.',
+            'security:audit' => 'Run package/project security audit for release hygiene, secrets, configs, sessions, plugins, and public surfaces.',
+            'security:doctor' => 'Show concise security posture summary and recommended release actions.',
+            'security:secrets-scan' => 'Scan project files for common committed secret patterns before release.',
+            'security:policy' => 'Write or show the responsible crawling and release compliance policy template.',
+            'compliance:report' => 'Generate a JSON or HTML responsible crawling/compliance report from the security audit.',
             'validate:records' => 'Validate records using required fields.',
             'job:summary' => 'Show job manifest, crawl summary, and pipeline summary.',
             'job:run' => 'Run one queued job by ID, or run a legacy JSON job configuration.',
@@ -429,6 +434,8 @@ final class CommandRegistry
             'template-dir',
             'preset-dir',
             'allowed-extension',
+            'policy',
+            'fail-on-high',
         ];
     }
 
@@ -493,6 +500,7 @@ final class CommandRegistry
             'once',
             'stop-on-error',
             'send',
+            'fail-on-high',
         ];
     }
 }

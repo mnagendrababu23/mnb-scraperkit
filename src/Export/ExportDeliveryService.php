@@ -8,7 +8,7 @@ use Mnb\ScraperKit\Safety\UrlSafetyGuard;
 
 final class ExportDeliveryService
 {
-    public const VERSION = '3.7.0';
+    public const VERSION = '3.8.0';
 
     public function __construct(private readonly string $rootDir, private readonly ?UrlSafetyGuard $safetyGuard = null)
     {
