@@ -1070,7 +1070,7 @@ ScraperKit focuses on practical export-ready outputs:
 - pipeline summaries
 - job manifest summaries
 
-Dashboard UI, PDF reports, Redis/distributed queues, browser-worker orchestration, and ML-assisted intelligence are future upgrade areas, not required for the current V1.x CLI release.
+PDF reports, Redis/distributed queues, and dedicated browser-worker orchestration are future upgrade areas. The current V3.1.0 release already includes CLI workflows, queue/worker commands, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
 
 ## Windows CMD
 
