@@ -7,7 +7,7 @@ namespace Mnb\ScraperKit\Distributed;
 /**
  * Distributed-compatible queue adapter using files.
  *
- * This is useful for tests, local development, and users who want the v4.0.0
+ * This is useful for tests, local development, and users who want the v4.0.1
  * distributed worker contract without running Redis yet.
  */
 final class FileDistributedQueueAdapter implements DistributedQueueAdapterInterface

@@ -1,5 +1,5 @@
 @echo off
-REM MNB ScraperKit V4.0.0 - optional lightweight JSON API server
+REM MNB ScraperKit V4.0.1 - optional lightweight JSON API server
 set HOST=%1
 if "%HOST%"=="" set HOST=127.0.0.1
 set PORT=%2

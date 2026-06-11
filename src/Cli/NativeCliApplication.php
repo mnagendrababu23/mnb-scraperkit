@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Mnb\ScraperKit\Cli;
 
 use Mnb\ScraperKit\Browser\BrowserCrawlService;
+use Mnb\ScraperKit\Cli\Commands\HardeningCommandTrait;
+use Mnb\ScraperKit\Hardening\CommandErrorRenderer;
 use Mnb\ScraperKit\Browser\BrowserFallbackDetector;
 use Mnb\ScraperKit\Browser\BrowserOptions;
 use Mnb\ScraperKit\Browser\BrowserPageResult;
@@ -105,6 +107,8 @@ use Mnb\ScraperKit\Template\TemplateInstaller;
 
 final class NativeCliApplication
 {
+    use HardeningCommandTrait;
+
     /** @var array<string,mixed> */
     private array $config;
     private string $rootDir;
@@ -128,6 +132,10 @@ final class NativeCliApplication
             return match ($command) {
                 '', 'help', '--help', '-h' => $this->help(),
                 'list' => $this->listCommands(),
+                'hardening:doctor' => $this->hardeningDoctor($args, $opts),
+                'ci:check' => $this->ciCheck($args, $opts),
+                'benchmark:run' => $this->benchmarkRun($args, $opts),
+                'compat:commands' => $this->compatCommands($args, $opts),
                 'crawl' => $this->crawl($args, $opts),
                 'browser:test' => $this->browserTest($args, $opts),
                 'browser:session-create' => $this->browserSessionCreate($args, $opts),
@@ -288,14 +296,14 @@ final class NativeCliApplication
                 default => $this->unknown($command),
             };
         } catch (\Throwable $e) {
-            $this->err('ERROR: ' . $e->getMessage());
+            $this->err(CommandErrorRenderer::exception($command, $e));
             return 1;
         }
     }
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 4.0.0 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 4.0.1 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -305,6 +313,10 @@ final class NativeCliApplication
     {
         $commands = [
             'crawl <url>' => 'Crawl one URL/site with rules, presets, common data, optional browser fallback, and optional pipeline.',
+            'hardening:doctor' => 'Run production-readiness checks for CI, command contracts, release hygiene, optional runtimes, and compatibility posture.',
+            'ci:check' => 'Run strict release-readiness checks for CI and pre-release validation.',
+            'benchmark:run' => 'Run deterministic local micro-benchmarks without network calls.',
+            'compat:commands' => 'Show or validate the public command/option compatibility contract.',
             'browser:test <url>' => 'Diagnose browser fallback need and optionally render one URL with the optional browser adapter.',
             'browser:session-create <name>' => 'Create an allowed-domain browser session profile for authorized login workflows.',
             'browser:session-list' => 'List browser session profiles and cookie/session files.',
@@ -764,7 +776,7 @@ final class NativeCliApplication
     {
         $templates = array_map(static fn($template): array => $template->summary(), (new TemplateCatalog($this->rootDir))->templates());
         if ($this->bool($opts, 'json')) {
-            $this->outJson(['ok' => true, 'template_version' => '4.0.0', 'templates' => $templates]);
+            $this->outJson(['ok' => true, 'template_version' => '4.0.1', 'templates' => $templates]);
             return 0;
         }
         $this->out('Project templates:');
@@ -832,7 +844,7 @@ final class NativeCliApplication
     {
         $packs = array_map(static fn($pack): array => $pack->summary(), (new TemplateCatalog($this->rootDir))->presetPacks());
         if ($this->bool($opts, 'json')) {
-            $this->outJson(['ok' => true, 'preset_pack_version' => '4.0.0', 'preset_packs' => $packs]);
+            $this->outJson(['ok' => true, 'preset_pack_version' => '4.0.1', 'preset_packs' => $packs]);
             return 0;
         }
         $this->out('Preset packs:');
@@ -1595,7 +1607,7 @@ final class NativeCliApplication
         $manifest = $context['manifest'];
         $datasetDir = (string) ($manifest['_dataset_dir'] ?? $this->rootDir . '/storage/datasets');
         $output = $this->optString($opts, 'output') ?: rtrim($datasetDir, '/\\') . '/annotations-export.' . ($format === 'csv' ? 'csv' : ($format === 'json' ? 'json' : 'jsonl'));
-        $this->exportRows($rows, $output, $format, ['annotation_export_version' => '4.0.0', 'rows_total' => count($rows)]);
+        $this->exportRows($rows, $output, $format, ['annotation_export_version' => '4.0.1', 'rows_total' => count($rows)]);
         $this->outJson(['ok' => true, 'rows_exported' => count($rows), 'format' => $format, 'output' => $output]);
         return 0;
     }
@@ -1731,7 +1743,7 @@ final class NativeCliApplication
         $output = $this->optString($opts, 'output') ?: $this->storagePath('webhooks/test-' . date('Ymd-His') . '.json');
         $payload = [
             'message' => 'MNB ScraperKit webhook test event',
-            'version' => '4.0.0',
+            'version' => '4.0.1',
             'generated_at' => date(DATE_ATOM),
         ];
         $dispatcher = new WebhookDispatcher($this->safetyGuard());
@@ -2502,7 +2514,7 @@ final class NativeCliApplication
         $store = new ExportConnectorStore($this->rootDir);
         $connectors = $store->list($this->optString($opts, 'config'));
         $data = [
-            'export_connector_version' => '4.0.0',
+            'export_connector_version' => '4.0.1',
             'connectors_total' => count($connectors),
             'connectors' => $connectors,
         ];
@@ -2530,7 +2542,7 @@ final class NativeCliApplication
             throw new \InvalidArgumentException('Usage: php bin/mnb-scraper export:connector-show <connector-id>');
         }
         $connector = (new ExportConnectorStore($this->rootDir))->show($id, $this->optString($opts, 'config'));
-        $this->outJson(['ok' => true, 'export_connector_version' => '4.0.0', 'connector' => $connector]);
+        $this->outJson(['ok' => true, 'export_connector_version' => '4.0.1', 'connector' => $connector]);
         return 0;
     }
 
@@ -2559,7 +2571,7 @@ final class NativeCliApplication
         $sample = $this->storagePath('export-connector-test/sample-export.json');
         $this->writeJson($sample, [
             'export_connector_test' => true,
-            'version' => '4.0.0',
+            'version' => '4.0.1',
             'generated_at' => date(DATE_ATOM),
             'message' => 'Sample export artifact for connector dry run.',
         ]);
@@ -2646,7 +2658,7 @@ final class NativeCliApplication
         $audit = new AuditLog($this->rootDir);
         $data = [
             'ok' => true,
-            'enterprise_version' => '4.0.0',
+            'enterprise_version' => '4.0.1',
             'storage_dir' => $this->rootDir . '/storage/enterprise',
             'workspaces' => $workspaceStore->summary(),
             'users' => $userStore->summary(),
@@ -4201,8 +4213,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
 
     private function unknown(string $command): int
     {
-        $this->err('Unknown command: ' . $command);
-        $this->err('Run: php bin/mnb-scraper list');
+        $this->err(CommandErrorRenderer::unknownCommand($command));
         return 1;
     }
 
@@ -4571,7 +4582,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $result = (new DatabaseMigrator($pdo, $config->driver()))->migrate();
         $this->outJson([
             'ok' => true,
-            'version' => '4.0.0',
+            'version' => '4.0.1',
             'driver' => $result['driver'],
             'statements_executed' => $result['statements'],
             'tables' => $result['tables'],
@@ -4587,7 +4598,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $pdo = (new DatabaseConnectionFactory())->connect($config);
         $this->outJson([
             'ok' => true,
-            'version' => '4.0.0',
+            'version' => '4.0.1',
             'driver' => $config->driver(),
             'pdo_driver' => (string) $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME),
             'dsn' => $this->safeDsn($config->dsn),
@@ -5148,7 +5159,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '4.0.0',
+            'checkpoint_version' => '4.0.1',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),

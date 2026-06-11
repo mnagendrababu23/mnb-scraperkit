@@ -34,7 +34,7 @@ use Mnb\ScraperKit\Enterprise\WorkspaceStore;
  */
 final class ApiRouter
 {
-    public const VERSION = '4.0.0';
+    public const VERSION = '4.0.1';
 
     public function __construct(
         private readonly string $rootDir,

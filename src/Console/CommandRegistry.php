@@ -14,6 +14,10 @@ final class CommandRegistry
     {
         return [
             'crawl' => 'Crawl one URL/site with safety rules, presets, common data, optional browser fallback, and optional professional pipeline.',
+            'hardening:doctor' => 'Run production-readiness checks for CI, command contracts, release hygiene, optional runtimes, and compatibility posture.',
+            'ci:check' => 'Run strict release-readiness checks intended for CI and pre-release validation.',
+            'benchmark:run' => 'Run deterministic local micro-benchmarks for URL normalization, safety checks, JSON handling, and command metadata.',
+            'compat:commands' => 'Show or validate the public command/option compatibility contract for backward-compatible releases.',
             'browser:test' => 'Diagnose browser fallback need and optionally render one URL with the optional browser adapter.',
             'browser:session-create' => 'Create an allowed-domain browser session profile for authorized login workflows.',
             'browser:session-list' => 'List browser session profiles and cookie/session files.',
@@ -457,6 +461,9 @@ final class CommandRegistry
             'active-only',
             'retention-days',
             'action',
+            'strict',
+            'iterations',
+            'validate',
         ];
     }
 
@@ -523,6 +530,8 @@ final class CommandRegistry
             'send',
             'fail-on-high',
             'active-only',
+            'strict',
+            'validate',
         ];
     }
 }
