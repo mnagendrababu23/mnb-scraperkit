@@ -10,6 +10,8 @@ use Mnb\ScraperKit\Browser\BrowserOptions;
 use Mnb\ScraperKit\Browser\BrowserPageResult;
 use Mnb\ScraperKit\Console\CommandRegistry;
 use Mnb\ScraperKit\Cli\NativeCliApplication;
+use Mnb\ScraperKit\Database\DatabaseConfig;
+use Mnb\ScraperKit\Database\DatabaseSchema;
 use Mnb\ScraperKit\Core\FailureClassifier;
 use Mnb\ScraperKit\Core\PageResult;
 use Mnb\ScraperKit\Core\RateLimiter;
@@ -33,6 +35,32 @@ use Mnb\ScraperKit\Source\Json\JsonUrlSourceReader;
 use Mnb\ScraperKit\Support\UrlNormalizer;
 
 $tests = [];
+
+
+$tests['database config defaults to local SQLite and schema exposes storage tables'] = function (): void {
+    $root = dirname(__DIR__);
+    $config = DatabaseConfig::fromArray([], $root);
+    assert($config->driver() === 'sqlite', 'default database driver should be sqlite');
+    assert(str_contains($config->dsn, '/storage/database/mnb-scraperkit.sqlite'), 'default SQLite path mismatch');
+    $tables = DatabaseSchema::tableNames();
+    foreach (['mnb_storage_jobs', 'mnb_storage_pages', 'mnb_storage_records', 'mnb_storage_failed_urls', 'mnb_storage_validation_issues', 'mnb_storage_exports'] as $table) {
+        assert(in_array($table, $tables, true), 'missing storage table: ' . $table);
+    }
+    assert(count(DatabaseSchema::statements('sqlite')) >= 6, 'SQLite schema statements missing');
+    assert(count(DatabaseSchema::statements('mysql')) >= 6, 'MySQL schema statements missing');
+};
+
+$tests['database command registry exposes v1.6.0 database commands and options'] = function (): void {
+    $commands = CommandRegistry::commands();
+    foreach (['db:init', 'db:test', 'db:status', 'db:save-crawl', 'db:save-pipeline', 'db:export'] as $command) {
+        assert(isset($commands[$command]), 'missing database command: ' . $command);
+    }
+    $options = CommandRegistry::optionNames();
+    foreach (['database-url', 'sqlite', 'db-user', 'db-pass', 'table', 'limit'] as $option) {
+        assert(in_array($option, $options, true), 'missing database option: ' . $option);
+    }
+};
+
 
 
 $tests['Symfony command option registry has no duplicate option names'] = function (): void {
@@ -126,7 +154,7 @@ $tests['failure classifier maps common crawl failures'] = function (): void {
     assert(FailureClassifier::fromSafetyMessage('URL safety check failed: private/reserved IP targets are blocked.') === 'private_ip_blocked');
 };
 
-$tests['rate limiter accepts v1.5.0 pacing options without sleeping unnecessarily'] = function (): void {
+$tests['rate limiter accepts v1.6.0 pacing options without sleeping unnecessarily'] = function (): void {
     $limiter = new RateLimiter();
     $options = CrawlOptions::fromArray([
         'delay_ms' => 0,
@@ -144,7 +172,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
     mkdir($dir, 0775, true);
     $checkpoint = $dir . '/checkpoint.json';
     file_put_contents($checkpoint, json_encode([
-        'checkpoint_version' => '1.5.0',
+        'checkpoint_version' => '1.6.0',
         'updated_at' => '2026-01-01T00:00:00+00:00',
         'queues' => [
             'pending' => ['https://example.com/pending'],
@@ -158,7 +186,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
 
     $manifestPath = JobManifest::write($dir, 'bulk-crawl', [], ['checkpoint' => $checkpoint], []);
     $manifest = JobManifest::read($manifestPath);
-    assert(($manifest['version'] ?? null) === '1.5.0');
+    assert(($manifest['version'] ?? null) === '1.6.0');
     assert(($manifest['resume']['counts']['pending'] ?? null) === 1);
     assert(($manifest['resume']['last_processed_url'] ?? null) === 'https://example.com/done');
 };
@@ -346,7 +374,7 @@ $tests['export and report upgrade creates XML, HTML summary and ZIP bundle'] = f
     mkdir($dir . '/logs', 0775, true);
 
     file_put_contents($dir . '/job-manifest.json', json_encode([
-        'version' => '1.5.0',
+        'version' => '1.6.0',
         'job_id' => 'test-job',
         'type' => 'crawl',
         'resume' => ['counts' => ['completed' => 1, 'failed' => 1]],

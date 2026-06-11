@@ -1,8 +1,8 @@
-# MNB ScraperKit V1.5.0
+# MNB ScraperKit V1.6.0
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V1.5.0 is the Browser-Assisted Crawling Update. It adds an optional browser fallback layer for JavaScript-heavy pages while keeping normal PHP HTTP crawling as the default. Browser rendering is optional and can be used in auto mode, forced mode, queued jobs, and worker runs without making browser dependencies mandatory for all users.
+V1.6.0 is the Database Storage Layer Update. It adds optional PDO-based SQLite/MySQL storage for crawl jobs, pages, pipeline records, failed URLs, validation issues, and export metadata while keeping file-based JSON/CSV workflows as the default.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,22 +16,21 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V1.5.0 update focus
+## V1.6.0 update focus
 
-V1.5.0 focuses on optional browser-assisted crawling for pages where fast PHP HTTP crawling is not enough. The normal HTTP crawler remains the default. Browser rendering is used only when requested or when auto fallback decides it is needed.
+V1.6.0 focuses on optional database storage for users who want persistent crawl history, searchable records, audit data, and reusable job outputs. The existing file-based outputs remain the default, so the library stays lightweight for CLI users.
 
-- Added browser option model for `off`, `auto`, and `always` modes.
-- Added `browser:test` to diagnose whether a URL likely needs browser rendering.
-- Added browser fallback detection for low-text pages, SPA/root app markers, JavaScript-required messages, challenge/browser-required signals, and missing required fields.
-- Added optional Panther/Chrome browser adapter support without making browser dependencies required.
-- Added rendered HTML and screenshot artifact support when browser rendering is enabled.
-- Added browser options for wait selector, wait time, viewport, timeout, asset blocking, and output folder.
-- Added queue/worker forwarding for browser options so queued jobs can run with browser fallback.
-- Kept V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
+- Added PDO-based database configuration for SQLite and MySQL/MariaDB.
+- Added `db:init`, `db:test`, `db:status`, `db:save-crawl`, `db:save-pipeline`, and `db:export` commands.
+- Added storage tables for jobs, pages, normalized pipeline records, failed URLs, validation issues, and export metadata.
+- Added SQLite schema for local/single-user automation and MySQL schema for server/team usage.
+- Added safe DSN handling and optional database usage without making DB storage required for all users.
+- Kept V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
 
 ## Highlights
 
 - **Professional PHP CLI framework** built as a Composer package with Symfony Console commands.
+- **Optional database storage layer** using PDO with SQLite and MySQL/MariaDB support for jobs, pages, records, failures, validation issues, and export metadata.
 - **Optional browser-assisted crawling** for JavaScript-heavy pages using `--browser=auto` or `--browser=always`, with optional rendered HTML and screenshot artifacts.
 - **Queue and worker commands** for local file-based job automation, worker loops, job pause/resume/cancel, failed queue retry, and worker locks.
 - **Safe crawling controls** including URL safety checks, redirect safety, scope rules, robots-aware behavior, userinfo blocking, URL length limits, and private/reserved IP protection.
@@ -43,12 +42,12 @@ V1.5.0 focuses on optional browser-assisted crawling for pages where fast PHP HT
 - **Professional exports and reports** including JSON, CSV, XML, HTML summaries, failed URL reports, validation issue reports, and ZIP project bundles.
 - **Automation friendly** for PHP CLI, CMD, PowerShell, cron, Windows Task Scheduler, and server-side workflows.
 - **Source connector system** for collecting crawl targets from sitemaps, RSS/Atom feeds, CSV files, JSON files, generic JSON APIs, PLOS, and Elsevier/ScienceDirect.
-- **Future-ready architecture** designed for later expansion into dashboards, database/Redis queues, API/webhooks, richer reports, and ML-assisted intelligence.
+- **Future-ready architecture** designed for later expansion into dashboards, Redis queues, API/webhooks, richer reports, and ML-assisted intelligence.
 
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V1.5.0 CLI/library release.
+This section lists the main functionality available in the current V1.6.0 CLI/library release.
 
 ### Package and CLI
 
@@ -115,6 +114,20 @@ This section lists the main functionality available in the current V1.5.0 CLI/li
 - Multi-value fields using `many: true` or `[]` rule suffix.
 - Common data extraction for emails, phones, metadata, links, documents, and profile-oriented data.
 - Common data type/profile listing command.
+
+### Database storage layer
+
+- Optional PDO-based storage layer.
+- SQLite support for local development, CLI automation, and single-machine jobs.
+- MySQL/MariaDB support for server and team workflows.
+- Database migration command using built-in schema definitions.
+- Database connection test command.
+- Database status command with table counts.
+- Save crawl JSON pages into database tables.
+- Save pipeline records and validation issues into database tables.
+- Export supported database tables to JSON or CSV.
+- Storage tables for jobs, pages, normalized records, failed URLs, validation issues, and export metadata.
+- File-based JSON/CSV output remains default; database storage is optional.
 
 ### Browser-assisted crawling
 
@@ -281,7 +294,7 @@ This section lists the main functionality available in the current V1.5.0 CLI/li
 ## Package direction
 
 - First public version: **1.0.0**
-- Current version: **1.5.0** — browser-assisted crawling update
+- Current version: **1.6.0** — database storage layer update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
@@ -483,6 +496,42 @@ php bin/mnb-scraper list
 php bin/mnb-scraper crawl --help
 php bin/mnb-scraper pipeline:run --help
 ```
+
+## Database storage examples
+
+Initialize a default local SQLite database:
+
+```bash
+php bin/mnb-scraper db:init
+```
+
+Use an explicit SQLite file:
+
+```bash
+php bin/mnb-scraper db:init --sqlite=storage/database/project.sqlite
+php bin/mnb-scraper db:status --sqlite=storage/database/project.sqlite
+```
+
+Save crawl output and pipeline records:
+
+```bash
+php bin/mnb-scraper db:save-crawl storage/jobs/example/crawl.json --job-id=example
+php bin/mnb-scraper db:save-pipeline storage/jobs/example/pipeline/records.json --job-id=example
+```
+
+Export stored records:
+
+```bash
+php bin/mnb-scraper db:export mnb_storage_records --format=csv --output=records-from-db.csv
+```
+
+Use MySQL/MariaDB with a PDO DSN:
+
+```bash
+php bin/mnb-scraper db:init --database-url="mysql:host=127.0.0.1;dbname=mnb_scraperkit;charset=utf8mb4" --db-user=root --db-pass=secret
+```
+
+Database storage is optional. Normal JSON/CSV exports continue to work without SQLite, MySQL, or any database setup.
 
 ## Source connector examples
 
@@ -794,7 +843,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V1.5.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V1.6.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 

@@ -489,7 +489,7 @@ final class SequentialUrlProcessor
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '1.5.0',
+            'checkpoint_version' => '1.6.0',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),

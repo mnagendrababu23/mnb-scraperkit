@@ -1,9 +1,9 @@
 {
   "name": "mnb/scraperkit",
-  "description": "MNB ScraperKit V1.5.0 - professional PHP crawling and data extraction framework with Symfony Console commands, safe crawling, source connectors, exports, reports, profile schemas, queue workers, and optional browser-assisted crawling.",
+  "description": "MNB ScraperKit V1.6.0 - professional PHP crawling and data extraction framework with Symfony Console commands, safe crawling, source connectors, exports, reports, profile schemas, queue workers, browser fallback, and optional database storage.",
   "type": "library",
   "license": "MIT",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "require": {
     "php": ">=8.2",
     "ext-dom": "*",
@@ -15,7 +15,9 @@
     "ext-curl": "Recommended for the cURL HTTP engine. The stream/file_get_contents engine works without cURL when allow_url_fopen is enabled.",
     "ext-pdo": "Needed only for database storage features.",
     "symfony/panther": "Optional browser-assisted crawling adapter for JavaScript-rendered pages. Normal PHP HTTP crawling works without it.",
-    "chrome/chromium": "Needed only when using browser-assisted crawling through Panther/Chrome."
+    "chrome/chromium": "Needed only when using browser-assisted crawling through Panther/Chrome.",
+    "pdo_sqlite": "Optional SQLite driver for local database storage.",
+    "pdo_mysql": "Optional MySQL/MariaDB driver for server database storage."
   },
   "autoload": {
     "psr-4": {
@@ -68,9 +70,13 @@
     "panther",
     "chrome",
     "fallback-crawling",
-    "spa-crawling"
-  ],
-  "require-dev": {
-    "symfony/panther": "^2.4"
-  }
+    "spa-crawling",
+    "database-storage",
+    "pdo",
+    "sqlite",
+    "mysql",
+    "mariadb",
+    "persistent-storage",
+    "crawl-history"
+  ]
 }

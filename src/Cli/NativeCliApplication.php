@@ -9,6 +9,11 @@ use Mnb\ScraperKit\Browser\BrowserFallbackDetector;
 use Mnb\ScraperKit\Browser\BrowserOptions;
 use Mnb\ScraperKit\Browser\BrowserPageResult;
 use Mnb\ScraperKit\Core\CrawlOptions;
+use Mnb\ScraperKit\Database\DatabaseConfig;
+use Mnb\ScraperKit\Database\DatabaseConnectionFactory;
+use Mnb\ScraperKit\Database\DatabaseMigrator;
+use Mnb\ScraperKit\Database\DatabaseRepository;
+use Mnb\ScraperKit\Database\DatabaseSchema;
 use Mnb\ScraperKit\Core\CrawlResult;
 use Mnb\ScraperKit\Core\HttpClient;
 use Mnb\ScraperKit\Core\RobotsPolicy;
@@ -80,6 +85,12 @@ final class NativeCliApplication
                 'list' => $this->listCommands(),
                 'crawl' => $this->crawl($args, $opts),
                 'browser:test' => $this->browserTest($args, $opts),
+                'db:init' => $this->dbInit($args, $opts),
+                'db:test' => $this->dbTest($args, $opts),
+                'db:status' => $this->dbStatus($args, $opts),
+                'db:save-crawl' => $this->dbSaveCrawl($args, $opts),
+                'db:save-pipeline' => $this->dbSavePipeline($args, $opts),
+                'db:export' => $this->dbExport($args, $opts),
                 'http:test' => $this->httpTest($args, $opts),
                 'bulk:crawl' => $this->bulkCrawl($args, $opts),
                 'url:process', 'urls:process' => $this->urlProcess($args, $opts),
@@ -142,7 +153,7 @@ final class NativeCliApplication
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 1.5.0 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 1.6.0 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -153,6 +164,12 @@ final class NativeCliApplication
         $commands = [
             'crawl <url>' => 'Crawl one URL/site with rules, presets, common data, optional browser fallback, and optional pipeline.',
             'browser:test <url>' => 'Diagnose browser fallback need and optionally render one URL with the optional browser adapter.',
+            'db:init' => 'Initialize SQLite/MySQL storage tables for jobs, pages, records, failures, validation issues, and exports.',
+            'db:test' => 'Test database connection settings and show the detected PDO driver.',
+            'db:status' => 'Show database table row counts.',
+            'db:save-crawl <crawl.json>' => 'Save crawl JSON pages to the database storage layer.',
+            'db:save-pipeline <records.json>' => 'Save pipeline records and validation issues to database storage.',
+            'db:export <table>' => 'Export supported database storage table rows as JSON or CSV.',
             'http:test <url>' => 'Test native PHP HTTP engines: auto, curl, or stream/file_get_contents.',
             'bulk:crawl <urls.txt>' => 'Crawl many URLs with gaps, pauses, checkpoint, and resume.',
             'url:process <urls.txt>' => 'Process URLs one by one with retry, method ladder, checkpoint, and resume.',
@@ -2368,6 +2385,153 @@ final class NativeCliApplication
         };
     }
 
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function dbInit(array $args, array $opts): int
+    {
+        $config = $this->databaseConfig($opts);
+        $pdo = (new DatabaseConnectionFactory())->connect($config);
+        $result = (new DatabaseMigrator($pdo, $config->driver()))->migrate();
+        $this->outJson([
+            'ok' => true,
+            'version' => '1.6.0',
+            'driver' => $result['driver'],
+            'statements_executed' => $result['statements'],
+            'tables' => $result['tables'],
+            'dsn' => $this->safeDsn($config->dsn),
+        ]);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function dbTest(array $args, array $opts): int
+    {
+        $config = $this->databaseConfig($opts);
+        $pdo = (new DatabaseConnectionFactory())->connect($config);
+        $this->outJson([
+            'ok' => true,
+            'version' => '1.6.0',
+            'driver' => $config->driver(),
+            'pdo_driver' => (string) $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME),
+            'dsn' => $this->safeDsn($config->dsn),
+            'available_pdo_drivers' => class_exists(\PDO::class) ? \PDO::getAvailableDrivers() : [],
+        ]);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function dbStatus(array $args, array $opts): int
+    {
+        $config = $this->databaseConfig($opts);
+        $pdo = (new DatabaseConnectionFactory())->connect($config);
+        $counts = (new DatabaseRepository($pdo))->counts();
+        $this->outJson([
+            'ok' => true,
+            'driver' => $config->driver(),
+            'dsn' => $this->safeDsn($config->dsn),
+            'counts' => $counts,
+        ]);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function dbSaveCrawl(array $args, array $opts): int
+    {
+        $path = $args[0] ?? $this->optString($opts, 'input');
+        if (!$path || !is_file($path)) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper db:save-crawl <crawl.json> [--job-id=JOB] [--sqlite=path]');
+        }
+        $data = json_decode((string) file_get_contents($path), true);
+        if (!is_array($data)) {
+            throw new \RuntimeException('Invalid crawl JSON file.');
+        }
+        $jobUid = $this->optString($opts, 'job-id', 'db_' . date('Ymd_His')) ?? ('db_' . date('Ymd_His'));
+        $config = $this->databaseConfig($opts);
+        $pdo = (new DatabaseConnectionFactory())->connect($config);
+        (new DatabaseMigrator($pdo, $config->driver()))->migrate();
+        $repo = new DatabaseRepository($pdo);
+        $repo->upsertJob($jobUid, 'crawl', 'stored', ['source_file' => $path], dirname($path));
+        $count = $repo->saveCrawlArray($data, $jobUid);
+        $this->outJson(['ok' => true, 'job_uid' => $jobUid, 'pages_saved' => $count, 'dsn' => $this->safeDsn($config->dsn)]);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function dbSavePipeline(array $args, array $opts): int
+    {
+        $path = $args[0] ?? $this->optString($opts, 'input');
+        if (!$path || !is_file($path)) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper db:save-pipeline <records.json> [--job-id=JOB] [--sqlite=path]');
+        }
+        $data = json_decode((string) file_get_contents($path), true);
+        if (!is_array($data)) {
+            throw new \RuntimeException('Invalid pipeline JSON file.');
+        }
+        $jobUid = $this->optString($opts, 'job-id', 'db_' . date('Ymd_His')) ?? ('db_' . date('Ymd_His'));
+        $config = $this->databaseConfig($opts);
+        $pdo = (new DatabaseConnectionFactory())->connect($config);
+        (new DatabaseMigrator($pdo, $config->driver()))->migrate();
+        $repo = new DatabaseRepository($pdo);
+        $repo->upsertJob($jobUid, 'pipeline', 'stored', ['source_file' => $path], dirname($path));
+        $counts = $repo->savePipelineArray($data, $jobUid);
+        $this->outJson(['ok' => true, 'job_uid' => $jobUid, 'saved' => $counts, 'dsn' => $this->safeDsn($config->dsn)]);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function dbExport(array $args, array $opts): int
+    {
+        $table = $args[0] ?? $this->optString($opts, 'table', 'mnb_storage_records');
+        $format = strtolower($this->optString($opts, 'format', 'json') ?? 'json');
+        $limit = max(1, (int) ($this->optString($opts, 'limit', '100') ?? '100'));
+        $output = $this->optString($opts, 'output');
+        $config = $this->databaseConfig($opts);
+        $pdo = (new DatabaseConnectionFactory())->connect($config);
+        $rows = (new DatabaseRepository($pdo))->fetchRows((string) $table, $limit);
+
+        if (!$output) {
+            $output = $this->storagePath('database/export-' . (string) $table . '-' . date('Ymd-His') . '.' . ($format === 'csv' ? 'csv' : 'json'));
+        }
+        $this->ensureDir(dirname($output));
+        if ($format === 'csv') {
+            $fp = fopen($output, 'wb');
+            if (!$fp) {
+                throw new \RuntimeException('Unable to open output file.');
+            }
+            $headers = [];
+            foreach ($rows as $row) {
+                $headers = array_values(array_unique(array_merge($headers, array_keys($row))));
+            }
+            if ($headers !== []) {
+                fputcsv($fp, $headers);
+                foreach ($rows as $row) {
+                    fputcsv($fp, array_map(static fn (string $h): mixed => $row[$h] ?? null, $headers));
+                }
+            }
+            fclose($fp);
+        } else {
+            $this->writeJson($output, ['table' => (string) $table, 'rows_total' => count($rows), 'rows' => $rows]);
+        }
+        $this->outJson(['ok' => true, 'table' => (string) $table, 'rows_exported' => count($rows), 'output' => $output]);
+        return 0;
+    }
+
+    /** @param array<string,mixed> $opts */
+    private function databaseConfig(array $opts): DatabaseConfig
+    {
+        return DatabaseConfig::fromArray([
+            'database-url' => $this->optString($opts, 'database-url') ?? $this->optString($opts, 'dsn'),
+            'sqlite' => $this->optString($opts, 'sqlite'),
+            'db-user' => $this->optString($opts, 'db-user'),
+            'db-pass' => $this->optString($opts, 'db-pass'),
+        ], $this->rootDir);
+    }
+
+    private function safeDsn(string $dsn): string
+    {
+        return preg_replace('/(password|passwd|pwd)=([^;]+)/i', '$1=****', $dsn) ?? $dsn;
+    }
+
     /** @param array<string,mixed> $opts */
     private function opt(array $opts, string $key, mixed $default = null): mixed
     {
@@ -2460,7 +2624,7 @@ final class NativeCliApplication
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '1.5.0',
+            'checkpoint_version' => '1.6.0',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),
