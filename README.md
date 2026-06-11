@@ -1,8 +1,8 @@
-# MNB ScraperKit V3.0.0
+# MNB ScraperKit V3.1.0
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V3.0.0 is the ML-Ready Intelligence Update. It adds deterministic intelligence helpers for feature extraction, page classification, quality prediction, URL priority scoring, and selector suggestions. These features work without external machine-learning dependencies, while exporting ML-ready JSON that can later be used with PHP-ML or another training workflow.
+V3.1.0 is the Dataset Versioning and Annotation Update. It adds dataset snapshots, normalized dataset exports, dataset diffing, quality summaries, and annotation files for review workflows and future ML training data.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,23 +16,22 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V3.0.0 update focus
+## V3.1.0 update focus
 
-V3.0.0 focuses on ML-ready intelligence while keeping the framework lightweight and safe. The intelligence layer does not execute opaque models by default. It produces explainable feature JSON, heuristic page classes, quality labels, URL priority scores, and selector suggestions that users can review, export, and later feed into PHP-ML or another model workflow.
+V3.1.0 focuses on dataset lifecycle tools while keeping ScraperKit lightweight and dependency-free. The new dataset layer converts crawl, pipeline, source connector, intelligence, and URL-list outputs into versioned dataset folders that can be reviewed, exported, compared, annotated, and reused for future ML workflows.
 
-- Added `src/Intelligence/` with feature extraction, classification, quality prediction, URL priority, selector suggestions, and capability diagnostics.
-- Added intelligence commands: `intelligence:doctor`, `intelligence:analyze`, `intelligence:classify`, `intelligence:quality`, `intelligence:priority`, and `intelligence:selectors`.
-- Added ML-ready feature exports for crawl JSON, pipeline JSON, source connector output, and URL lists.
-- Added heuristic page classification for article, ecommerce, jobs, tender, contact, document, JS-app, and error/blocked pages.
-- Added explainable quality prediction for pages and normalized records.
-- Added URL priority scoring to help process important crawl targets first.
-- Added profile-aware selector suggestions from saved HTML files.
-- Added optional `php-ai/php-ml` suggestion in Composer without making it a required dependency.
-- Kept V2.0.0 dashboard/admin UI, V1.9.0 API/webhooks, V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
+- Added `src/Dataset/` with dataset builder, store, exporter, comparator, and annotation store.
+- Added dataset commands: `dataset:create`, `dataset:list`, `dataset:show`, `dataset:diff`, and `dataset:export`.
+- Added annotation commands: `annotation:init` and `annotation:add`.
+- Added normalized dataset outputs: `dataset-manifest.json`, `records.json`, `records.jsonl`, `quality-summary.json`, and `annotations.json`.
+- Added dataset diffing for added, removed, common, and changed records.
+- Added dataset API routes for listing and showing dataset snapshots.
+- Kept V3.0.0 ML-ready intelligence, V2.0.0 dashboard/admin UI, V1.9.0 API/webhooks, V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
 
 ## Highlights
 
 - **Professional PHP CLI framework** built as a Composer package with Symfony Console commands.
+- **Dataset versioning and annotation layer** for dataset snapshots, quality summaries, JSON/CSV/JSONL exports, dataset diffs, and review labels.
 - **ML-ready intelligence layer** for feature extraction, page classification, quality prediction, URL priority scoring, and selector suggestions.
 - **Local dashboard and admin UI** for queue jobs, schedules, workers, profiles, plugins, API routes, and system health.
 - **Plugin system** for config-only add-ons with reusable profile schemas, extractor rule files, source templates, export templates, command aliases, validation, install, enable/disable, and doctor checks.
@@ -54,7 +53,7 @@ V3.0.0 focuses on ML-ready intelligence while keeping the framework lightweight 
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V3.0.0 CLI/library release.
+This section lists the main functionality available in the current V3.1.0 CLI/library release.
 
 ### Package and CLI
 
@@ -64,6 +63,17 @@ This section lists the main functionality available in the current V3.0.0 CLI/li
 - Global binary support through `vendor/bin/mnb-scraper`.
 - Built-in command list and per-command help screens.
 - CMD, PowerShell, cron, Windows Task Scheduler, and server automation friendly scripts/workflows.
+
+### Dataset versioning and annotations
+
+- `dataset:create <input.json|urls.txt>` creates versioned dataset snapshots from crawl, pipeline, source, intelligence, or URL-list data.
+- `dataset:list` lists local dataset snapshots.
+- `dataset:show <dataset-id|manifest.json>` shows one dataset manifest and quality summary.
+- `dataset:diff <old> <new>` compares two dataset snapshots.
+- `dataset:export <dataset-id|manifest.json>` exports normalized records as JSON, CSV, or JSONL.
+- `annotation:init <dataset-dir>` creates an annotation file for review labels.
+- `annotation:add <annotations.json>` adds labels, notes, field comments, and reviewer metadata.
+- Dataset folders include `dataset-manifest.json`, `records.json`, `records.jsonl`, `quality-summary.json`, and `annotations.json`.
 
 ### ML-ready intelligence
 
@@ -152,7 +162,7 @@ This section lists the main functionality available in the current V3.0.0 CLI/li
 - Plugin enable/disable controls by editing the manifest `enabled` flag.
 - Plugin doctor command for validating all discovered plugins.
 - Plugin-contributed profiles available to `profile:list`, `profile:show`, `extract:rules`, and pipeline/profile workflows.
-- Safe-by-default design: V3.0.0 does not automatically execute arbitrary plugin PHP code.
+- Safe-by-default design: V3.1.0 does not automatically execute arbitrary plugin PHP code.
 
 ### Lightweight API and webhooks
 
@@ -365,7 +375,7 @@ This section lists the main functionality available in the current V3.0.0 CLI/li
 ## Package direction
 
 - First public version: **1.0.0**
-- Current version: **3.0.0** — Dashboard and admin UI update
+- Current version: **3.1.0** — Dataset versioning and annotation update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
@@ -1087,7 +1097,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V3.0.0 dashboard and admin UI package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V3.1.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 
@@ -1111,6 +1121,40 @@ Optional Composer script:
 
 ```bash
 composer test
+```
+
+## Dataset versioning examples
+
+Create a dataset snapshot from pipeline records:
+
+```bash
+php bin/mnb-scraper dataset:create storage/jobs/example/pipeline/records.json --id=example_dataset
+```
+
+List and inspect datasets:
+
+```bash
+php bin/mnb-scraper dataset:list
+php bin/mnb-scraper dataset:show example_dataset
+```
+
+Export normalized dataset records:
+
+```bash
+php bin/mnb-scraper dataset:export example_dataset --format=csv --output=storage/datasets/example_dataset/export.csv
+```
+
+Compare two dataset snapshots:
+
+```bash
+php bin/mnb-scraper dataset:diff old_dataset new_dataset --json
+```
+
+Initialize annotations and add review labels:
+
+```bash
+php bin/mnb-scraper annotation:init storage/datasets/example_dataset
+php bin/mnb-scraper annotation:add storage/datasets/example_dataset/annotations.json --record-id=dsrec_123 --label=good --note="Ready for training"
 ```
 
 ## ML-ready intelligence examples

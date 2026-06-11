@@ -1,9 +1,9 @@
 {
     "name": "mnb/scraperkit",
-    "description": "MNB ScraperKit V3.0.0 - professional PHP crawling and data extraction framework with Symfony Console commands, safe crawling, source connectors, reports, profiles, queue workers, browser fallback, database storage, monitoring, plugins, API/webhooks, dashboard UI, and ML-ready intelligence.",
+    "description": "MNB ScraperKit V3.1.0 - professional PHP crawling and data extraction framework with Symfony Console commands, safe crawling, source connectors, reports, profiles, queue workers, browser fallback, database storage, monitoring, plugins, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotations.",
     "type": "library",
     "license": "MIT",
-    "version": "3.0.0",
+    "version": "3.1.0",
     "require": {
         "php": ">=8.2",
         "ext-dom": "*",
@@ -18,7 +18,7 @@
         "chrome/chromium": "Needed only when using browser-assisted crawling through Panther/Chrome.",
         "pdo_sqlite": "Optional SQLite driver for local database storage.",
         "pdo_mysql": "Optional MySQL/MariaDB driver for server database storage.",
-        "php-ai/php-ml": "Optional machine-learning toolkit for future model training/inference. V3.0.0 includes deterministic ML-ready feature exports without requiring this dependency."
+        "php-ai/php-ml": "Optional machine-learning toolkit for future model training/inference. V3.1.0 includes deterministic ML-ready features and dataset annotation exports without requiring this dependency."
     },
     "autoload": {
         "psr-4": {
@@ -118,6 +118,15 @@
         "selector-suggestions",
         "quality-prediction",
         "url-priority",
-        "ml-ready"
+        "ml-ready",
+        "dataset",
+        "datasets",
+        "dataset-versioning",
+        "annotation",
+        "annotations",
+        "data-quality",
+        "training-data",
+        "jsonl",
+        "dataset-diff"
     ]
 }

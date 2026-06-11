@@ -18,6 +18,10 @@ use Mnb\ScraperKit\Database\DatabaseRepository;
 use Mnb\ScraperKit\Database\DatabaseSchema;
 use Mnb\ScraperKit\Dashboard\DashboardDataCollector;
 use Mnb\ScraperKit\Dashboard\DashboardRenderer;
+use Mnb\ScraperKit\Dataset\AnnotationStore;
+use Mnb\ScraperKit\Dataset\DatasetComparator;
+use Mnb\ScraperKit\Dataset\DatasetExporter;
+use Mnb\ScraperKit\Dataset\DatasetStore;
 use Mnb\ScraperKit\Intelligence\FeatureExtractor;
 use Mnb\ScraperKit\Intelligence\IntelligenceDoctor;
 use Mnb\ScraperKit\Intelligence\PageClassifier;
@@ -131,6 +135,13 @@ final class NativeCliApplication
                 'dashboard:status' => $this->dashboardStatus($args, $opts),
                 'dashboard:build' => $this->dashboardBuild($args, $opts),
                 'dashboard:serve' => $this->dashboardServe($args, $opts),
+                'dataset:create' => $this->datasetCreate($args, $opts),
+                'dataset:list' => $this->datasetList($args, $opts),
+                'dataset:show' => $this->datasetShow($args, $opts),
+                'dataset:diff' => $this->datasetDiff($args, $opts),
+                'dataset:export' => $this->datasetExport($args, $opts),
+                'annotation:init' => $this->annotationInit($args, $opts),
+                'annotation:add' => $this->annotationAdd($args, $opts),
                 'intelligence:doctor' => $this->intelligenceDoctor($args, $opts),
                 'intelligence:analyze' => $this->intelligenceAnalyze($args, $opts),
                 'intelligence:classify' => $this->intelligenceClassify($args, $opts),
@@ -203,7 +214,7 @@ final class NativeCliApplication
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 3.0.0 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 3.1.0 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -242,6 +253,13 @@ final class NativeCliApplication
             'dashboard:status' => 'Show dashboard health, URLs, and read-only data availability.',
             'dashboard:build' => 'Build a static HTML dashboard snapshot from local queue/schedule/plugin/profile data.',
             'dashboard:serve' => 'Serve the optional local HTML admin dashboard using PHP built-in server.',
+            'dataset:create <input.json|urls.txt>' => 'Create a versioned dataset snapshot from crawl, pipeline, source, intelligence, or URL-list data.',
+            'dataset:list' => 'List local dataset snapshots from storage/datasets.',
+            'dataset:show <dataset-id|manifest.json>' => 'Show one dataset manifest and quality summary.',
+            'dataset:diff <old> <new>' => 'Compare two dataset snapshots and show added, removed, and changed records.',
+            'dataset:export <dataset-id|manifest.json>' => 'Export normalized dataset records as JSON, CSV, or JSONL.',
+            'annotation:init <dataset-dir>' => 'Initialize an annotation file for review labels and future ML training.',
+            'annotation:add <annotations.json>' => 'Add one review annotation to a dataset annotation file.',
             'intelligence:doctor' => 'Show ML/intelligence capability status and optional PHP-ML availability.',
             'intelligence:analyze <input.json>' => 'Extract ML-ready features from crawl, pipeline, source, or URL JSON files.',
             'intelligence:classify <input.json>' => 'Classify pages into article/ecommerce/job/tender/contact/JS/error groups.',
@@ -759,6 +777,152 @@ final class NativeCliApplication
     }
 
 
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function datasetCreate(array $args, array $opts): int
+    {
+        $input = $args[0] ?? $this->optString($opts, 'input');
+        if (!$input) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper dataset:create <input.json|urls.txt> [--id=name] [--type=auto|crawl|pipeline|source|intelligence|url-list] [--output-dir=storage/datasets]');
+        }
+        $store = new DatasetStore($this->rootDir, $this->optString($opts, 'datasets-dir'));
+        $result = $store->create(
+            $input,
+            $this->optString($opts, 'id') ?: $this->optString($opts, 'dataset-id'),
+            $this->optString($opts, 'type', 'auto') ?? 'auto',
+            $this->optString($opts, 'output-dir') ?: $this->optString($opts, 'datasets-dir')
+        );
+        $manifest = (array) $result['manifest'];
+        if ($this->bool($opts, 'json')) {
+            $this->outJson(['ok' => true, 'dataset_dir' => $result['dataset_dir'], 'manifest' => $manifest]);
+        } else {
+            $this->out('Dataset created: ' . (string) $manifest['dataset_id']);
+            $this->out('Records: ' . (string) ($manifest['summary']['records_total'] ?? 0));
+            $this->out('Output: ' . (string) $result['dataset_dir']);
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function datasetList(array $args, array $opts): int
+    {
+        $store = new DatasetStore($this->rootDir, $this->optString($opts, 'datasets-dir'));
+        $datasets = $store->list();
+        if ($this->bool($opts, 'json')) {
+            $this->outJson(['ok' => true, 'datasets_total' => count($datasets), 'datasets' => $datasets]);
+            return 0;
+        }
+        $this->out('Datasets: ' . count($datasets));
+        foreach ($datasets as $dataset) {
+            $this->out(sprintf('  %-40s %8d records  %s', (string) ($dataset['dataset_id'] ?? ''), (int) ($dataset['summary']['records_total'] ?? 0), (string) ($dataset['source_type'] ?? '')));
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function datasetShow(array $args, array $opts): int
+    {
+        $id = $args[0] ?? $this->optString($opts, 'id') ?? $this->optString($opts, 'dataset-id');
+        if (!$id) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper dataset:show <dataset-id|manifest.json>');
+        }
+        $store = new DatasetStore($this->rootDir, $this->optString($opts, 'datasets-dir'));
+        $manifest = $store->show($id);
+        $qualityFile = rtrim((string) $manifest['_dataset_dir'], '/\\') . '/' . (string) ($manifest['quality_file'] ?? 'quality-summary.json');
+        $quality = is_file($qualityFile) ? json_decode((string) file_get_contents($qualityFile), true) : null;
+        if ($this->bool($opts, 'json')) {
+            $this->outJson(['ok' => true, 'manifest' => $manifest, 'quality' => is_array($quality) ? $quality : null]);
+            return 0;
+        }
+        $this->out('Dataset: ' . (string) ($manifest['dataset_id'] ?? ''));
+        $this->out('Source type: ' . (string) ($manifest['source_type'] ?? ''));
+        $this->out('Records: ' . (string) ($manifest['summary']['records_total'] ?? 0));
+        $this->out('Average quality: ' . (string) ($manifest['summary']['quality_score_avg'] ?? 0));
+        $this->out('Path: ' . (string) ($manifest['_dataset_dir'] ?? ''));
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function datasetDiff(array $args, array $opts): int
+    {
+        $old = $args[0] ?? $this->optString($opts, 'old');
+        $new = $args[1] ?? $this->optString($opts, 'new');
+        if (!$old || !$new) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper dataset:diff <old-dataset> <new-dataset> [--json]');
+        }
+        $store = new DatasetStore($this->rootDir, $this->optString($opts, 'datasets-dir'));
+        $diff = (new DatasetComparator())->compare($store->records($old), $store->records($new));
+        $output = $this->optString($opts, 'output');
+        if ($output) {
+            $this->writeJson($output, $diff);
+        }
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($diff + ['output' => $output]);
+            return 0;
+        }
+        $this->out('Dataset diff');
+        $this->out('Added: ' . $diff['added_total'] . ' | Removed: ' . $diff['removed_total'] . ' | Changed: ' . $diff['changed_total'] . ' | Common: ' . $diff['common_total']);
+        if ($output) {
+            $this->out('Output: ' . $output);
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function datasetExport(array $args, array $opts): int
+    {
+        $id = $args[0] ?? $this->optString($opts, 'id') ?? $this->optString($opts, 'dataset-id');
+        if (!$id) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper dataset:export <dataset-id|manifest.json> [--format=json|csv|jsonl] [--output=file]');
+        }
+        $format = strtolower($this->optString($opts, 'format', 'json') ?? 'json');
+        $store = new DatasetStore($this->rootDir, $this->optString($opts, 'datasets-dir'));
+        $manifest = $store->show($id);
+        $output = $this->optString($opts, 'output') ?: rtrim((string) $manifest['_dataset_dir'], '/\\') . '/dataset-export.' . ($format === 'jsonl' ? 'jsonl' : ($format === 'csv' ? 'csv' : 'json'));
+        $result = (new DatasetExporter())->export($store->records($id), $output, $format);
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($result);
+        } else {
+            $this->out('Dataset exported: ' . $output);
+            $this->out('Records: ' . (string) $result['records_exported']);
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function annotationInit(array $args, array $opts): int
+    {
+        $datasetDir = $args[0] ?? $this->optString($opts, 'dataset-dir');
+        if (!$datasetDir) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper annotation:init <dataset-dir> [--output=annotations.json]');
+        }
+        $result = (new AnnotationStore())->init($datasetDir, $this->optString($opts, 'output'));
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($result);
+        } else {
+            $this->out('Annotations initialized: ' . (string) $result['output']);
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function annotationAdd(array $args, array $opts): int
+    {
+        $file = $args[0] ?? $this->optString($opts, 'file') ?? $this->optString($opts, 'annotations');
+        $recordId = $this->optString($opts, 'record-id');
+        $label = $this->optString($opts, 'label');
+        if (!$file || !$recordId || !$label) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper annotation:add <annotations.json> --record-id=ID --label=good|bad|review [--note=text] [--field=name]');
+        }
+        $result = (new AnnotationStore())->add($file, $recordId, $label, $this->optString($opts, 'note'), $this->optString($opts, 'field'), $this->optString($opts, 'user'));
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($result);
+        } else {
+            $this->out('Annotation added. Total annotations: ' . (string) $result['annotations_total']);
+        }
+        return 0;
+    }
+
     /** @param array<int,string> $args @param array<string,mixed> $opts */
     private function intelligenceDoctor(array $args, array $opts): int
     {
@@ -890,7 +1054,7 @@ final class NativeCliApplication
         $output = $this->optString($opts, 'output') ?: $this->storagePath('webhooks/test-' . date('Ymd-His') . '.json');
         $payload = [
             'message' => 'MNB ScraperKit webhook test event',
-            'version' => '3.0.0',
+            'version' => '3.1.0',
             'generated_at' => date(DATE_ATOM),
         ];
         $dispatcher = new WebhookDispatcher($this->safetyGuard());
@@ -3286,7 +3450,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $result = (new DatabaseMigrator($pdo, $config->driver()))->migrate();
         $this->outJson([
             'ok' => true,
-            'version' => '3.0.0',
+            'version' => '3.1.0',
             'driver' => $result['driver'],
             'statements_executed' => $result['statements'],
             'tables' => $result['tables'],
@@ -3302,7 +3466,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $pdo = (new DatabaseConnectionFactory())->connect($config);
         $this->outJson([
             'ok' => true,
-            'version' => '3.0.0',
+            'version' => '3.1.0',
             'driver' => $config->driver(),
             'pdo_driver' => (string) $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME),
             'dsn' => $this->safeDsn($config->dsn),
@@ -3516,7 +3680,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '3.0.0',
+            'checkpoint_version' => '3.1.0',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),

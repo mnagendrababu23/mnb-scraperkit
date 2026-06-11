@@ -6,6 +6,7 @@ namespace Mnb\ScraperKit\Api;
 
 use Mnb\ScraperKit\Console\CommandRegistry;
 use Mnb\ScraperKit\Dashboard\DashboardDataCollector;
+use Mnb\ScraperKit\Dataset\DatasetStore;
 use Mnb\ScraperKit\Monitoring\MonitoringSnapshot;
 use Mnb\ScraperKit\Plugin\PluginManager;
 use Mnb\ScraperKit\Profile\ProfileSchemaLoader;
@@ -20,7 +21,7 @@ use Mnb\ScraperKit\Queue\LocalJobQueue;
  */
 final class ApiRouter
 {
-    public const VERSION = '3.0.0';
+    public const VERSION = '3.1.0';
 
     public function __construct(
         private readonly string $rootDir,
@@ -43,6 +44,8 @@ final class ApiRouter
             ['method' => 'GET', 'path' => '/api/v1/plugins', 'description' => 'List discovered config-only plugins.'],
             ['method' => 'GET', 'path' => '/api/v1/profiles', 'description' => 'List built-in and plugin profile schemas.'],
             ['method' => 'GET', 'path' => '/api/v1/dashboard', 'description' => 'Read consolidated dashboard data for local admin screens.'],
+            ['method' => 'GET', 'path' => '/api/v1/datasets', 'description' => 'List local dataset snapshots.'],
+            ['method' => 'GET', 'path' => '/api/v1/datasets/{dataset_id}', 'description' => 'Read one dataset manifest.'],
         ];
     }
 
@@ -158,6 +161,20 @@ final class ApiRouter
             return new ApiResponse(200, [
                 'ok' => true,
                 'dashboard' => (new DashboardDataCollector($this->rootDir))->collect(),
+            ]);
+        }
+
+        if ($method === 'GET' && $path === '/api/v1/datasets') {
+            return new ApiResponse(200, [
+                'ok' => true,
+                'datasets' => (new DatasetStore($this->rootDir))->list(),
+            ]);
+        }
+
+        if ($method === 'GET' && preg_match('#^/api/v1/datasets/([^/]+)$#', $path, $m)) {
+            return new ApiResponse(200, [
+                'ok' => true,
+                'dataset' => (new DatasetStore($this->rootDir))->show(rawurldecode($m[1])),
             ]);
         }
 

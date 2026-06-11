@@ -16,6 +16,10 @@ use Mnb\ScraperKit\Database\DatabaseConfig;
 use Mnb\ScraperKit\Database\DatabaseSchema;
 use Mnb\ScraperKit\Dashboard\DashboardDataCollector;
 use Mnb\ScraperKit\Dashboard\DashboardRenderer;
+use Mnb\ScraperKit\Dataset\AnnotationStore;
+use Mnb\ScraperKit\Dataset\DatasetComparator;
+use Mnb\ScraperKit\Dataset\DatasetExporter;
+use Mnb\ScraperKit\Dataset\DatasetStore;
 use Mnb\ScraperKit\Intelligence\FeatureExtractor;
 use Mnb\ScraperKit\Intelligence\PageClassifier;
 use Mnb\ScraperKit\Intelligence\QualityPredictor;
@@ -53,6 +57,123 @@ use Mnb\ScraperKit\Webhook\WebhookEndpointStore;
 $tests = [];
 
 
+$tests['v3.1.0 dataset command registry exposes dataset and annotation commands'] = function (): void {
+    $commands = CommandRegistry::commands();
+    foreach (['dataset:create', 'dataset:list', 'dataset:show', 'dataset:diff', 'dataset:export', 'annotation:init', 'annotation:add'] as $command) {
+        assert(isset($commands[$command]), 'missing v3.1.0 dataset command: ' . $command);
+    }
+    $options = CommandRegistry::optionNames();
+    foreach (['datasets-dir', 'dataset-dir', 'dataset-id', 'record-id', 'label', 'note', 'old', 'new', 'annotations'] as $option) {
+        assert(in_array($option, $options, true), 'missing v3.1.0 dataset option: ' . $option);
+    }
+};
+
+$tests['dataset store creates snapshots exports annotations and diffs'] = function (): void {
+    $root = sys_get_temp_dir() . '/mnb_dataset_' . bin2hex(random_bytes(4));
+    mkdir($root, 0775, true);
+    $inputA = $root . '/records-a.json';
+    file_put_contents($inputA, json_encode(['records' => [[
+        'record_id' => 'rec-a',
+        'record_type' => 'product',
+        'source_url' => 'https://example.com/a',
+        'dedupe_key' => 'sku-a',
+        'fields' => ['title' => 'A', 'price' => '10'],
+        'validation' => ['status' => 'valid'],
+        'quality_score' => 92,
+    ]]], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    $inputB = $root . '/records-b.json';
+    file_put_contents($inputB, json_encode(['records' => [[
+        'record_id' => 'rec-a',
+        'record_type' => 'product',
+        'source_url' => 'https://example.com/a',
+        'dedupe_key' => 'sku-a',
+        'fields' => ['title' => 'A changed', 'price' => '12'],
+        'validation' => ['status' => 'valid'],
+        'quality_score' => 88,
+    ], [
+        'record_id' => 'rec-b',
+        'record_type' => 'product',
+        'source_url' => 'https://example.com/b',
+        'dedupe_key' => 'sku-b',
+        'fields' => ['title' => 'B'],
+        'validation' => ['status' => 'warning'],
+        'quality_score' => 45,
+    ]]], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+    $store = new DatasetStore($root);
+    $createdA = $store->create($inputA, 'dataset_a');
+    $createdB = $store->create($inputB, 'dataset_b');
+    assert(is_file($createdA['dataset_dir'] . '/dataset-manifest.json'), 'dataset manifest missing');
+    assert(is_file($createdA['dataset_dir'] . '/records.jsonl'), 'dataset JSONL missing');
+    assert(($createdA['manifest']['summary']['records_total'] ?? null) === 1, 'dataset record count mismatch');
+    assert(count($store->list()) === 2, 'dataset list count mismatch');
+
+    $csv = $createdA['dataset_dir'] . '/export.csv';
+    $export = (new DatasetExporter())->export($store->records('dataset_a'), $csv, 'csv');
+    assert(is_file($csv) && ($export['records_exported'] ?? 0) === 1, 'dataset CSV export missing');
+
+    $diff = (new DatasetComparator())->compare($store->records('dataset_a'), $store->records('dataset_b'));
+    assert(($diff['added_total'] ?? null) === 1, 'dataset diff added mismatch');
+    assert(($diff['changed_total'] ?? null) === 1, 'dataset diff changed mismatch');
+
+    $annotations = (new AnnotationStore())->init($createdA['dataset_dir']);
+    $add = (new AnnotationStore())->add($annotations['output'], 'rec-a', 'good', 'Ready for training');
+    assert(($add['annotations_total'] ?? 0) === 1, 'annotation add mismatch');
+};
+
+$tests['native dataset commands create list show export diff and annotate'] = function (): void {
+    $root = sys_get_temp_dir() . '/mnb_dataset_cli_' . bin2hex(random_bytes(4));
+    mkdir($root, 0775, true);
+    $inputA = $root . '/crawl-a.json';
+    file_put_contents($inputA, json_encode(['pages' => [[
+        'url' => 'https://example.com/a',
+        'final_url' => 'https://example.com/a',
+        'status_code' => 200,
+        'title' => 'A',
+    ]]], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    $inputB = $root . '/crawl-b.json';
+    file_put_contents($inputB, json_encode(['pages' => [[
+        'url' => 'https://example.com/a',
+        'final_url' => 'https://example.com/a',
+        'status_code' => 200,
+        'title' => 'A changed',
+    ], [
+        'url' => 'https://example.com/b',
+        'status_code' => 200,
+        'title' => 'B',
+    ]]], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    $config = is_file(dirname(__DIR__) . '/config/scraper.php') ? require dirname(__DIR__) . '/config/scraper.php' : [];
+    $app = new NativeCliApplication($config, $root);
+    ob_start();
+    $createA = $app->run(['mnb-scraper', 'dataset:create', $inputA, '--id=cli_a']);
+    $createB = $app->run(['mnb-scraper', 'dataset:create', $inputB, '--id=cli_b']);
+    $list = $app->run(['mnb-scraper', 'dataset:list', '--json']);
+    $show = $app->run(['mnb-scraper', 'dataset:show', 'cli_a', '--json']);
+    $export = $app->run(['mnb-scraper', 'dataset:export', 'cli_a', '--format=jsonl']);
+    $diff = $app->run(['mnb-scraper', 'dataset:diff', 'cli_a', 'cli_b', '--json']);
+    $init = $app->run(['mnb-scraper', 'annotation:init', $root . '/storage/datasets/cli_a']);
+    $add = $app->run(['mnb-scraper', 'annotation:add', $root . '/storage/datasets/cli_a/annotations.json', '--record-id=rec-test', '--label=review']);
+    ob_end_clean();
+    foreach (['createA' => $createA, 'createB' => $createB, 'list' => $list, 'show' => $show, 'export' => $export, 'diff' => $diff, 'init' => $init, 'add' => $add] as $name => $code) {
+        assert($code === 0, 'native dataset command failed: ' . $name);
+    }
+};
+
+$tests['API router exposes dataset list and show routes'] = function (): void {
+    $root = sys_get_temp_dir() . '/mnb_api_dataset_' . bin2hex(random_bytes(4));
+    mkdir($root, 0775, true);
+    $input = $root . '/records.json';
+    file_put_contents($input, json_encode(['records' => [['record_id' => 'r1', 'fields' => ['title' => 'One']]]], JSON_UNESCAPED_SLASHES));
+    (new DatasetStore($root))->create($input, 'api_dataset');
+    $token = ApiToken::generate('test');
+    $router = new ApiRouter($root, $token);
+    $list = $router->handle('GET', '/api/v1/datasets', ['Authorization' => 'Bearer ' . $token]);
+    assert($list->status === 200 && count($list->body['datasets'] ?? []) === 1, 'dataset API list failed');
+    $show = $router->handle('GET', '/api/v1/datasets/api_dataset', ['Authorization' => 'Bearer ' . $token]);
+    assert($show->status === 200 && ($show->body['dataset']['dataset_id'] ?? null) === 'api_dataset', 'dataset API show failed');
+};
+
+
 $tests['database config defaults to local SQLite and schema exposes storage tables'] = function (): void {
     $root = dirname(__DIR__);
     $config = DatabaseConfig::fromArray([], $root);
@@ -66,7 +187,7 @@ $tests['database config defaults to local SQLite and schema exposes storage tabl
     assert(count(DatabaseSchema::statements('mysql')) >= 6, 'MySQL schema statements missing');
 };
 
-$tests['database command registry exposes v3.0.0 database commands and options'] = function (): void {
+$tests['database command registry exposes v3.1.0 database commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['db:init', 'db:test', 'db:status', 'db:save-crawl', 'db:save-pipeline', 'db:export'] as $command) {
         assert(isset($commands[$command]), 'missing database command: ' . $command);
@@ -77,22 +198,22 @@ $tests['database command registry exposes v3.0.0 database commands and options']
     }
 };
 
-$tests['v3.0.0 command registry exposes retry scheduling and monitoring commands'] = function (): void {
+$tests['v3.1.0 command registry exposes retry scheduling and monitoring commands'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['retry:plan', 'queue:retry-safe', 'schedule:create', 'schedule:list', 'schedule:show', 'schedule:run-due', 'schedule:enable', 'schedule:disable', 'monitor:summary', 'monitor:stale-locks'] as $command) {
-        assert(isset($commands[$command]), 'missing v3.0.0 command: ' . $command);
+        assert(isset($commands[$command]), 'missing v3.1.0 command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['command', 'arg', 'schedule-id', 'every-minutes', 'every-hours', 'dry-run', 'failed-jobs', 'ttl-seconds'] as $option) {
-        assert(in_array($option, $options, true), 'missing v3.0.0 option: ' . $option);
+        assert(in_array($option, $options, true), 'missing v3.1.0 option: ' . $option);
     }
 };
 
 
-$tests['v3.0.0 plugin command registry exposes plugin commands and options'] = function (): void {
+$tests['v3.1.0 plugin command registry exposes plugin commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['plugin:list', 'plugin:show', 'plugin:validate', 'plugin:install', 'plugin:enable', 'plugin:disable', 'plugin:doctor'] as $command) {
-        assert(isset($commands[$command]), 'missing v3.0.0 plugin command: ' . $command);
+        assert(isset($commands[$command]), 'missing v3.1.0 plugin command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['plugin-dir', 'plugin-id', 'plugins-dir', 'all', 'force'] as $option) {
@@ -169,14 +290,14 @@ $tests['local schedule store creates due schedules and monitoring snapshot repor
 
 
 
-$tests['v3.0.0 API and webhook command registry exposes automation commands and options'] = function (): void {
+$tests['v3.1.0 API and webhook command registry exposes automation commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['api:routes', 'api:token', 'api:serve', 'webhook:list', 'webhook:test', 'webhook:send'] as $command) {
-        assert(isset($commands[$command]), 'missing v3.0.0 command: ' . $command);
+        assert(isset($commands[$command]), 'missing v3.1.0 command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['host', 'port', 'prefix', 'print-command', 'webhook-url', 'webhook-header', 'webhook-secret', 'config', 'payload'] as $option) {
-        assert(in_array($option, $options, true), 'missing v3.0.0 option: ' . $option);
+        assert(in_array($option, $options, true), 'missing v3.1.0 option: ' . $option);
     }
 };
 
@@ -235,7 +356,7 @@ $tests['native API and webhook commands run without network by default'] = funct
 };
 
 
-$tests['v3.0.0 dashboard command registry exposes dashboard commands and options'] = function (): void {
+$tests['v3.1.0 dashboard command registry exposes dashboard commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['dashboard:status', 'dashboard:build', 'dashboard:serve'] as $command) {
         assert(isset($commands[$command]), 'missing dashboard command: ' . $command);
@@ -254,7 +375,7 @@ $tests['dashboard collector and renderer expose local operations state'] = funct
     $scheduleStore = new LocalScheduleStore($root);
     $scheduleStore->create(['schedule_id' => 'dashboard-schedule', 'command' => 'crawl', 'args' => ['https://example.com'], 'interval_seconds' => 60]);
     $data = (new DashboardDataCollector($root))->collect();
-    assert(($data['dashboard_version'] ?? null) === '3.0.0', 'dashboard version mismatch');
+    assert(($data['dashboard_version'] ?? null) === '3.1.0', 'dashboard version mismatch');
     assert(($data['queue']['counts']['pending'] ?? 0) === 1, 'dashboard queue count mismatch');
     assert(($data['schedules']['total'] ?? 0) === 1, 'dashboard schedule count mismatch');
     $html = (new DashboardRenderer())->render($data);
@@ -269,7 +390,7 @@ $tests['API router exposes dashboard summary route'] = function (): void {
     $router = new ApiRouter($root, $token);
     $response = $router->handle('GET', '/api/v1/dashboard', ['Authorization' => 'Bearer ' . $token]);
     assert($response->status === 200, 'dashboard API route failed');
-    assert(($response->body['dashboard']['dashboard_version'] ?? null) === '3.0.0', 'dashboard API version mismatch');
+    assert(($response->body['dashboard']['dashboard_version'] ?? null) === '3.1.0', 'dashboard API version mismatch');
 };
 
 $tests['native dashboard commands run without starting server'] = function (): void {
@@ -379,7 +500,7 @@ $tests['failure classifier maps common crawl failures'] = function (): void {
     assert(FailureClassifier::fromSafetyMessage('URL safety check failed: private/reserved IP targets are blocked.') === 'private_ip_blocked');
 };
 
-$tests['rate limiter accepts v3.0.0 pacing options without sleeping unnecessarily'] = function (): void {
+$tests['rate limiter accepts v3.1.0 pacing options without sleeping unnecessarily'] = function (): void {
     $limiter = new RateLimiter();
     $options = CrawlOptions::fromArray([
         'delay_ms' => 0,
@@ -397,7 +518,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
     mkdir($dir, 0775, true);
     $checkpoint = $dir . '/checkpoint.json';
     file_put_contents($checkpoint, json_encode([
-        'checkpoint_version' => '3.0.0',
+        'checkpoint_version' => '3.1.0',
         'updated_at' => '2026-01-01T00:00:00+00:00',
         'queues' => [
             'pending' => ['https://example.com/pending'],
@@ -411,7 +532,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
 
     $manifestPath = JobManifest::write($dir, 'bulk-crawl', [], ['checkpoint' => $checkpoint], []);
     $manifest = JobManifest::read($manifestPath);
-    assert(($manifest['version'] ?? null) === '3.0.0');
+    assert(($manifest['version'] ?? null) === '3.1.0');
     assert(($manifest['resume']['counts']['pending'] ?? null) === 1);
     assert(($manifest['resume']['last_processed_url'] ?? null) === 'https://example.com/done');
 };
@@ -599,7 +720,7 @@ $tests['export and report upgrade creates XML, HTML summary and ZIP bundle'] = f
     mkdir($dir . '/logs', 0775, true);
 
     file_put_contents($dir . '/job-manifest.json', json_encode([
-        'version' => '3.0.0',
+        'version' => '3.1.0',
         'job_id' => 'test-job',
         'type' => 'crawl',
         'resume' => ['counts' => ['completed' => 1, 'failed' => 1]],
@@ -643,7 +764,7 @@ $tests['export and report upgrade creates XML, HTML summary and ZIP bundle'] = f
 };
 
 
-$tests['v3.0.0 intelligence features classify quality priority and selector suggestions'] = function (): void {
+$tests['v3.1.0 intelligence features classify quality priority and selector suggestions'] = function (): void {
     $dir = sys_get_temp_dir() . '/mnb_intel_' . bin2hex(random_bytes(4));
     mkdir($dir, 0775, true);
     $crawlFile = $dir . '/crawl.json';
@@ -686,7 +807,7 @@ $tests['v3.0.0 intelligence features classify quality priority and selector sugg
     assert(isset($suggestions['suggestions']['price']), 'selector suggestions missing price group');
 };
 
-$tests['v3.0.0 command registry exposes intelligence commands and options'] = function (): void {
+$tests['v3.1.0 command registry exposes intelligence commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['intelligence:doctor', 'intelligence:analyze', 'intelligence:classify', 'intelligence:quality', 'intelligence:priority', 'intelligence:selectors'] as $command) {
         assert(isset($commands[$command]), 'missing intelligence command: ' . $command);

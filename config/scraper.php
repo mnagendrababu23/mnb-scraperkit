@@ -15,7 +15,7 @@ return [
         'verify_ssl' => true,
         'same_domain' => true,
         'respect_robots' => true,
-        'user_agent' => 'MNB-ScraperKit/3.0.0 (+https://example.com)',
+        'user_agent' => 'MNB-ScraperKit/3.1.0 (+https://example.com)',
         'max_response_bytes' => 5242880,
         'skip_auth_links' => true,
         'avoid_duplicate_final_urls' => true,
