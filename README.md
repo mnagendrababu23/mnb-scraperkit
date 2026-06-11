@@ -1,8 +1,8 @@
-# MNB ScraperKit V2.0.0
+# MNB ScraperKit V3.0.0
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V2.0.0 is the Dashboard and Admin UI Update. It adds an optional dependency-free local HTML dashboard, static dashboard snapshots, dashboard JSON output, dashboard serve/build/status commands, and consolidated read-only operations views for queue jobs, schedules, workers, profiles, plugins, API routes, and system health.
+V3.0.0 is the ML-Ready Intelligence Update. It adds deterministic intelligence helpers for feature extraction, page classification, quality prediction, URL priority scoring, and selector suggestions. These features work without external machine-learning dependencies, while exporting ML-ready JSON that can later be used with PHP-ML or another training workflow.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,22 +16,24 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V2.0.0 update focus
+## V3.0.0 update focus
 
-V2.0.0 focuses on visibility and operations. It gives users a lightweight local dashboard without requiring Laravel, Symfony HTTP Kernel, Node, Redis, or a database. The dashboard reads the same local queue, schedule, monitor, profile, plugin, and API metadata used by CLI commands.
+V3.0.0 focuses on ML-ready intelligence while keeping the framework lightweight and safe. The intelligence layer does not execute opaque models by default. It produces explainable feature JSON, heuristic page classes, quality labels, URL priority scores, and selector suggestions that users can review, export, and later feed into PHP-ML or another model workflow.
 
-- Added dependency-free dashboard classes: `DashboardDataCollector` and `DashboardRenderer`.
-- Added `public/dashboard.php` for local HTML dashboard and `/dashboard.json` machine-readable snapshots.
-- Added dashboard commands: `dashboard:status`, `dashboard:build`, and `dashboard:serve`.
-- Added static dashboard snapshot generation for sharing or archiving local job state.
-- Added dashboard server helper scripts for CMD and PowerShell.
-- Added optional dashboard token protection using `MNB_SCRAPERKIT_DASHBOARD_TOKEN`.
-- Added API dashboard endpoint: `/api/v1/dashboard`.
-- Kept V1.9.0 API/webhooks, V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
+- Added `src/Intelligence/` with feature extraction, classification, quality prediction, URL priority, selector suggestions, and capability diagnostics.
+- Added intelligence commands: `intelligence:doctor`, `intelligence:analyze`, `intelligence:classify`, `intelligence:quality`, `intelligence:priority`, and `intelligence:selectors`.
+- Added ML-ready feature exports for crawl JSON, pipeline JSON, source connector output, and URL lists.
+- Added heuristic page classification for article, ecommerce, jobs, tender, contact, document, JS-app, and error/blocked pages.
+- Added explainable quality prediction for pages and normalized records.
+- Added URL priority scoring to help process important crawl targets first.
+- Added profile-aware selector suggestions from saved HTML files.
+- Added optional `php-ai/php-ml` suggestion in Composer without making it a required dependency.
+- Kept V2.0.0 dashboard/admin UI, V1.9.0 API/webhooks, V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
 
 ## Highlights
 
 - **Professional PHP CLI framework** built as a Composer package with Symfony Console commands.
+- **ML-ready intelligence layer** for feature extraction, page classification, quality prediction, URL priority scoring, and selector suggestions.
 - **Local dashboard and admin UI** for queue jobs, schedules, workers, profiles, plugins, API routes, and system health.
 - **Plugin system** for config-only add-ons with reusable profile schemas, extractor rule files, source templates, export templates, command aliases, validation, install, enable/disable, and doctor checks.
 - **Advanced retry, scheduling, and monitoring** with safe retry plans, local schedules, due-job enqueueing, health summaries, and stale lock diagnostics.
@@ -47,12 +49,12 @@ V2.0.0 focuses on visibility and operations. It gives users a lightweight local 
 - **Professional exports and reports** including JSON, CSV, XML, HTML summaries, failed URL reports, validation issue reports, and ZIP project bundles.
 - **Automation friendly** for PHP CLI, CMD, PowerShell, cron, Windows Task Scheduler, and server-side workflows.
 - **Source connector system** for collecting crawl targets from sitemaps, RSS/Atom feeds, CSV files, JSON files, generic JSON APIs, PLOS, and Elsevier/ScienceDirect.
-- **Future-ready architecture** designed for later expansion into richer dashboards, Redis queues, browser-worker orchestration, role-based access, and ML-assisted intelligence.
+- **Future-ready architecture** designed for later expansion into richer dashboards, Redis queues, browser-worker orchestration, role-based access, and trainable ML models.
 
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V2.0.0 CLI/library release.
+This section lists the main functionality available in the current V3.0.0 CLI/library release.
 
 ### Package and CLI
 
@@ -62,6 +64,16 @@ This section lists the main functionality available in the current V2.0.0 CLI/li
 - Global binary support through `vendor/bin/mnb-scraper`.
 - Built-in command list and per-command help screens.
 - CMD, PowerShell, cron, Windows Task Scheduler, and server automation friendly scripts/workflows.
+
+### ML-ready intelligence
+
+- `intelligence:doctor` shows available intelligence tools and optional PHP-ML availability.
+- `intelligence:analyze <input.json>` extracts ML-ready page, record, and URL features.
+- `intelligence:classify <input.json>` classifies crawled pages into useful workflow groups.
+- `intelligence:quality <input.json>` predicts page and record quality labels with explainable reasons.
+- `intelligence:priority <urls.txt|source.json>` ranks URLs so high-value crawl targets can run first.
+- `intelligence:selectors <html-file>` suggests profile-aware selectors for saved HTML.
+- Works without external ML dependencies. Optional PHP-ML integration can be added later using the exported feature JSON.
 
 ### Dashboard and local admin UI
 
@@ -140,7 +152,7 @@ This section lists the main functionality available in the current V2.0.0 CLI/li
 - Plugin enable/disable controls by editing the manifest `enabled` flag.
 - Plugin doctor command for validating all discovered plugins.
 - Plugin-contributed profiles available to `profile:list`, `profile:show`, `extract:rules`, and pipeline/profile workflows.
-- Safe-by-default design: V2.0.0 does not automatically execute arbitrary plugin PHP code.
+- Safe-by-default design: V3.0.0 does not automatically execute arbitrary plugin PHP code.
 
 ### Lightweight API and webhooks
 
@@ -353,7 +365,7 @@ This section lists the main functionality available in the current V2.0.0 CLI/li
 ## Package direction
 
 - First public version: **1.0.0**
-- Current version: **2.0.0** — Dashboard and admin UI update
+- Current version: **3.0.0** — Dashboard and admin UI update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
@@ -1075,7 +1087,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V2.0.0 dashboard and admin UI package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V3.0.0 dashboard and admin UI package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 
@@ -1099,6 +1111,38 @@ Optional Composer script:
 
 ```bash
 composer test
+```
+
+## ML-ready intelligence examples
+
+Analyze crawl or pipeline output and export features:
+
+```bash
+php bin/mnb-scraper intelligence:analyze storage/jobs/example/crawl.json --output=storage/intelligence/features.json
+```
+
+Classify pages and recommend profiles:
+
+```bash
+php bin/mnb-scraper intelligence:classify storage/jobs/example/crawl.json --output=storage/intelligence/classes.json
+```
+
+Predict quality for pages and records:
+
+```bash
+php bin/mnb-scraper intelligence:quality storage/jobs/example/pipeline.json --output=storage/intelligence/quality.json
+```
+
+Prioritize URLs before crawling:
+
+```bash
+php bin/mnb-scraper intelligence:priority urls.txt --format=txt --output=priority-urls.txt
+```
+
+Suggest selectors from saved HTML:
+
+```bash
+php bin/mnb-scraper intelligence:selectors page.html --profile=ecommerce --output=selectors.json
 ```
 
 ## License

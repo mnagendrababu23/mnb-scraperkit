@@ -1,4 +1,4 @@
--- MNB ScraperKit V2.0.0 SQLite storage schema
+-- MNB ScraperKit V3.0.0 SQLite storage schema
 -- Default local database: storage/database/mnb-scraperkit.sqlite
 
 CREATE TABLE IF NOT EXISTS mnb_storage_jobs (

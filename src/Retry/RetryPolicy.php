@@ -100,7 +100,7 @@ final class RetryPolicy
         }
         ksort($counts);
         return [
-            'retry_policy_version' => '2.0.0',
+            'retry_policy_version' => '3.0.0',
             'generated_at' => date(DATE_ATOM),
             'total' => count($decisions),
             'eligible' => $eligible,

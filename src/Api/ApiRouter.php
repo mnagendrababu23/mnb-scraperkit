@@ -20,7 +20,7 @@ use Mnb\ScraperKit\Queue\LocalJobQueue;
  */
 final class ApiRouter
 {
-    public const VERSION = '2.0.0';
+    public const VERSION = '3.0.0';
 
     public function __construct(
         private readonly string $rootDir,

@@ -18,6 +18,12 @@ use Mnb\ScraperKit\Database\DatabaseRepository;
 use Mnb\ScraperKit\Database\DatabaseSchema;
 use Mnb\ScraperKit\Dashboard\DashboardDataCollector;
 use Mnb\ScraperKit\Dashboard\DashboardRenderer;
+use Mnb\ScraperKit\Intelligence\FeatureExtractor;
+use Mnb\ScraperKit\Intelligence\IntelligenceDoctor;
+use Mnb\ScraperKit\Intelligence\PageClassifier;
+use Mnb\ScraperKit\Intelligence\QualityPredictor;
+use Mnb\ScraperKit\Intelligence\SelectorSuggester;
+use Mnb\ScraperKit\Intelligence\UrlPrioritizer;
 use Mnb\ScraperKit\Core\CrawlResult;
 use Mnb\ScraperKit\Core\HttpClient;
 use Mnb\ScraperKit\Core\RobotsPolicy;
@@ -125,6 +131,12 @@ final class NativeCliApplication
                 'dashboard:status' => $this->dashboardStatus($args, $opts),
                 'dashboard:build' => $this->dashboardBuild($args, $opts),
                 'dashboard:serve' => $this->dashboardServe($args, $opts),
+                'intelligence:doctor' => $this->intelligenceDoctor($args, $opts),
+                'intelligence:analyze' => $this->intelligenceAnalyze($args, $opts),
+                'intelligence:classify' => $this->intelligenceClassify($args, $opts),
+                'intelligence:quality' => $this->intelligenceQuality($args, $opts),
+                'intelligence:priority' => $this->intelligencePriority($args, $opts),
+                'intelligence:selectors' => $this->intelligenceSelectors($args, $opts),
                 'webhook:list' => $this->webhookList($args, $opts),
                 'webhook:test' => $this->webhookTest($args, $opts),
                 'webhook:send' => $this->webhookSend($args, $opts),
@@ -191,7 +203,7 @@ final class NativeCliApplication
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 2.0.0 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 3.0.0 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -230,6 +242,12 @@ final class NativeCliApplication
             'dashboard:status' => 'Show dashboard health, URLs, and read-only data availability.',
             'dashboard:build' => 'Build a static HTML dashboard snapshot from local queue/schedule/plugin/profile data.',
             'dashboard:serve' => 'Serve the optional local HTML admin dashboard using PHP built-in server.',
+            'intelligence:doctor' => 'Show ML/intelligence capability status and optional PHP-ML availability.',
+            'intelligence:analyze <input.json>' => 'Extract ML-ready features from crawl, pipeline, source, or URL JSON files.',
+            'intelligence:classify <input.json>' => 'Classify pages into article/ecommerce/job/tender/contact/JS/error groups.',
+            'intelligence:quality <input.json>' => 'Predict page/record quality labels from extracted features.',
+            'intelligence:priority <input>' => 'Score and sort URLs for crawl priority from TXT or JSON input.',
+            'intelligence:selectors <html-file>' => 'Suggest profile-aware CSS/meta selectors from saved HTML.',
             'webhook:list' => 'List webhook endpoints from config/webhooks.json or a custom config file.',
             'webhook:test' => 'Create or send a test webhook event.',
             'webhook:send <payload.json>' => 'Send a JSON payload as a webhook event to one endpoint.',
@@ -740,6 +758,114 @@ final class NativeCliApplication
         return (int) $exitCode;
     }
 
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function intelligenceDoctor(array $args, array $opts): int
+    {
+        $this->outJson((new IntelligenceDoctor())->inspect());
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function intelligenceAnalyze(array $args, array $opts): int
+    {
+        $input = $args[0] ?? $this->optString($opts, 'input');
+        if (!$input) {
+            throw new \InvalidArgumentException('Usage: intelligence:analyze <input.json> [--output=features.json]');
+        }
+        $data = (new FeatureExtractor())->analyzeFile((string) $input);
+        $output = $this->optString($opts, 'output');
+        if ($output) {
+            $this->writeJson($output, $data);
+            $this->outJson(['ok' => true, 'output' => $output, 'summary' => $data['summary'] ?? []]);
+        } else {
+            $this->outJson($data);
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function intelligenceClassify(array $args, array $opts): int
+    {
+        $input = $args[0] ?? $this->optString($opts, 'input');
+        if (!$input) {
+            throw new \InvalidArgumentException('Usage: intelligence:classify <input.json> [--output=classes.json]');
+        }
+        $analysis = (new FeatureExtractor())->analyzeFile((string) $input);
+        $data = (new PageClassifier())->classifyFeatureSet(array_values(array_filter($analysis['page_features'] ?? [], 'is_array')));
+        $output = $this->optString($opts, 'output');
+        if ($output) {
+            $this->writeJson($output, $data);
+            $this->outJson(['ok' => true, 'output' => $output, 'class_counts' => $data['class_counts'] ?? []]);
+        } else {
+            $this->outJson($data);
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function intelligenceQuality(array $args, array $opts): int
+    {
+        $input = $args[0] ?? $this->optString($opts, 'input');
+        if (!$input) {
+            throw new \InvalidArgumentException('Usage: intelligence:quality <input.json> [--output=quality.json]');
+        }
+        $analysis = (new FeatureExtractor())->analyzeFile((string) $input);
+        $data = (new QualityPredictor())->predict($analysis);
+        $output = $this->optString($opts, 'output');
+        if ($output) {
+            $this->writeJson($output, $data);
+            $this->outJson(['ok' => true, 'output' => $output, 'summary' => $data['summary'] ?? []]);
+        } else {
+            $this->outJson($data);
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function intelligencePriority(array $args, array $opts): int
+    {
+        $input = $args[0] ?? $this->optString($opts, 'input');
+        if (!$input || !is_file((string) $input)) {
+            throw new \InvalidArgumentException('Usage: intelligence:priority <urls.txt|source.json> [--output=priority.json]');
+        }
+        $urls = $this->readUrlsForIntelligence((string) $input);
+        $data = (new UrlPrioritizer())->prioritize($urls);
+        $format = strtolower($this->optString($opts, 'format', 'json') ?? 'json');
+        $output = $this->optString($opts, 'output');
+        if ($output) {
+            if ($format === 'txt') {
+                $this->writeTextLines($output, array_values(array_map('strval', $data['urls'] ?? [])));
+            } else {
+                $this->writeJson($output, $data);
+            }
+            $this->outJson(['ok' => true, 'output' => $output, 'urls_total' => $data['urls_total'] ?? 0]);
+        } else {
+            $this->outJson($data);
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function intelligenceSelectors(array $args, array $opts): int
+    {
+        $input = $args[0] ?? $this->optString($opts, 'input');
+        if (!$input || !is_file((string) $input)) {
+            throw new \InvalidArgumentException('Usage: intelligence:selectors <html-file> [--profile=ecommerce] [--output=selectors.json]');
+        }
+        $html = (string) file_get_contents((string) $input);
+        $profile = $this->optString($opts, 'profile', 'seo') ?? 'seo';
+        $data = (new SelectorSuggester())->suggestFromHtml($html, $profile);
+        $output = $this->optString($opts, 'output');
+        if ($output) {
+            $this->writeJson($output, $data);
+            $this->outJson(['ok' => true, 'output' => $output, 'profile' => $profile]);
+        } else {
+            $this->outJson($data);
+        }
+        return 0;
+    }
+
     /** @param array<int,string> $args @param array<string,mixed> $opts */
     private function webhookList(array $args, array $opts): int
     {
@@ -764,7 +890,7 @@ final class NativeCliApplication
         $output = $this->optString($opts, 'output') ?: $this->storagePath('webhooks/test-' . date('Ymd-His') . '.json');
         $payload = [
             'message' => 'MNB ScraperKit webhook test event',
-            'version' => '2.0.0',
+            'version' => '3.0.0',
             'generated_at' => date(DATE_ATOM),
         ];
         $dispatcher = new WebhookDispatcher($this->safetyGuard());
@@ -2602,6 +2728,38 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
     }
 
     /** @param array<int,string> $lines */
+
+    /** @return array<int,string> */
+    private function readUrlsForIntelligence(string $input): array
+    {
+        $content = (string) file_get_contents($input);
+        $urls = [];
+        $trim = ltrim($content);
+        if ($trim !== '' && ($trim[0] === '{' || $trim[0] === '[')) {
+            $data = json_decode($content, true);
+            $walk = static function (mixed $value) use (&$walk, &$urls): void {
+                if (is_string($value) && preg_match('~^https?://~i', $value) === 1) {
+                    $urls[] = $value;
+                    return;
+                }
+                if (is_array($value)) {
+                    foreach ($value as $item) {
+                        $walk($item);
+                    }
+                }
+            };
+            $walk($data);
+        } else {
+            foreach (preg_split('/\R+/', $content) ?: [] as $line) {
+                $line = trim($line);
+                if ($line !== '' && !str_starts_with($line, '#')) {
+                    $urls[] = $line;
+                }
+            }
+        }
+        return array_values(array_unique(array_filter($urls, static fn (string $url): bool => preg_match('~^https?://~i', $url) === 1)));
+    }
+
     private function writeTextLines(string $path, array $lines): void
     {
         $this->ensureDir(dirname($path));
@@ -3128,7 +3286,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $result = (new DatabaseMigrator($pdo, $config->driver()))->migrate();
         $this->outJson([
             'ok' => true,
-            'version' => '2.0.0',
+            'version' => '3.0.0',
             'driver' => $result['driver'],
             'statements_executed' => $result['statements'],
             'tables' => $result['tables'],
@@ -3144,7 +3302,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $pdo = (new DatabaseConnectionFactory())->connect($config);
         $this->outJson([
             'ok' => true,
-            'version' => '2.0.0',
+            'version' => '3.0.0',
             'driver' => $config->driver(),
             'pdo_driver' => (string) $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME),
             'dsn' => $this->safeDsn($config->dsn),
@@ -3358,7 +3516,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '2.0.0',
+            'checkpoint_version' => '3.0.0',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),

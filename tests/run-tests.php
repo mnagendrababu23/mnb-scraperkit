@@ -16,6 +16,11 @@ use Mnb\ScraperKit\Database\DatabaseConfig;
 use Mnb\ScraperKit\Database\DatabaseSchema;
 use Mnb\ScraperKit\Dashboard\DashboardDataCollector;
 use Mnb\ScraperKit\Dashboard\DashboardRenderer;
+use Mnb\ScraperKit\Intelligence\FeatureExtractor;
+use Mnb\ScraperKit\Intelligence\PageClassifier;
+use Mnb\ScraperKit\Intelligence\QualityPredictor;
+use Mnb\ScraperKit\Intelligence\SelectorSuggester;
+use Mnb\ScraperKit\Intelligence\UrlPrioritizer;
 use Mnb\ScraperKit\Core\FailureClassifier;
 use Mnb\ScraperKit\Core\PageResult;
 use Mnb\ScraperKit\Core\RateLimiter;
@@ -61,7 +66,7 @@ $tests['database config defaults to local SQLite and schema exposes storage tabl
     assert(count(DatabaseSchema::statements('mysql')) >= 6, 'MySQL schema statements missing');
 };
 
-$tests['database command registry exposes v2.0.0 database commands and options'] = function (): void {
+$tests['database command registry exposes v3.0.0 database commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['db:init', 'db:test', 'db:status', 'db:save-crawl', 'db:save-pipeline', 'db:export'] as $command) {
         assert(isset($commands[$command]), 'missing database command: ' . $command);
@@ -72,22 +77,22 @@ $tests['database command registry exposes v2.0.0 database commands and options']
     }
 };
 
-$tests['v2.0.0 command registry exposes retry scheduling and monitoring commands'] = function (): void {
+$tests['v3.0.0 command registry exposes retry scheduling and monitoring commands'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['retry:plan', 'queue:retry-safe', 'schedule:create', 'schedule:list', 'schedule:show', 'schedule:run-due', 'schedule:enable', 'schedule:disable', 'monitor:summary', 'monitor:stale-locks'] as $command) {
-        assert(isset($commands[$command]), 'missing v2.0.0 command: ' . $command);
+        assert(isset($commands[$command]), 'missing v3.0.0 command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['command', 'arg', 'schedule-id', 'every-minutes', 'every-hours', 'dry-run', 'failed-jobs', 'ttl-seconds'] as $option) {
-        assert(in_array($option, $options, true), 'missing v2.0.0 option: ' . $option);
+        assert(in_array($option, $options, true), 'missing v3.0.0 option: ' . $option);
     }
 };
 
 
-$tests['v2.0.0 plugin command registry exposes plugin commands and options'] = function (): void {
+$tests['v3.0.0 plugin command registry exposes plugin commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['plugin:list', 'plugin:show', 'plugin:validate', 'plugin:install', 'plugin:enable', 'plugin:disable', 'plugin:doctor'] as $command) {
-        assert(isset($commands[$command]), 'missing v2.0.0 plugin command: ' . $command);
+        assert(isset($commands[$command]), 'missing v3.0.0 plugin command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['plugin-dir', 'plugin-id', 'plugins-dir', 'all', 'force'] as $option) {
@@ -164,14 +169,14 @@ $tests['local schedule store creates due schedules and monitoring snapshot repor
 
 
 
-$tests['v2.0.0 API and webhook command registry exposes automation commands and options'] = function (): void {
+$tests['v3.0.0 API and webhook command registry exposes automation commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['api:routes', 'api:token', 'api:serve', 'webhook:list', 'webhook:test', 'webhook:send'] as $command) {
-        assert(isset($commands[$command]), 'missing v2.0.0 command: ' . $command);
+        assert(isset($commands[$command]), 'missing v3.0.0 command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['host', 'port', 'prefix', 'print-command', 'webhook-url', 'webhook-header', 'webhook-secret', 'config', 'payload'] as $option) {
-        assert(in_array($option, $options, true), 'missing v2.0.0 option: ' . $option);
+        assert(in_array($option, $options, true), 'missing v3.0.0 option: ' . $option);
     }
 };
 
@@ -230,7 +235,7 @@ $tests['native API and webhook commands run without network by default'] = funct
 };
 
 
-$tests['v2.0.0 dashboard command registry exposes dashboard commands and options'] = function (): void {
+$tests['v3.0.0 dashboard command registry exposes dashboard commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['dashboard:status', 'dashboard:build', 'dashboard:serve'] as $command) {
         assert(isset($commands[$command]), 'missing dashboard command: ' . $command);
@@ -249,7 +254,7 @@ $tests['dashboard collector and renderer expose local operations state'] = funct
     $scheduleStore = new LocalScheduleStore($root);
     $scheduleStore->create(['schedule_id' => 'dashboard-schedule', 'command' => 'crawl', 'args' => ['https://example.com'], 'interval_seconds' => 60]);
     $data = (new DashboardDataCollector($root))->collect();
-    assert(($data['dashboard_version'] ?? null) === '2.0.0', 'dashboard version mismatch');
+    assert(($data['dashboard_version'] ?? null) === '3.0.0', 'dashboard version mismatch');
     assert(($data['queue']['counts']['pending'] ?? 0) === 1, 'dashboard queue count mismatch');
     assert(($data['schedules']['total'] ?? 0) === 1, 'dashboard schedule count mismatch');
     $html = (new DashboardRenderer())->render($data);
@@ -264,7 +269,7 @@ $tests['API router exposes dashboard summary route'] = function (): void {
     $router = new ApiRouter($root, $token);
     $response = $router->handle('GET', '/api/v1/dashboard', ['Authorization' => 'Bearer ' . $token]);
     assert($response->status === 200, 'dashboard API route failed');
-    assert(($response->body['dashboard']['dashboard_version'] ?? null) === '2.0.0', 'dashboard API version mismatch');
+    assert(($response->body['dashboard']['dashboard_version'] ?? null) === '3.0.0', 'dashboard API version mismatch');
 };
 
 $tests['native dashboard commands run without starting server'] = function (): void {
@@ -374,7 +379,7 @@ $tests['failure classifier maps common crawl failures'] = function (): void {
     assert(FailureClassifier::fromSafetyMessage('URL safety check failed: private/reserved IP targets are blocked.') === 'private_ip_blocked');
 };
 
-$tests['rate limiter accepts v2.0.0 pacing options without sleeping unnecessarily'] = function (): void {
+$tests['rate limiter accepts v3.0.0 pacing options without sleeping unnecessarily'] = function (): void {
     $limiter = new RateLimiter();
     $options = CrawlOptions::fromArray([
         'delay_ms' => 0,
@@ -392,7 +397,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
     mkdir($dir, 0775, true);
     $checkpoint = $dir . '/checkpoint.json';
     file_put_contents($checkpoint, json_encode([
-        'checkpoint_version' => '2.0.0',
+        'checkpoint_version' => '3.0.0',
         'updated_at' => '2026-01-01T00:00:00+00:00',
         'queues' => [
             'pending' => ['https://example.com/pending'],
@@ -406,7 +411,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
 
     $manifestPath = JobManifest::write($dir, 'bulk-crawl', [], ['checkpoint' => $checkpoint], []);
     $manifest = JobManifest::read($manifestPath);
-    assert(($manifest['version'] ?? null) === '2.0.0');
+    assert(($manifest['version'] ?? null) === '3.0.0');
     assert(($manifest['resume']['counts']['pending'] ?? null) === 1);
     assert(($manifest['resume']['last_processed_url'] ?? null) === 'https://example.com/done');
 };
@@ -594,7 +599,7 @@ $tests['export and report upgrade creates XML, HTML summary and ZIP bundle'] = f
     mkdir($dir . '/logs', 0775, true);
 
     file_put_contents($dir . '/job-manifest.json', json_encode([
-        'version' => '2.0.0',
+        'version' => '3.0.0',
         'job_id' => 'test-job',
         'type' => 'crawl',
         'resume' => ['counts' => ['completed' => 1, 'failed' => 1]],
@@ -635,6 +640,61 @@ $tests['export and report upgrade creates XML, HTML summary and ZIP bundle'] = f
     $bundle = (new ProjectBundleExporter())->create($dir, $zip);
     assert(is_file($zip) && filesize($zip) > 0, 'ZIP bundle missing');
     assert(($bundle['files_total'] ?? 0) >= 3, 'bundle file count mismatch');
+};
+
+
+$tests['v3.0.0 intelligence features classify quality priority and selector suggestions'] = function (): void {
+    $dir = sys_get_temp_dir() . '/mnb_intel_' . bin2hex(random_bytes(4));
+    mkdir($dir, 0775, true);
+    $crawlFile = $dir . '/crawl.json';
+    file_put_contents($crawlFile, json_encode([
+        'pages' => [[
+            'url' => 'https://example.com/product/sku-1',
+            'final_url' => 'https://example.com/product/sku-1',
+            'status_code' => 200,
+            'status' => 'completed',
+            'title' => 'Sample Product',
+            'text' => 'Buy now for ₹1299 with product details and stock availability.',
+            'html' => '<html><head><meta property="og:title" content="Sample Product"><script type="application/ld+json">{"@type":"Product"}</script></head><body><h1 class="product-title">Sample Product</h1><span class="price">₹1299</span><a href="/x">x</a></body></html>',
+        ]],
+        'records' => [[
+            'record_id' => 'rec1',
+            'record_type' => 'product',
+            'source_url' => 'https://example.com/product/sku-1',
+            'dedupe_key' => 'sku-1',
+            'fields' => ['title' => 'Sample Product', 'price' => '1299'],
+            'validation' => ['warnings' => []],
+            'quality_score' => 0.9,
+        ]],
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+    $analysis = (new FeatureExtractor())->analyzeFile($crawlFile);
+    assert(($analysis['summary']['pages_total'] ?? null) === 1, 'intelligence page count mismatch');
+    assert(($analysis['page_features'][0]['has_price_hint'] ?? false) === true, 'price hint feature missing');
+
+    $classes = (new PageClassifier())->classifyFeatureSet($analysis['page_features']);
+    assert(($classes['rows'][0]['class'] ?? null) === 'ecommerce', 'page should classify as ecommerce');
+
+    $quality = (new QualityPredictor())->predict($analysis);
+    assert(($quality['summary']['page_quality_avg'] ?? 0) > 0, 'page quality avg missing');
+    assert(($quality['record_quality'][0]['label'] ?? '') !== '', 'record quality label missing');
+
+    $priority = (new UrlPrioritizer())->prioritize(['https://example.com/a.jpg', 'https://example.com/product/sku-1']);
+    assert(($priority['urls'][0] ?? '') === 'https://example.com/product/sku-1', 'URL priority should prefer product page over asset');
+
+    $suggestions = (new SelectorSuggester())->suggestFromHtml((string) json_decode((string) file_get_contents($crawlFile), true)['pages'][0]['html'], 'ecommerce');
+    assert(isset($suggestions['suggestions']['price']), 'selector suggestions missing price group');
+};
+
+$tests['v3.0.0 command registry exposes intelligence commands and options'] = function (): void {
+    $commands = CommandRegistry::commands();
+    foreach (['intelligence:doctor', 'intelligence:analyze', 'intelligence:classify', 'intelligence:quality', 'intelligence:priority', 'intelligence:selectors'] as $command) {
+        assert(isset($commands[$command]), 'missing intelligence command: ' . $command);
+    }
+    $options = CommandRegistry::optionNames();
+    foreach (['input', 'output', 'profile', 'format', 'model', 'features-file'] as $option) {
+        assert(in_array($option, $options, true), 'missing intelligence option: ' . $option);
+    }
 };
 
 $passed = 0;

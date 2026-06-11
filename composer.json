@@ -1,9 +1,9 @@
 {
     "name": "mnb/scraperkit",
-    "description": "MNB ScraperKit V2.0.0 - professional PHP crawling and data extraction framework with Symfony Console commands, safe crawling, source connectors, reports, profiles, queue workers, browser fallback, database storage, monitoring, plugins, API/webhooks, and local dashboard UI.",
+    "description": "MNB ScraperKit V3.0.0 - professional PHP crawling and data extraction framework with Symfony Console commands, safe crawling, source connectors, reports, profiles, queue workers, browser fallback, database storage, monitoring, plugins, API/webhooks, dashboard UI, and ML-ready intelligence.",
     "type": "library",
     "license": "MIT",
-    "version": "2.0.0",
+    "version": "3.0.0",
     "require": {
         "php": ">=8.2",
         "ext-dom": "*",
@@ -17,7 +17,8 @@
         "symfony/panther": "Optional browser-assisted crawling adapter for JavaScript-rendered pages. Normal PHP HTTP crawling works without it.",
         "chrome/chromium": "Needed only when using browser-assisted crawling through Panther/Chrome.",
         "pdo_sqlite": "Optional SQLite driver for local database storage.",
-        "pdo_mysql": "Optional MySQL/MariaDB driver for server database storage."
+        "pdo_mysql": "Optional MySQL/MariaDB driver for server database storage.",
+        "php-ai/php-ml": "Optional machine-learning toolkit for future model training/inference. V3.0.0 includes deterministic ML-ready feature exports without requiring this dependency."
     },
     "autoload": {
         "psr-4": {
@@ -107,6 +108,16 @@
         "operations-dashboard",
         "queue-dashboard",
         "scheduler-dashboard",
-        "html-dashboard"
+        "html-dashboard",
+        "ml",
+        "machine-learning",
+        "php-ml",
+        "intelligence",
+        "feature-extraction",
+        "page-classification",
+        "selector-suggestions",
+        "quality-prediction",
+        "url-priority",
+        "ml-ready"
     ]
 }
