@@ -5,6 +5,7 @@ declare(strict_types=1);
 require __DIR__ . '/../autoload.php';
 
 use Mnb\ScraperKit\Console\CommandRegistry;
+use Mnb\ScraperKit\Cli\NativeCliApplication;
 use Mnb\ScraperKit\Core\FailureClassifier;
 use Mnb\ScraperKit\Core\RateLimiter;
 use Mnb\ScraperKit\Core\CrawlOptions;
@@ -13,6 +14,7 @@ use Mnb\ScraperKit\Pipeline\PipelineOptions;
 use Mnb\ScraperKit\Pipeline\ProfessionalCrawlPipeline;
 use Mnb\ScraperKit\Profile\ProfileSchemaLoader;
 use Mnb\ScraperKit\Profile\ProfileSchemaValidator;
+use Mnb\ScraperKit\Queue\LocalJobQueue;
 use Mnb\ScraperKit\Extractor\RuleBasedExtractor;
 use Mnb\ScraperKit\Parser\HtmlParser;
 use Mnb\ScraperKit\Report\ProjectBundleExporter;
@@ -71,7 +73,7 @@ $tests['failure classifier maps common crawl failures'] = function (): void {
     assert(FailureClassifier::fromSafetyMessage('URL safety check failed: private/reserved IP targets are blocked.') === 'private_ip_blocked');
 };
 
-$tests['rate limiter accepts v1.3.0 pacing options without sleeping unnecessarily'] = function (): void {
+$tests['rate limiter accepts v1.4.0 pacing options without sleeping unnecessarily'] = function (): void {
     $limiter = new RateLimiter();
     $options = CrawlOptions::fromArray([
         'delay_ms' => 0,
@@ -89,7 +91,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
     mkdir($dir, 0775, true);
     $checkpoint = $dir . '/checkpoint.json';
     file_put_contents($checkpoint, json_encode([
-        'checkpoint_version' => '1.3.0',
+        'checkpoint_version' => '1.4.0',
         'updated_at' => '2026-01-01T00:00:00+00:00',
         'queues' => [
             'pending' => ['https://example.com/pending'],
@@ -103,7 +105,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
 
     $manifestPath = JobManifest::write($dir, 'bulk-crawl', [], ['checkpoint' => $checkpoint], []);
     $manifest = JobManifest::read($manifestPath);
-    assert(($manifest['version'] ?? null) === '1.3.0');
+    assert(($manifest['version'] ?? null) === '1.4.0');
     assert(($manifest['resume']['counts']['pending'] ?? null) === 1);
     assert(($manifest['resume']['last_processed_url'] ?? null) === 'https://example.com/done');
 };
@@ -191,6 +193,59 @@ $tests['source connectors parse sitemap, CSV and JSON URL sources'] = function (
 
 
 
+
+
+$tests['local queue creates, moves, retries and counts jobs'] = function (): void {
+    $root = sys_get_temp_dir() . '/mnb_queue_' . bin2hex(random_bytes(4));
+    mkdir($root, 0775, true);
+    $queue = new LocalJobQueue($root);
+    $job = $queue->create([
+        'job_id' => 'test-job',
+        'command' => 'source:csv',
+        'args' => ['urls.csv'],
+        'options' => ['url-column' => 'url'],
+    ]);
+
+    assert(($job['state'] ?? null) === 'pending', 'created job should be pending');
+    assert(($queue->counts()['pending'] ?? 0) === 1, 'pending count mismatch');
+
+    $queue->pause('test-job');
+    assert(($queue->counts()['paused'] ?? 0) === 1, 'paused count mismatch');
+
+    $queue->resume('test-job');
+    $running = $queue->markRunning('test-job', 'worker-test');
+    assert(($running['attempts'] ?? 0) === 1, 'attempt count mismatch');
+
+    $queue->markFailed('test-job', 1, 'expected failure');
+    assert(($queue->counts()['failed'] ?? 0) === 1, 'failed count mismatch');
+
+    $queue->retry('test-job');
+    assert(($queue->counts()['pending'] ?? 0) === 1, 'retry should move job to pending');
+
+    assert($queue->acquireLock('test-job', 'worker-test') === true, 'lock should be acquired');
+    assert($queue->acquireLock('test-job', 'worker-two') === false, 'duplicate lock should fail');
+    $queue->releaseLock('test-job');
+};
+
+
+
+$tests['native queue worker runs a CSV source job to completion'] = function (): void {
+    $root = sys_get_temp_dir() . '/mnb_queue_cli_' . bin2hex(random_bytes(4));
+    mkdir($root, 0775, true);
+    $csv = $root . '/urls.csv';
+    file_put_contents($csv, "url,label\nhttps://example.com/a,one\n");
+    $config = is_file(dirname(__DIR__) . '/config/scraper.php') ? require dirname(__DIR__) . '/config/scraper.php' : [];
+    $app = new NativeCliApplication($config, $root);
+    ob_start();
+    $createCode = $app->run(['mnb-scraper', 'job:create', '--job-id=cli-test', '--source=csv', $csv, '--url-column=url', '--format=json']);
+    $workerCode = $app->run(['mnb-scraper', 'worker:once']);
+    ob_end_clean();
+    assert($createCode === 0, 'job:create failed');
+    assert($workerCode === 0, 'worker:once failed');
+    $queue = new LocalJobQueue($root);
+    assert(($queue->counts()['completed'] ?? 0) === 1, 'worker should complete queued job');
+};
+
 $tests['profile schemas validate and load extraction defaults'] = function (): void {
     $root = dirname(__DIR__);
     $loader = new ProfileSchemaLoader($root . '/config/profiles');
@@ -238,7 +293,7 @@ $tests['export and report upgrade creates XML, HTML summary and ZIP bundle'] = f
     mkdir($dir . '/logs', 0775, true);
 
     file_put_contents($dir . '/job-manifest.json', json_encode([
-        'version' => '1.3.0',
+        'version' => '1.4.0',
         'job_id' => 'test-job',
         'type' => 'crawl',
         'resume' => ['counts' => ['completed' => 1, 'failed' => 1]],

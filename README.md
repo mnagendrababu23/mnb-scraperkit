@@ -1,8 +1,8 @@
-# MNB ScraperKit V1.3.0
+# MNB ScraperKit V1.4.0
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V1.3.0 is the Profile Schemas and Extractor Rules Update. It adds reusable profile schema files, rule-based extraction, profile validation commands, schema-aware pipeline defaults, and extraction-rule examples while keeping source connectors, exports, reports, safe crawling, and the Symfony Console CLI.
+V1.4.0 is the Queue and Worker Commands Update. It adds a lightweight local JSON queue, queued job lifecycle commands, worker commands, retry helpers, queue status reporting, and lock files while keeping profile schemas, source connectors, exports, reports, safe crawling, and the Symfony Console CLI.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,22 +16,23 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V1.3.0 update focus
+## V1.4.0 update focus
 
-V1.3.0 focuses on profile-driven extraction: reusable schemas, extractor rules, schema validation, and pipeline defaults for real project workflows.
+V1.4.0 focuses on local job automation: create jobs, queue jobs, run workers, pause/resume/cancel jobs, retry failed work, and inspect queue status from CLI/CMD/PowerShell/server workflows.
 
-- Added `config/profiles/*.json` profile schemas for ecommerce, SEO, academic, jobs, and tender/government workflows.
-- Added `profile:list` to show available profile schemas.
-- Added `profile:show` to inspect required fields, optional fields, validators, transformations, dedupe keys, export columns, and extraction rules.
-- Added `profile:validate` to validate custom profile schema JSON before using it in production crawls.
-- Added `extract:rules` to test extraction rules against a single URL.
-- Added schema-aware pipeline defaults for required fields, validators, transformations, dedupe keys, field mapping, export columns, and record type.
-- Added rule-based extraction support for CSS-style selectors, XPath, meta tags, Open Graph tags, JSON-LD paths, attributes, regex cleanup, fallback rules, and multi-value fields.
-- Kept V1.2.0 exports/reports/bundles and V1.1.0 source connectors.
+- Added file-based local queue folders under `storage/queue/`.
+- Added `job:create`, `job:list`, `job:show`, `job:pause`, `job:resume`, and `job:cancel`.
+- Upgraded `job:run` to run queued jobs by ID while still supporting legacy JSON job files.
+- Added `worker:once`, `worker:run`, and `worker:status`.
+- Added failed queue helpers: `queue:failed`, `queue:retry`, `queue:retry-all`, and `queue:clear-failed`.
+- Added lock files to avoid two workers running the same job.
+- Added worker limits for max jobs, max runtime, sleep interval, and memory guard.
+- Kept V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
 
 ## Highlights
 
 - **Professional PHP CLI framework** built as a Composer package with Symfony Console commands.
+- **Queue and worker commands** for local file-based job automation, worker loops, job pause/resume/cancel, failed queue retry, and worker locks.
 - **Safe crawling controls** including URL safety checks, redirect safety, scope rules, robots-aware behavior, userinfo blocking, URL length limits, and private/reserved IP protection.
 - **Bulk crawling support** for processing many URLs with pacing, random jitter, cooldowns, checkpointing, failed queues, skipped queues, and resume support.
 - **Manifest-driven jobs** for reproducible crawl configuration, including input URLs, scope, pacing, extraction profile, output settings, and resume state.
@@ -41,12 +42,12 @@ V1.3.0 focuses on profile-driven extraction: reusable schemas, extractor rules, 
 - **Professional exports and reports** including JSON, CSV, XML, HTML summaries, failed URL reports, validation issue reports, and ZIP project bundles.
 - **Automation friendly** for PHP CLI, CMD, PowerShell, cron, Windows Task Scheduler, and server-side workflows.
 - **Source connector system** for collecting crawl targets from sitemaps, RSS/Atom feeds, CSV files, JSON files, generic JSON APIs, PLOS, and Elsevier/ScienceDirect.
-- **Future-ready architecture** designed for later expansion into dashboards, workers, richer reports, API/webhooks, and ML-assisted intelligence.
+- **Future-ready architecture** designed for later expansion into dashboards, database/Redis queues, API/webhooks, richer reports, and ML-assisted intelligence.
 
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V1.3.0 CLI/library release.
+This section lists the main functionality available in the current V1.4.0 CLI/library release.
 
 ### Package and CLI
 
@@ -145,6 +146,22 @@ This section lists the main functionality available in the current V1.3.0 CLI/li
 - Pause after N URLs.
 - Rest gaps and jitter for less aggressive crawling.
 - Job summary command for inspecting job output and manifest state.
+
+
+### Queue and worker commands
+
+- Local file-based queue stored under `storage/queue/`.
+- Queue states: `pending`, `running`, `completed`, `failed`, `paused`, `cancelled`, and `retry`.
+- `job:create` to create crawl, bulk crawl, URL process, sitemap, RSS, CSV, JSON, or API source jobs.
+- `job:list` and `job:show` for queue inspection.
+- `job:pause`, `job:resume`, and `job:cancel` for lifecycle control.
+- `job:run <job-id>` to run one queued job manually.
+- `worker:once` to run exactly one pending job and exit.
+- `worker:run` for long-running CLI workers with `--sleep`, `--max-jobs`, `--max-runtime`, `--memory-limit`, and `--stop-when-empty`.
+- `worker:status` for queue counts and active lock visibility.
+- Failed queue helpers: `queue:failed`, `queue:retry`, `queue:retry-all`, and `queue:clear-failed`.
+- Lock file support under `storage/queue/locks/` to avoid duplicate execution by parallel workers.
+- Works without Redis, database, or external queue services.
 
 ### Job manifest
 
@@ -250,7 +267,7 @@ This section lists the main functionality available in the current V1.3.0 CLI/li
 ## Package direction
 
 - First public version: **1.0.0**
-- Current version: **1.3.0** — profile schemas and extractor rules update
+- Current version: **1.4.0** — queue and worker commands update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
@@ -572,6 +589,64 @@ ScraperKit is built for reusable extraction profiles instead of one-off scraping
 | `seo` | Meta title, meta description, canonical URL, robots, schema, Open Graph, Twitter cards, headings, links, and sitemap hints |
 | `contact` / `document` | Emails, phones, addresses, document URLs, file metadata, and page-level contact information |
 
+## Queue and worker examples
+
+Create a queued sitemap source job:
+
+```bash
+php bin/mnb-scraper job:create --source=sitemap https://example.com/sitemap.xml --profile=seo
+```
+
+Create a queued CSV source job:
+
+```bash
+php bin/mnb-scraper job:create --source=csv urls.csv --url-column=url --profile=ecommerce
+```
+
+List queued jobs:
+
+```bash
+php bin/mnb-scraper job:list
+```
+
+Show one queued job:
+
+```bash
+php bin/mnb-scraper job:show JOB_ID
+```
+
+Run one queued job manually:
+
+```bash
+php bin/mnb-scraper job:run JOB_ID
+```
+
+Run one worker pass and exit:
+
+```bash
+php bin/mnb-scraper worker:once
+```
+
+Run a worker loop for server automation:
+
+```bash
+php bin/mnb-scraper worker:run --sleep=5 --max-jobs=10 --max-runtime=3600 --memory-limit=256M
+```
+
+Pause, resume, cancel, and retry:
+
+```bash
+php bin/mnb-scraper job:pause JOB_ID
+php bin/mnb-scraper job:resume JOB_ID
+php bin/mnb-scraper job:cancel JOB_ID
+php bin/mnb-scraper queue:failed
+php bin/mnb-scraper queue:retry JOB_ID
+php bin/mnb-scraper queue:retry-all
+```
+
+The V1.4.0 queue is intentionally local and dependency-free. It is suitable for CMD, PowerShell, cron, Windows Task Scheduler, systemd, and Supervisor. Future versions can add database/Redis queue drivers without changing the crawl/pipeline core.
+
+
 ## Job manifest and checkpoint
 
 When `--job-dir` is used, ScraperKit writes a `job-manifest.json` file containing:
@@ -665,7 +740,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V1.3.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V1.4.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 

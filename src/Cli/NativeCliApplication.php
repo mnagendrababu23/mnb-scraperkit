@@ -26,6 +26,7 @@ use Mnb\ScraperKit\Pipeline\PipelineOptions;
 use Mnb\ScraperKit\Pipeline\ProfessionalCrawlPipeline;
 use Mnb\ScraperKit\Profile\ProfileSchemaLoader;
 use Mnb\ScraperKit\Profile\ProfileSchemaValidator;
+use Mnb\ScraperKit\Queue\LocalJobQueue;
 use Mnb\ScraperKit\Report\ProjectBundleExporter;
 use Mnb\ScraperKit\Report\RecordExportService;
 use Mnb\ScraperKit\Report\ReportDataCollector;
@@ -82,6 +83,19 @@ final class NativeCliApplication
                 'profile:show' => $this->profileShow($args, $opts),
                 'profile:validate' => $this->profileValidate($args, $opts),
                 'extract:rules' => $this->extractRules($args, $opts),
+                'job:create' => $this->jobCreate($args, $opts),
+                'job:list' => $this->jobList($args, $opts),
+                'job:show' => $this->jobShow($args, $opts),
+                'job:pause' => $this->jobPause($args, $opts),
+                'job:resume' => $this->jobResume($args, $opts),
+                'job:cancel' => $this->jobCancel($args, $opts),
+                'worker:once' => $this->workerOnce($args, $opts),
+                'worker:run' => $this->workerRun($args, $opts),
+                'worker:status' => $this->workerStatus($args, $opts),
+                'queue:failed' => $this->queueFailed($args, $opts),
+                'queue:retry' => $this->queueRetry($args, $opts),
+                'queue:retry-all' => $this->queueRetryAll($args, $opts),
+                'queue:clear-failed' => $this->queueClearFailed($args, $opts),
                 'report:failed' => $this->reportFailed($args, $opts),
                 'export:failed' => $this->reportFailed($args, $opts),
                 'report:summary' => $this->reportSummary($args, $opts),
@@ -120,7 +134,7 @@ final class NativeCliApplication
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 1.3.0 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 1.4.0 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -141,6 +155,19 @@ final class NativeCliApplication
             'profile:show <profile>' => 'Show one profile schema with fields, validators, transformations, dedupe keys, and rules.',
             'profile:validate <profile.json>' => 'Validate a profile schema JSON file.',
             'extract:rules <url>' => 'Extract fields from one URL using profile schema rules or --rule/--rules-file.',
+            'job:create' => 'Create a local queued crawl/source job JSON file.',
+            'job:list' => 'List queued jobs across pending/running/completed/failed/paused states.',
+            'job:show <job-id>' => 'Show one queued job manifest.',
+            'job:pause <job-id>' => 'Move a queued job to paused state.',
+            'job:resume <job-id>' => 'Move a paused/failed/cancelled job back to pending state.',
+            'job:cancel <job-id>' => 'Cancel a queued job.',
+            'worker:once' => 'Run one pending queued job and exit.',
+            'worker:run' => 'Run queue worker loop with sleep, max-jobs, max-runtime, and memory guard options.',
+            'worker:status' => 'Show queue counts and active worker locks.',
+            'queue:failed' => 'List failed queue jobs.',
+            'queue:retry <job-id>' => 'Move one failed job back to pending for retry.',
+            'queue:retry-all' => 'Move all failed jobs back to pending for retry.',
+            'queue:clear-failed' => 'Delete failed queue job files.',
             'report:failed <crawl.json>' => 'Create failed/skipped URL report.',
             'export:failed <crawl.json>' => 'Export failed/skipped URL report as JSON, CSV, or XML.',
             'report:summary <job-dir>' => 'Generate professional job summary as HTML, JSON, CSV, or XML.',
@@ -150,7 +177,7 @@ final class NativeCliApplication
             'export:records <records.json>' => 'Export pipeline records to JSON, CSV, XML, or HTML.',
             'validate:records <records.json>' => 'Validate records using required fields.',
             'job:summary <job-dir>' => 'Show job manifest and pipeline/crawl summaries.',
-            'job:run <job.json>' => 'Run crawl job from JSON config.',
+            'job:run <job-id|job.json>' => 'Run one queued job by ID, or run a legacy JSON job config file.',
             'source:discover <url>' => 'Check fallback sources such as sitemap, feeds, robots, and well-known endpoints.',
             'source:sitemap <sitemap>' => 'Read sitemap.xml or sitemap index and export crawlable URLs.',
             'source:rss <feed-url>' => 'Read RSS/Atom feed and export normalized feed records/URLs.',
@@ -853,6 +880,243 @@ final class NativeCliApplication
         return $issues === [] ? 0 : 2;
     }
 
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function jobCreate(array $args, array $opts): int
+    {
+        $queue = $this->jobQueue();
+        $source = strtolower($this->optString($opts, 'source', '') ?? '');
+        $type = strtolower($this->optString($opts, 'type', '') ?? '');
+        $target = $args[0] ?? $this->optString($opts, 'url') ?? $this->optString($opts, 'source-url') ?? $this->optString($opts, 'source-file') ?? $this->optString($opts, 'input') ?? $this->optString($opts, 'file');
+
+        if ($type === '' && $source !== '') {
+            $type = str_starts_with($source, 'source:') ? $source : 'source:' . $source;
+        }
+        if ($type === '') {
+            $type = $this->optString($opts, 'file') || $this->optString($opts, 'source-file') ? 'bulk:crawl' : 'crawl';
+        }
+
+        $command = match ($type) {
+            'sitemap', 'source:sitemap' => 'source:sitemap',
+            'rss', 'atom', 'feed', 'source:rss' => 'source:rss',
+            'csv', 'source:csv' => 'source:csv',
+            'json', 'source:json' => 'source:json',
+            'api', 'source:api' => 'source:api',
+            'bulk', 'bulk-crawl', 'bulk:crawl' => 'bulk:crawl',
+            'url-process', 'url:process', 'urls:process' => 'url:process',
+            default => 'crawl',
+        };
+
+        if (!$target) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper job:create --type=crawl --url=https://example.com OR --source=sitemap https://example.com/sitemap.xml');
+        }
+
+        $jobOpts = $opts;
+        foreach (['source', 'type', 'url', 'source-url', 'source-file', 'input', 'file', 'job-id', 'json'] as $drop) {
+            unset($jobOpts[$drop]);
+        }
+        if ($this->optString($opts, 'profile')) {
+            $jobOpts['profile'] = $this->optString($opts, 'profile');
+        }
+        if (!isset($jobOpts['job-dir'])) {
+            $jobOpts['job-dir'] = $this->storagePath('jobs/' . ($this->optString($opts, 'job-id') ?: 'queued-' . date('Ymd-His')));
+        }
+
+        $job = $queue->create([
+            'job_id' => $this->optString($opts, 'job-id'),
+            'title' => $this->optString($opts, 'title', ucfirst(str_replace(':', ' ', $command)) . ' job'),
+            'command' => $command,
+            'args' => [(string) $target],
+            'options' => $jobOpts,
+            'source' => ['type' => $source ?: $type, 'target' => (string) $target],
+            'profile' => $this->optString($opts, 'profile'),
+            'job_dir' => (string) ($jobOpts['job-dir'] ?? ''),
+        ]);
+
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($job);
+        } else {
+            $this->out('Created job: ' . (string) $job['job_id']);
+            $this->out('State: ' . (string) $job['state']);
+            $this->out('Command: ' . (string) $job['command']);
+            $this->out('Queue: ' . $queue->queueDir());
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function jobList(array $args, array $opts): int
+    {
+        $queue = $this->jobQueue();
+        $state = $this->optString($opts, 'state') ?: ($args[0] ?? null);
+        $jobs = $queue->list($state);
+        if ($this->bool($opts, 'json')) {
+            $this->outJson(['queue_dir' => $queue->queueDir(), 'counts' => $queue->counts(), 'jobs' => $jobs]);
+            return 0;
+        }
+        $this->out('Queue: ' . $queue->queueDir());
+        foreach ($queue->counts() as $name => $count) {
+            $this->out(sprintf('  %-10s %d', $name . ':', $count));
+        }
+        $this->out('');
+        foreach ($jobs as $job) {
+            $this->out(sprintf('  %-26s %-10s %-16s %s',
+                (string) ($job['job_id'] ?? ''),
+                (string) ($job['state'] ?? ''),
+                (string) ($job['command'] ?? ''),
+                (string) (($job['args'][0] ?? $job['source']['target'] ?? $job['title'] ?? ''))
+            ));
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function jobShow(array $args, array $opts): int
+    {
+        $id = $args[0] ?? null;
+        if (!$id) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper job:show <job-id>');
+        }
+        $this->outJson($this->jobQueue()->load($id));
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function jobPause(array $args, array $opts): int
+    {
+        $id = $args[0] ?? null;
+        if (!$id) { throw new \InvalidArgumentException('Usage: php bin/mnb-scraper job:pause <job-id>'); }
+        $job = $this->jobQueue()->pause($id);
+        $this->out('Paused job: ' . (string) $job['job_id']);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function jobResume(array $args, array $opts): int
+    {
+        $id = $args[0] ?? null;
+        if (!$id) { throw new \InvalidArgumentException('Usage: php bin/mnb-scraper job:resume <job-id>'); }
+        $job = $this->jobQueue()->resume($id);
+        $this->out('Resumed job: ' . (string) $job['job_id']);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function jobCancel(array $args, array $opts): int
+    {
+        $id = $args[0] ?? null;
+        if (!$id) { throw new \InvalidArgumentException('Usage: php bin/mnb-scraper job:cancel <job-id>'); }
+        $job = $this->jobQueue()->cancel($id);
+        $this->out('Cancelled job: ' . (string) $job['job_id']);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function workerOnce(array $args, array $opts): int
+    {
+        $queue = $this->jobQueue();
+        $job = $queue->nextPending();
+        if ($job === null) {
+            $this->out('No pending jobs.');
+            return 0;
+        }
+        return $this->runQueuedJob((string) $job['job_id'], $opts);
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function workerRun(array $args, array $opts): int
+    {
+        $sleep = max(0, (int) $this->opt($opts, 'sleep', 5));
+        $maxJobs = max(0, (int) $this->opt($opts, 'max-jobs', 0));
+        $maxRuntime = max(0, (int) $this->opt($opts, 'max-runtime', $this->opt($opts, 'max-runtime-seconds', 0)));
+        $memoryLimit = $this->parseBytes($this->optString($opts, 'memory-limit', '0') ?? '0');
+        $started = time();
+        $ran = 0;
+        while (true) {
+            if ($maxJobs > 0 && $ran >= $maxJobs) { break; }
+            if ($maxRuntime > 0 && (time() - $started) >= $maxRuntime) { break; }
+            if ($memoryLimit > 0 && memory_get_usage(true) >= $memoryLimit) {
+                $this->err('Worker memory limit reached.');
+                break;
+            }
+            $job = $this->jobQueue()->nextPending();
+            if ($job === null) {
+                if ($this->bool($opts, 'stop-when-empty')) { break; }
+                sleep($sleep);
+                continue;
+            }
+            $code = $this->runQueuedJob((string) $job['job_id'], $opts);
+            $ran++;
+            if ($code !== 0 && !$this->bool($opts, 'continue-on-error')) {
+                return $code;
+            }
+        }
+        $this->out('Worker finished. Jobs processed: ' . $ran);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function workerStatus(array $args, array $opts): int
+    {
+        $queue = $this->jobQueue();
+        $data = ['queue_dir' => $queue->queueDir(), 'counts' => $queue->counts(), 'locks' => $queue->locks()];
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($data);
+        } else {
+            $this->out('Queue: ' . $data['queue_dir']);
+            foreach ($data['counts'] as $name => $count) {
+                $this->out(sprintf('  %-10s %d', $name . ':', $count));
+            }
+            $this->out('Locks: ' . count($data['locks']));
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function queueFailed(array $args, array $opts): int
+    {
+        $jobs = $this->jobQueue()->list('failed');
+        if ($this->bool($opts, 'json')) {
+            $this->outJson(['jobs' => $jobs]);
+        } else {
+            foreach ($jobs as $job) {
+                $this->out(sprintf('  %-26s attempts=%s exit=%s %s',
+                    (string) ($job['job_id'] ?? ''),
+                    (string) ($job['attempts'] ?? 0),
+                    (string) ($job['last_exit_code'] ?? ''),
+                    (string) ($job['last_error'] ?? '')
+                ));
+            }
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function queueRetry(array $args, array $opts): int
+    {
+        $id = $args[0] ?? null;
+        if (!$id) { throw new \InvalidArgumentException('Usage: php bin/mnb-scraper queue:retry <job-id>'); }
+        $job = $this->jobQueue()->retry($id);
+        $this->out('Retry scheduled: ' . (string) $job['job_id']);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function queueRetryAll(array $args, array $opts): int
+    {
+        $jobs = $this->jobQueue()->retryAllFailed();
+        $this->out('Retry scheduled jobs: ' . count($jobs));
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function queueClearFailed(array $args, array $opts): int
+    {
+        $count = $this->jobQueue()->clearFailed();
+        $this->out('Failed jobs cleared: ' . $count);
+        return 0;
+    }
+
     /** @param array<int,string> $args @param array<string,mixed> $opts */
     private function jobSummary(array $args, array $opts): int
     {
@@ -884,13 +1148,23 @@ final class NativeCliApplication
     /** @param array<int,string> $args @param array<string,mixed> $opts */
     private function jobRun(array $args, array $opts): int
     {
-        $path = $args[0] ?? null;
-        if (!$path || !is_file($path)) {
-            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper job:run <job.json>');
+        $target = $args[0] ?? null;
+        if (!$target) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper job:run <job-id|job.json>');
         }
-        $job = json_decode((string) file_get_contents($path), true);
+
+        if (!is_file($target)) {
+            return $this->runQueuedJob($target, $opts);
+        }
+
+        $job = json_decode((string) file_get_contents($target), true);
         if (!is_array($job)) {
             throw new \RuntimeException('Invalid job JSON.');
+        }
+        if (isset($job['queue_version'], $job['command'])) {
+            $queue = $this->jobQueue();
+            $loaded = $queue->create($job);
+            return $this->runQueuedJob((string) $loaded['job_id'], $opts);
         }
         $type = (string) ($job['type'] ?? 'crawl');
         $url = (string) ($job['url'] ?? '');
@@ -1451,6 +1725,98 @@ final class NativeCliApplication
         return count($clauses) === 1 ? $clauses[0] : '(' . implode(') AND (', $clauses) . ')';
     }
 
+
+    private function jobQueue(): LocalJobQueue
+    {
+        return new LocalJobQueue($this->rootDir);
+    }
+
+    /** @param array<string,mixed> $workerOpts */
+    private function runQueuedJob(string $jobId, array $workerOpts = []): int
+    {
+        $queue = $this->jobQueue();
+        $job = $queue->load($jobId);
+        $jobId = (string) ($job['job_id'] ?? $jobId);
+        $workerId = $this->optString($workerOpts, 'worker-id', 'worker_' . getmypid()) ?? ('worker_' . getmypid());
+
+        if (!$queue->acquireLock($jobId, $workerId)) {
+            $this->err('Job is already locked: ' . $jobId);
+            return 3;
+        }
+
+        try {
+            $queue->markRunning($jobId, $workerId);
+            $queue->heartbeat($jobId, $workerId);
+
+            $command = (string) ($job['command'] ?? 'crawl');
+            $jobArgs = is_array($job['args'] ?? null) ? array_values(array_map('strval', $job['args'])) : [];
+            $jobOpts = is_array($job['options'] ?? null) ? $job['options'] : [];
+            $argv = array_merge(['mnb-scraper', $command], $jobArgs, $this->optionsToArgv($jobOpts));
+            $this->out('Running queued job: ' . $jobId . ' (' . $command . ')');
+            $code = $this->run($argv);
+
+            if ($code === 0) {
+                $queue->markCompleted($jobId, $code);
+                $this->out('Completed job: ' . $jobId);
+            } else {
+                $queue->markFailed($jobId, $code, 'Command exited with code ' . $code);
+                $this->err('Failed job: ' . $jobId . ' exit=' . $code);
+            }
+            return $code;
+        } catch (\Throwable $e) {
+            $queue->markFailed($jobId, 1, $e->getMessage());
+            $this->err('Failed job: ' . $jobId . ' ' . $e->getMessage());
+            return 1;
+        } finally {
+            $queue->releaseLock($jobId);
+        }
+    }
+
+    /** @param array<string,mixed> $opts @return array<int,string> */
+    private function optionsToArgv(array $opts): array
+    {
+        $argv = [];
+        foreach ($opts as $key => $value) {
+            $key = str_replace('_', '-', (string) $key);
+            if ($value === null || $value === false) {
+                continue;
+            }
+            if (is_array($value)) {
+                foreach ($value as $item) {
+                    foreach ($this->optionsToArgv([$key => $item]) as $part) {
+                        $argv[] = $part;
+                    }
+                }
+                continue;
+            }
+            if ($value === true) {
+                $argv[] = '--' . $key;
+            } else {
+                $argv[] = '--' . $key . '=' . (string) $value;
+            }
+        }
+        return $argv;
+    }
+
+    private function parseBytes(string $value): int
+    {
+        $value = trim($value);
+        if ($value === '' || $value === '0') {
+            return 0;
+        }
+        if (preg_match('/^(\d+)([KMG])?B?$/i', $value, $m) !== 1) {
+            return (int) $value;
+        }
+        $num = (int) $m[1];
+        $unit = strtoupper($m[2] ?? '');
+        return match ($unit) {
+            'G' => $num * 1024 * 1024 * 1024,
+            'M' => $num * 1024 * 1024,
+            'K' => $num * 1024,
+            default => $num,
+        };
+    }
+
     private function unknown(string $command): int
     {
         $this->err('Unknown command: ' . $command);
@@ -1906,7 +2272,7 @@ final class NativeCliApplication
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '1.3.0',
+            'checkpoint_version' => '1.4.0',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),
