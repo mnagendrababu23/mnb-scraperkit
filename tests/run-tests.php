@@ -10,6 +10,10 @@ use Mnb\ScraperKit\Core\CrawlOptions;
 use Mnb\ScraperKit\Pipeline\JobManifest;
 use Mnb\ScraperKit\Pipeline\PipelineOptions;
 use Mnb\ScraperKit\Pipeline\ProfessionalCrawlPipeline;
+use Mnb\ScraperKit\Profile\ProfileSchemaLoader;
+use Mnb\ScraperKit\Profile\ProfileSchemaValidator;
+use Mnb\ScraperKit\Extractor\RuleBasedExtractor;
+use Mnb\ScraperKit\Parser\HtmlParser;
 use Mnb\ScraperKit\Report\ProjectBundleExporter;
 use Mnb\ScraperKit\Report\RecordExportService;
 use Mnb\ScraperKit\Report\ReportDataCollector;
@@ -59,7 +63,7 @@ $tests['failure classifier maps common crawl failures'] = function (): void {
     assert(FailureClassifier::fromSafetyMessage('URL safety check failed: private/reserved IP targets are blocked.') === 'private_ip_blocked');
 };
 
-$tests['rate limiter accepts v1.2.0 pacing options without sleeping unnecessarily'] = function (): void {
+$tests['rate limiter accepts v1.3.0 pacing options without sleeping unnecessarily'] = function (): void {
     $limiter = new RateLimiter();
     $options = CrawlOptions::fromArray([
         'delay_ms' => 0,
@@ -77,7 +81,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
     mkdir($dir, 0775, true);
     $checkpoint = $dir . '/checkpoint.json';
     file_put_contents($checkpoint, json_encode([
-        'checkpoint_version' => '1.2.0',
+        'checkpoint_version' => '1.3.0',
         'updated_at' => '2026-01-01T00:00:00+00:00',
         'queues' => [
             'pending' => ['https://example.com/pending'],
@@ -91,7 +95,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
 
     $manifestPath = JobManifest::write($dir, 'bulk-crawl', [], ['checkpoint' => $checkpoint], []);
     $manifest = JobManifest::read($manifestPath);
-    assert(($manifest['version'] ?? null) === '1.2.0');
+    assert(($manifest['version'] ?? null) === '1.3.0');
     assert(($manifest['resume']['counts']['pending'] ?? null) === 1);
     assert(($manifest['resume']['last_processed_url'] ?? null) === 'https://example.com/done');
 };
@@ -178,13 +182,55 @@ $tests['source connectors parse sitemap, CSV and JSON URL sources'] = function (
 };
 
 
+
+$tests['profile schemas validate and load extraction defaults'] = function (): void {
+    $root = dirname(__DIR__);
+    $loader = new ProfileSchemaLoader($root . '/config/profiles');
+    $profiles = $loader->list();
+    assert(count($profiles) >= 5, 'expected built-in profile schemas');
+
+    $schema = $loader->load('ecommerce');
+    assert($schema->profile === 'ecommerce', 'profile name mismatch');
+    assert($schema->recordType === 'product', 'record type mismatch');
+    assert(in_array('price', $schema->requiredFields, true), 'required field missing');
+    assert(($schema->validators['price'] ?? null) === 'price', 'validator missing');
+    assert(isset($schema->extractionRules['title']), 'title rule missing');
+
+    $validation = (new ProfileSchemaValidator())->validateFile($root . '/config/profiles/ecommerce.json');
+    assert(($validation['valid'] ?? false) === true, 'ecommerce schema should validate');
+};
+
+$tests['rule based extractor supports fallback CSS meta OpenGraph and JSON-LD'] = function (): void {
+    if (!class_exists('DOMDocument')) {
+        assert(true);
+        return;
+    }
+    $html = '<!doctype html><html><head><title>Fallback Title</title><meta name="description" content="Meta description"><meta property="og:title" content="OG Product"><script type="application/ld+json">{"@type":"Product","name":"JSON Product","offers":{"price":"1299.50"}}</script></head><body><h1> Page H1 </h1><span class="price">₹ 1,299.50</span><a class="apply" href="/apply">Apply</a></body></html>';
+    $parser = new HtmlParser();
+    $doc = $parser->load($html, 'https://example.com/product');
+    $extractor = new RuleBasedExtractor($parser, new UrlNormalizer());
+    $data = $extractor->extract($doc, [
+        'title' => ['fallback' => [['css' => '.missing'], ['og' => 'title'], 'h1']],
+        'description' => ['meta' => 'description'],
+        'price' => ['css' => '.price', 'regex' => '([0-9][0-9,]*(?:\\.[0-9]{1,2})?)'],
+        'apply_url' => ['css' => 'a.apply', 'attr' => 'href', 'url' => true],
+        'json_price' => ['json_ld' => 'offers.price'],
+    ], 'https://example.com/product');
+
+    assert(($data['title'] ?? null) === 'OG Product', 'fallback OG extraction failed');
+    assert(($data['description'] ?? null) === 'Meta description', 'meta extraction failed');
+    assert(($data['price'] ?? null) === '1,299.50', 'regex extraction failed');
+    assert(($data['apply_url'] ?? null) === 'https://example.com/apply', 'URL attr normalization failed');
+    assert(($data['json_price'] ?? null) === '1299.50', 'JSON-LD path extraction failed');
+};
+
 $tests['export and report upgrade creates XML, HTML summary and ZIP bundle'] = function (): void {
     $dir = sys_get_temp_dir() . '/mnb_reports_' . bin2hex(random_bytes(4));
     mkdir($dir . '/pipeline', 0775, true);
     mkdir($dir . '/logs', 0775, true);
 
     file_put_contents($dir . '/job-manifest.json', json_encode([
-        'version' => '1.2.0',
+        'version' => '1.3.0',
         'job_id' => 'test-job',
         'type' => 'crawl',
         'resume' => ['counts' => ['completed' => 1, 'failed' => 1]],

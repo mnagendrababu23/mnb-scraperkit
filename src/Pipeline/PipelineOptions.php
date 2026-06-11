@@ -11,6 +11,8 @@ final class PipelineOptions
      * @param array<int,string> $dedupeKeys
      * @param array<string,array<int,string>> $transformations
      * @param array<string,string> $fieldMap
+     * @param array<string,string> $validators
+     * @param array<int,string> $exportColumns
      */
     public function __construct(
         public array $requiredFields = [],
@@ -23,6 +25,9 @@ final class PipelineOptions
         public string $profile = 'page',
         public ?string $preset = null,
         public array $fieldMap = [],
+        public array $validators = [],
+        public array $exportColumns = [],
+        public ?string $recordType = null,
     ) {
     }
 
@@ -40,6 +45,9 @@ final class PipelineOptions
             profile: trim((string) ($data['profile'] ?? $data['common_data_profile'] ?? 'page')) ?: 'page',
             preset: isset($data['preset']) && trim((string) $data['preset']) !== '' ? trim((string) $data['preset']) : null,
             fieldMap: self::fieldMap($data['field_map'] ?? $data['field_mapping'] ?? []),
+            validators: self::validators($data['validators'] ?? []),
+            exportColumns: self::list($data['export_columns'] ?? []),
+            recordType: isset($data['record_type']) && trim((string) $data['record_type']) !== '' ? trim((string) $data['record_type']) : null,
         );
     }
 
@@ -47,7 +55,7 @@ final class PipelineOptions
     private static function list(mixed $value): array
     {
         if (is_string($value)) {
-            $value = array_filter(array_map('trim', explode(',', $value)));
+            $value = array_filter(array_map('trim', preg_split('/[,|]/', $value) ?: []));
         }
         if (!is_array($value)) {
             return [];
@@ -101,6 +109,23 @@ final class PipelineOptions
             $to = trim((string) $to);
             if ($from !== '' && $to !== '') {
                 $out[$from] = $to;
+            }
+        }
+        return $out;
+    }
+
+    /** @return array<string,string> */
+    private static function validators(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+        $out = [];
+        foreach ($value as $field => $rule) {
+            $field = trim((string) $field);
+            $rule = strtolower(trim((string) $rule));
+            if ($field !== '' && $rule !== '') {
+                $out[$field] = $rule;
             }
         }
         return $out;

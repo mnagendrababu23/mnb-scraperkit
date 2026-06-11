@@ -9,7 +9,7 @@ use Mnb\ScraperKit\Encoding\EncodingDetector;
 use Mnb\ScraperKit\Extractor\CommonDataExtractor;
 use Mnb\ScraperKit\Network\ExitPointManager;
 use Mnb\ScraperKit\Network\NetworkPolicy;
-use Mnb\ScraperKit\Parser\CustomRuleExtractor;
+use Mnb\ScraperKit\Extractor\RuleBasedExtractor;
 use Mnb\ScraperKit\Parser\HtmlParser;
 use Mnb\ScraperKit\Parser\PresetExtractor;
 use Mnb\ScraperKit\Safety\UrlSafetyGuard;
@@ -45,7 +45,7 @@ final class Scraper
         $parser = new HtmlParser();
         $encodingDetector = new EncodingDetector((array) $this->config->get('encoding', []));
         $encodingConverter = new EncodingConverter((array) $this->config->get('encoding', []));
-        $extractor = new CustomRuleExtractor($parser, $this->urlNormalizer);
+        $extractor = new RuleBasedExtractor($parser, $this->urlNormalizer);
         $presetExtractor = new PresetExtractor($this->urlNormalizer);
         $commonDataExtractor = new CommonDataExtractor($parser, $this->urlNormalizer);
         $rateLimiter = new RateLimiter();

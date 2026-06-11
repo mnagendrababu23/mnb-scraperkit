@@ -1,0 +1,34 @@
+{
+  "profile": "ecommerce",
+  "record_type": "product",
+  "required_fields": ["title", "price", "url"],
+  "optional_fields": ["sku", "brand", "currency", "availability", "rating", "image_url", "canonical_url"],
+  "dedupe_keys": ["sku", "canonical_url", "url", "title"],
+  "validators": {
+    "url": "url",
+    "canonical_url": "url",
+    "image_url": "url",
+    "price": "price"
+  },
+  "transformations": {
+    "title": ["normalize_space"],
+    "price": ["price"],
+    "url": ["clean_url"],
+    "canonical_url": ["clean_url"],
+    "sku": ["identifier_upper"]
+  },
+  "field_map": {
+    "page_title": "title"
+  },
+  "export_columns": ["record_id", "title", "price", "currency", "sku", "brand", "availability", "url", "canonical_url", "quality_score"],
+  "extraction_rules": {
+    "title": {"fallback": [{"css": "h1"}, {"og": "title"}, "title"]},
+    "price": {"fallback": [{"css": ".price"}, {"css": "[itemprop=price]", "attr": "content"}, {"text": true, "regex": "(?:₹|Rs\\.?|USD|\\$)?\\s*([0-9][0-9,]*(?:\\.[0-9]{1,2})?)"}]},
+    "currency": {"fallback": [{"css": "[itemprop=priceCurrency]", "attr": "content"}, {"text": true, "regex": "(₹|Rs\\.?|USD|INR|\\$)"}]},
+    "sku": {"fallback": [{"css": "[itemprop=sku]"}, {"text": true, "regex": "SKU[:#\\s]+([A-Za-z0-9_-]+)"}]},
+    "brand": {"fallback": [{"css": "[itemprop=brand]"}, {"css": ".brand"}]},
+    "availability": {"fallback": [{"css": "[itemprop=availability]", "attr": "content"}, {"css": ".availability"}]},
+    "image_url": {"fallback": [{"og": "image"}, {"css": "img", "attr": "src", "url": true}]},
+    "canonical_url": {"css": "link[rel=canonical]", "attr": "href", "url": true}
+  }
+}

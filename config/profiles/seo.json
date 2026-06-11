@@ -1,0 +1,26 @@
+{
+  "profile": "seo",
+  "record_type": "seo_record",
+  "required_fields": ["title", "url"],
+  "optional_fields": ["description", "canonical_url", "h1", "robots", "og_title", "og_description"],
+  "dedupe_keys": ["canonical_url", "url", "title"],
+  "validators": {
+    "url": "url",
+    "canonical_url": "url"
+  },
+  "transformations": {
+    "title": ["normalize_space"],
+    "description": ["normalize_space"],
+    "canonical_url": ["clean_url"]
+  },
+  "export_columns": ["record_id", "title", "description", "canonical_url", "h1", "robots", "quality_score"],
+  "extraction_rules": {
+    "title": {"fallback": [{"og": "title"}, "title"]},
+    "description": {"fallback": [{"meta": "description"}, {"og": "description"}]},
+    "canonical_url": {"css": "link[rel=canonical]", "attr": "href", "url": true},
+    "robots": {"meta": "robots"},
+    "h1": {"css": "h1", "many": true},
+    "og_title": {"og": "title"},
+    "og_description": {"og": "description"}
+  }
+}

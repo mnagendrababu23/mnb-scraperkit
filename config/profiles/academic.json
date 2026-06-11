@@ -1,0 +1,31 @@
+{
+  "profile": "academic",
+  "record_type": "article",
+  "required_fields": ["title", "url"],
+  "optional_fields": ["doi", "authors", "journal", "published_date", "pdf_url", "issn"],
+  "dedupe_keys": ["doi", "canonical_url", "url", "title"],
+  "validators": {
+    "url": "url",
+    "canonical_url": "url",
+    "pdf_url": "url",
+    "doi": "doi",
+    "issn": "issn",
+    "published_date": "date"
+  },
+  "transformations": {
+    "title": ["normalize_space"],
+    "doi": ["lowercase"],
+    "published_date": ["date"],
+    "pdf_url": ["clean_url"]
+  },
+  "export_columns": ["record_id", "title", "doi", "authors", "journal", "published_date", "pdf_url", "url", "quality_score"],
+  "extraction_rules": {
+    "title": {"fallback": [{"meta": "citation_title"}, {"og": "title"}, "h1"]},
+    "doi": {"fallback": [{"meta": "citation_doi"}, {"text": true, "regex": "(10\\.[0-9]{4,9}/[^\\s]+)"}]},
+    "authors": {"css": "meta[name=citation_author]", "attr": "content", "many": true},
+    "journal": {"fallback": [{"meta": "citation_journal_title"}, {"meta": "citation_conference_title"}]},
+    "published_date": {"fallback": [{"meta": "citation_publication_date"}, {"meta": "citation_online_date"}]},
+    "pdf_url": {"css": "meta[name=citation_pdf_url]", "attr": "content", "url": true},
+    "canonical_url": {"css": "link[rel=canonical]", "attr": "href", "url": true}
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "profile": "jobs",
+  "record_type": "job",
+  "required_fields": ["title", "company", "url"],
+  "optional_fields": ["location", "salary", "experience", "skills", "apply_url", "deadline"],
+  "dedupe_keys": ["apply_url", "url", "title", "company"],
+  "validators": {
+    "url": "url",
+    "apply_url": "url",
+    "deadline": "date"
+  },
+  "transformations": {
+    "title": ["normalize_space"],
+    "company": ["normalize_space"],
+    "deadline": ["date"],
+    "apply_url": ["clean_url"]
+  },
+  "export_columns": ["record_id", "title", "company", "location", "salary", "experience", "skills", "apply_url", "deadline", "quality_score"],
+  "extraction_rules": {
+    "title": {"fallback": [{"css": "h1"}, {"og": "title"}]},
+    "company": {"fallback": [{"css": ".company"}, {"css": "[itemprop=hiringOrganization]"}]},
+    "location": {"fallback": [{"css": ".location"}, {"css": "[itemprop=jobLocation]"}]},
+    "salary": {"fallback": [{"css": ".salary"}, {"text": true, "regex": "((?:₹|Rs\\.?|USD|\\$)\\s*[0-9][0-9,]*(?:\\s*-\\s*(?:₹|Rs\\.?|USD|\\$)?\\s*[0-9][0-9,]*)?)"}]},
+    "apply_url": {"fallback": [{"css": "a.apply", "attr": "href", "url": true}, {"css": "a[href*=apply]", "attr": "href", "url": true}]},
+    "deadline": {"fallback": [{"css": ".deadline"}, {"text": true, "regex": "(?:deadline|last date)[:\\s]+([A-Za-z0-9, -]+)"}]}
+  }
+}

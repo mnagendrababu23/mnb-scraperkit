@@ -138,8 +138,37 @@ final class HtmlParser
             return '//' . $m[1] . '[@id="' . $m[2] . '"]';
         }
 
-        if (preg_match('/^([a-zA-Z0-9_-]+)\[([^=]+)=["\']?([^"\']+)["\']?\]$/', $selector, $m)) {
-            return '//' . $m[1] . '[@' . $m[2] . '="' . $m[3] . '"]';
+        if (preg_match('/^\[([^\]=]+)([*$^]?=)["\']?([^"\']+)["\']?\]$/', $selector, $m)) {
+            $attr = $m[1];
+            $op = $m[2];
+            $value = $m[3];
+            if ($op === '*=') {
+                return '//*[contains(@' . $attr . ', "' . $value . '")]';
+            }
+            if ($op === '^=') {
+                return '//*[starts-with(@' . $attr . ', "' . $value . '")]';
+            }
+            if ($op === '$=') {
+                return '//*[substring(@' . $attr . ', string-length(@' . $attr . ') - string-length("' . $value . '") + 1) = "' . $value . '"]';
+            }
+            return '//*[@' . $attr . '="' . $value . '"]';
+        }
+
+        if (preg_match('/^([a-zA-Z0-9_-]+)\[([^\]=]+)([*$^]?=)["\']?([^"\']+)["\']?\]$/', $selector, $m)) {
+            $tag = $m[1];
+            $attr = $m[2];
+            $op = $m[3];
+            $value = $m[4];
+            if ($op === '*=') {
+                return '//' . $tag . '[contains(@' . $attr . ', "' . $value . '")]';
+            }
+            if ($op === '^=') {
+                return '//' . $tag . '[starts-with(@' . $attr . ', "' . $value . '")]';
+            }
+            if ($op === '$=') {
+                return '//' . $tag . '[substring(@' . $attr . ', string-length(@' . $attr . ') - string-length("' . $value . '") + 1) = "' . $value . '"]';
+            }
+            return '//' . $tag . '[@' . $attr . '="' . $value . '"]';
         }
 
         if (preg_match('/^[a-zA-Z0-9_-]+$/', $selector)) {

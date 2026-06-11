@@ -1,0 +1,31 @@
+{
+  "profile": "tender",
+  "record_type": "tender",
+  "required_fields": ["title", "tender_number", "url"],
+  "optional_fields": ["department", "deadline", "fee", "document_url", "contact_email"],
+  "dedupe_keys": ["tender_number", "document_url", "url"],
+  "validators": {
+    "url": "url",
+    "document_url": "url",
+    "contact_email": "email",
+    "deadline": "date",
+    "fee": "price"
+  },
+  "transformations": {
+    "title": ["normalize_space"],
+    "tender_number": ["identifier_upper"],
+    "deadline": ["date"],
+    "fee": ["price"],
+    "document_url": ["clean_url"]
+  },
+  "export_columns": ["record_id", "title", "tender_number", "department", "deadline", "fee", "document_url", "contact_email", "quality_score"],
+  "extraction_rules": {
+    "title": {"fallback": [{"css": "h1"}, {"og": "title"}]},
+    "tender_number": {"fallback": [{"css": ".tender-number"}, {"text": true, "regex": "(?:Tender|Notice)\\s*(?:No\\.?|Number|#)[:\\s]+([A-Za-z0-9/-]+)"}]},
+    "department": {"fallback": [{"css": ".department"}, {"css": ".organization"}]},
+    "deadline": {"fallback": [{"css": ".deadline"}, {"text": true, "regex": "(?:deadline|last date)[:\\s]+([A-Za-z0-9, -]+)"}]},
+    "fee": {"fallback": [{"css": ".fee"}, {"text": true, "regex": "(?:fee|emd)[:\\s]+(?:₹|Rs\\.?)?\\s*([0-9][0-9,]*(?:\\.[0-9]{1,2})?)"}]},
+    "document_url": {"fallback": [{"css": "a[href$=.pdf]", "attr": "href", "url": true}, {"css": "a[href*=download]", "attr": "href", "url": true}]},
+    "contact_email": {"text": true, "regex": "([A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,})"}
+  }
+}

@@ -1,8 +1,8 @@
-# MNB ScraperKit V1.2.0
+# MNB ScraperKit V1.3.0
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V1.2.0 is the Export and Report Upgrade. It adds professional JSON/CSV/XML/HTML exports, crawl summary reports, validation reports, failed URL exports, and ZIP project bundles while keeping the Symfony Console CLI, safe crawling core, source connectors, and professional pipeline system.
+V1.3.0 is the Profile Schemas and Extractor Rules Update. It adds reusable profile schema files, rule-based extraction, profile validation commands, schema-aware pipeline defaults, and extraction-rule examples while keeping source connectors, exports, reports, safe crawling, and the Symfony Console CLI.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,17 +16,18 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V1.2.0 update focus
+## V1.3.0 update focus
 
-V1.2.0 focuses on the final professional output stage: exporting, reporting, and bundling crawl/pipeline results.
+V1.3.0 focuses on profile-driven extraction: reusable schemas, extractor rules, schema validation, and pipeline defaults for real project workflows.
 
-- Added `report:summary` for professional job summary reports in HTML, JSON, CSV, or XML.
-- Added `bundle:create` for portable ZIP bundles containing records, failed URLs, reports, manifests, checkpoints, and logs.
-- Added `export:failed` as a clearer alias for failed/skipped URL diagnostics.
-- Added `export:validation` for exporting validation issues from pipeline output.
-- Upgraded `export:records` to support JSON, CSV, XML, and HTML table output.
-- Added lightweight built-in ZIP creation that works even when PHP `ext-zip` is not installed.
-- Kept V1.1.0 source connectors for sitemap, RSS/Atom, CSV, JSON, API, PLOS, and Elsevier/ScienceDirect workflows.
+- Added `config/profiles/*.json` profile schemas for ecommerce, SEO, academic, jobs, and tender/government workflows.
+- Added `profile:list` to show available profile schemas.
+- Added `profile:show` to inspect required fields, optional fields, validators, transformations, dedupe keys, export columns, and extraction rules.
+- Added `profile:validate` to validate custom profile schema JSON before using it in production crawls.
+- Added `extract:rules` to test extraction rules against a single URL.
+- Added schema-aware pipeline defaults for required fields, validators, transformations, dedupe keys, field mapping, export columns, and record type.
+- Added rule-based extraction support for CSS-style selectors, XPath, meta tags, Open Graph tags, JSON-LD paths, attributes, regex cleanup, fallback rules, and multi-value fields.
+- Kept V1.2.0 exports/reports/bundles and V1.1.0 source connectors.
 
 ## Highlights
 
@@ -35,6 +36,7 @@ V1.2.0 focuses on the final professional output stage: exporting, reporting, and
 - **Bulk crawling support** for processing many URLs with pacing, random jitter, cooldowns, checkpointing, failed queues, skipped queues, and resume support.
 - **Manifest-driven jobs** for reproducible crawl configuration, including input URLs, scope, pacing, extraction profile, output settings, and resume state.
 - **Professional crawl pipeline** that converts raw page results into normalized records with metadata, validation, deduplication, transformation, quality scoring, and exports.
+- **Profile schemas and extractor rules** for reusable field definitions, validators, transformations, dedupe keys, export columns, CSS/XPath/meta/JSON-LD/Open Graph extraction, and fallback selectors.
 - **Common data profiles** for academic, journal, conference, ecommerce, government, tender, jobs, SEO, contact, and document-focused extraction workflows.
 - **Professional exports and reports** including JSON, CSV, XML, HTML summaries, failed URL reports, validation issue reports, and ZIP project bundles.
 - **Automation friendly** for PHP CLI, CMD, PowerShell, cron, Windows Task Scheduler, and server-side workflows.
@@ -44,7 +46,7 @@ V1.2.0 focuses on the final professional output stage: exporting, reporting, and
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V1.2.0 CLI/library release.
+This section lists the main functionality available in the current V1.3.0 CLI/library release.
 
 ### Package and CLI
 
@@ -99,7 +101,16 @@ This section lists the main functionality available in the current V1.2.0 CLI/li
 - HTML parsing helpers.
 - Preset extraction support.
 - Custom rule extraction support.
-- JSON-LD extraction support.
+- V1.3 profile-driven rule extraction support.
+- CSS-style selector extraction.
+- XPath extraction.
+- Attribute extraction such as `href`, `src`, and `content`.
+- Meta tag extraction such as `meta:description`.
+- Open Graph extraction such as `og:title` and `og:image`.
+- JSON-LD dot-path extraction such as `jsonld:name` or `jsonld:offers.price`.
+- Regex cleanup/extraction from selected text.
+- Fallback selectors for fields that vary across websites.
+- Multi-value fields using `many: true` or `[]` rule suffix.
 - Common data extraction for emails, phones, metadata, links, documents, and profile-oriented data.
 - Common data type/profile listing command.
 
@@ -112,6 +123,18 @@ This section lists the main functionality available in the current V1.2.0 CLI/li
 - Jobs extraction profile direction.
 - SEO extraction profile direction.
 - Contact and document extraction profile direction.
+
+### Profile schemas and extractor rules
+
+- Built-in profile schema directory: `config/profiles/`.
+- Example schemas for ecommerce, SEO, academic/article metadata, jobs, and tender/government data.
+- Schema fields for `profile`, `record_type`, `required_fields`, `optional_fields`, `dedupe_keys`, `validators`, `transformations`, `field_map`, `export_columns`, and `extraction_rules`.
+- `profile:list` command to discover available schemas.
+- `profile:show <profile>` command to inspect one schema.
+- `profile:validate <profile.json>` command to validate custom schemas.
+- `extract:rules <url> --profile=<name>` command to test profile extraction rules before running a full crawl.
+- Pipeline integration that uses schema defaults for validation, transformations, dedupe keys, record type, and export metadata.
+- Custom project profiles can be added without editing PHP core classes.
 
 ### Bulk jobs and resume
 
@@ -227,11 +250,11 @@ This section lists the main functionality available in the current V1.2.0 CLI/li
 ## Package direction
 
 - First public version: **1.0.0**
-- Current version: **1.2.0** — export and report upgrade
+- Current version: **1.3.0** — profile schemas and extractor rules update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
-- Reusable PHP core classes for crawler, HTTP, parser, pipeline, manifest, checkpoint, exporter, reports, bundles, and source connectors
+- Reusable PHP core classes for crawler, HTTP, parser, profile schemas, extractor rules, pipeline, manifest, checkpoint, exporter, reports, bundles, and source connectors
 - CMD, PowerShell, cron, Windows Task Scheduler, and server worker friendly
 - Clean release package without `vendor/` or generated crawl outputs
 - Single documentation file: this `README.md`
@@ -247,6 +270,66 @@ This section lists the main functionality available in the current V1.2.0 CLI/li
 - `ext-curl` recommended for the cURL HTTP engine
 - `ext-pdo` optional, only for database storage features
 
+
+## Profile schema and extractor rule examples
+
+List built-in schemas:
+
+```bash
+php bin/mnb-scraper profile:list
+```
+
+Show the ecommerce schema:
+
+```bash
+php bin/mnb-scraper profile:show ecommerce
+php bin/mnb-scraper profile:show ecommerce --json
+```
+
+Validate a custom schema file:
+
+```bash
+php bin/mnb-scraper profile:validate config/profiles/ecommerce.json
+```
+
+Test extraction rules against one URL:
+
+```bash
+php bin/mnb-scraper extract:rules https://example.com/product-page --profile=ecommerce
+```
+
+Use a profile schema during crawl and pipeline processing:
+
+```bash
+php bin/mnb-scraper crawl https://example.com/product-page --profile=ecommerce --pipeline --job-dir=storage/jobs/product-test
+php bin/mnb-scraper pipeline:run storage/jobs/product-test/crawl.json --profile=ecommerce --output-dir=storage/jobs/product-test/pipeline
+```
+
+Simple custom profile schema shape:
+
+```json
+{
+  "profile": "custom_product",
+  "record_type": "product",
+  "required_fields": ["title", "price", "url"],
+  "dedupe_keys": ["sku", "canonical_url", "url"],
+  "validators": {
+    "url": "url",
+    "price": "price"
+  },
+  "transformations": {
+    "title": ["normalize_space"],
+    "price": ["price"],
+    "url": ["clean_url"]
+  },
+  "export_columns": ["record_id", "title", "price", "url", "quality_score"],
+  "extraction_rules": {
+    "title": {"fallback": [{"css": "h1"}, {"og": "title"}]},
+    "price": {"css": ".price", "regex": "([0-9][0-9,]*(?:\\.[0-9]{1,2})?)"},
+    "url": {"css": "link[rel=canonical]", "attr": "href", "url": true}
+  }
+}
+```
 
 ## Export and report examples
 
@@ -582,7 +665,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V1.2.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V1.3.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 

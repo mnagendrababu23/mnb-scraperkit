@@ -24,6 +24,8 @@ use Mnb\ScraperKit\Pipeline\JobManifest;
 use Mnb\ScraperKit\Pipeline\PipelineExporter;
 use Mnb\ScraperKit\Pipeline\PipelineOptions;
 use Mnb\ScraperKit\Pipeline\ProfessionalCrawlPipeline;
+use Mnb\ScraperKit\Profile\ProfileSchemaLoader;
+use Mnb\ScraperKit\Profile\ProfileSchemaValidator;
 use Mnb\ScraperKit\Report\ProjectBundleExporter;
 use Mnb\ScraperKit\Report\RecordExportService;
 use Mnb\ScraperKit\Report\ReportDataCollector;
@@ -76,6 +78,10 @@ final class NativeCliApplication
                 'encoding:test' => $this->encodingTest($args, $opts),
                 'common:extract' => $this->commonExtract($args, $opts),
                 'common:types' => $this->commonTypes($opts),
+                'profile:list' => $this->profileList($opts),
+                'profile:show' => $this->profileShow($args, $opts),
+                'profile:validate' => $this->profileValidate($args, $opts),
+                'extract:rules' => $this->extractRules($args, $opts),
                 'report:failed' => $this->reportFailed($args, $opts),
                 'export:failed' => $this->reportFailed($args, $opts),
                 'report:summary' => $this->reportSummary($args, $opts),
@@ -114,7 +120,7 @@ final class NativeCliApplication
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 1.2.0 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 1.3.0 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -131,6 +137,10 @@ final class NativeCliApplication
             'encoding:test <url>' => 'Fetch one URL and report detected encoding.',
             'common:extract <url>' => 'Extract common data patterns from one URL.',
             'common:types' => 'List supported common data types and profiles.',
+            'profile:list' => 'List available profile schema files.',
+            'profile:show <profile>' => 'Show one profile schema with fields, validators, transformations, dedupe keys, and rules.',
+            'profile:validate <profile.json>' => 'Validate a profile schema JSON file.',
+            'extract:rules <url>' => 'Extract fields from one URL using profile schema rules or --rule/--rules-file.',
             'report:failed <crawl.json>' => 'Create failed/skipped URL report.',
             'export:failed <crawl.json>' => 'Export failed/skipped URL report as JSON, CSV, or XML.',
             'report:summary <job-dir>' => 'Generate professional job summary as HTML, JSON, CSV, or XML.',
@@ -568,6 +578,104 @@ final class NativeCliApplication
             }
         }
         return 0;
+    }
+
+
+    /** @param array<string,mixed> $opts */
+    private function profileList(array $opts): int
+    {
+        $items = $this->profileLoader()->list();
+        if ($this->bool($opts, 'json')) {
+            $this->outJson(['profiles' => $items]);
+            return 0;
+        }
+        $this->out('Available profile schemas:');
+        foreach ($items as $item) {
+            $this->out(sprintf('  %-16s record=%-12s required=%d rules=%d', $item['name'], (string) ($item['record_type'] ?? ''), $item['required_fields'], $item['extraction_rules']));
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function profileShow(array $args, array $opts): int
+    {
+        $profile = $args[0] ?? $this->optString($opts, 'profile');
+        if (!$profile) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper profile:show <profile|profile.json>');
+        }
+        $schema = $this->profileLoader()->load($profile);
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($schema->toArray());
+            return 0;
+        }
+        $data = $schema->toArray();
+        $this->out('Profile: ' . $data['profile']);
+        $this->out('Record type: ' . $data['record_type']);
+        $this->out('Required fields: ' . implode(', ', $data['required_fields']));
+        $this->out('Optional fields: ' . implode(', ', $data['optional_fields']));
+        $this->out('Dedupe keys: ' . implode(', ', $data['dedupe_keys']));
+        $this->out('Export columns: ' . implode(', ', $data['export_columns']));
+        $this->out('Extraction rules: ' . count($data['extraction_rules']));
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function profileValidate(array $args, array $opts): int
+    {
+        $profile = $args[0] ?? $this->optString($opts, 'profile');
+        if (!$profile) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper profile:validate <profile|profile.json>');
+        }
+        $file = $this->profileLoader()->resolvePath($profile);
+        $result = (new ProfileSchemaValidator())->validateFile($file);
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($result);
+            return $result['valid'] ? 0 : 2;
+        }
+        if ($result['valid']) {
+            $this->out('Profile schema is valid: ' . $file);
+            return 0;
+        }
+        $this->err('Profile schema has issues: ' . $file);
+        foreach ($result['issues'] as $issue) {
+            $this->err(sprintf('  - %s [%s] %s', $issue['field'], $issue['rule'], $issue['message']));
+        }
+        return 2;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function extractRules(array $args, array $opts): int
+    {
+        $url = $args[0] ?? null;
+        if (!$url) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper extract:rules <url> --profile=ecommerce');
+        }
+        $rules = $this->rulesFromOptions($opts);
+        if ($rules === []) {
+            throw new \InvalidArgumentException('No extraction rules found. Use --profile, --profile-file, --rules-file, or --rule=name=selector.');
+        }
+        $options = $this->crawlOptions($opts);
+        $options->maxPages = 1;
+        $options->maxDepth = 0;
+        $result = (new Scraper($this->config, new Logger()))->crawl($url, $options, $rules);
+        $page = $result->pages()[0] ?? null;
+        $data = [
+            'url' => $url,
+            'profile' => $this->optString($opts, 'profile') ?: $this->optString($opts, 'profile-file'),
+            'rules_count' => count($rules),
+            'fields' => $page ? array_filter((array) ($page->extracted ?? []), static fn ($v, $k): bool => !str_starts_with((string) $k, '_'), ARRAY_FILTER_USE_BOTH) : [],
+            'page' => $this->bool($opts, 'include-page') && $page ? $page->toArray(false) : null,
+        ];
+        if (!$this->bool($opts, 'include-page')) {
+            unset($data['page']);
+        }
+        $this->outJson($data);
+        return 0;
+    }
+
+    private function profileLoader(): ProfileSchemaLoader
+    {
+        return new ProfileSchemaLoader($this->rootDir . '/config/profiles');
     }
 
     /** @param array<int,string> $args @param array<string,mixed> $opts */
@@ -1569,7 +1677,7 @@ final class NativeCliApplication
     /** @param array<string,mixed> $opts */
     private function pipelineOptionsFromCli(array $opts): PipelineOptions
     {
-        return PipelineOptions::fromArray([
+        $data = [
             'required_fields' => $this->stringList($this->opt($opts, 'pipeline-required-field', $this->opt($opts, 'required-field', []))),
             'dedupe_keys' => $this->stringList($this->opt($opts, 'pipeline-dedupe-key', $this->opt($opts, 'dedupe-key', ['record_key']))),
             'min_quality' => (int) $this->opt($opts, 'pipeline-min-quality', $this->opt($opts, 'min-quality', 0)),
@@ -1579,9 +1687,29 @@ final class NativeCliApplication
             'profile' => $this->optString($opts, 'pipeline-profile') ?: $this->optString($opts, 'profile') ?: $this->optString($opts, 'common-profile') ?: 'page',
             'preset' => $this->optString($opts, 'preset') ?: $this->optString($opts, 'extract-preset'),
             'field_map' => $this->fieldMapFromCli($opts),
-        ]);
-    }
+        ];
 
+        $profile = $this->optString($opts, 'profile-schema') ?: $this->optString($opts, 'profile-file') ?: (string) $data['profile'];
+        if ($profile !== '') {
+            try {
+                $schema = $this->profileLoader()->load($profile);
+                $schemaData = $schema->toPipelineArray();
+                $data['profile'] = $schemaData['profile'];
+                $data['record_type'] = $schemaData['record_type'];
+                $data['required_fields'] = array_values(array_unique(array_merge((array) $schemaData['required_fields'], (array) $data['required_fields'])));
+                $cliDedupe = (array) $data['dedupe_keys'];
+                $data['dedupe_keys'] = $cliDedupe === ['record_key'] ? $schemaData['dedupe_keys'] : array_values(array_unique(array_merge((array) $schemaData['dedupe_keys'], $cliDedupe)));
+                $data['transformations'] = array_replace((array) $schemaData['transformations'], (array) ($data['transformations'] ?? []));
+                $data['validators'] = (array) $schemaData['validators'];
+                $data['field_map'] = array_replace((array) $schemaData['field_map'], (array) $data['field_map']);
+                $data['export_columns'] = (array) $schemaData['export_columns'];
+            } catch (\Throwable) {
+                // Optional: not every --profile value has a config/profiles schema.
+            }
+        }
+
+        return PipelineOptions::fromArray($data);
+    }
 
     /** @param array<string,mixed> $opts @return array<string,string> */
     private function fieldMapFromCli(array $opts): array
@@ -1603,10 +1731,21 @@ final class NativeCliApplication
         return $out;
     }
 
-    /** @param array<string,mixed> $opts @return array<string,string> */
+    /** @param array<string,mixed> $opts @return array<string,mixed> */
     private function rulesFromOptions(array $opts): array
     {
         $rules = [];
+
+        $profile = $this->optString($opts, 'profile-schema') ?: $this->optString($opts, 'profile-file') ?: $this->optString($opts, 'pipeline-profile') ?: $this->optString($opts, 'profile');
+        if ($profile) {
+            try {
+                $schema = $this->profileLoader()->load($profile);
+                $rules = array_replace($rules, $schema->extractionRules);
+            } catch (\Throwable) {
+                // A profile option may also mean common-data profile; extraction rules stay optional.
+            }
+        }
+
         $ruleOpts = $this->stringList($this->opt($opts, 'rule', []));
         foreach ($ruleOpts as $rule) {
             if (str_contains($rule, '=')) {
@@ -1621,9 +1760,12 @@ final class NativeCliApplication
         if ($rulesFile && is_file($rulesFile)) {
             $loaded = json_decode((string) file_get_contents($rulesFile), true);
             if (is_array($loaded)) {
+                if (isset($loaded['extraction_rules']) && is_array($loaded['extraction_rules'])) {
+                    $loaded = $loaded['extraction_rules'];
+                }
                 foreach ($loaded as $k => $v) {
-                    if (is_scalar($v)) {
-                        $rules[(string) $k] = (string) $v;
+                    if (is_scalar($v) || is_array($v)) {
+                        $rules[(string) $k] = $v;
                     }
                 }
             }
@@ -1764,7 +1906,7 @@ final class NativeCliApplication
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '1.2.0',
+            'checkpoint_version' => '1.3.0',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),

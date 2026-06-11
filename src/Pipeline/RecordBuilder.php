@@ -37,19 +37,19 @@ final class RecordBuilder
                 $record['journal_url'] = $this->string($journal['url'] ?? null);
                 $record['journal_id'] = $this->string($journal['slug_or_id'] ?? ($journal['id'] ?? null));
                 $record['record_key'] = $record['journal_url'] ?: ($record['journal_name'] . '|' . $record['source_url']);
-                $records[] = $this->finalizeRecord($this->withCommonData($record, $extracted));
+                $records[] = $this->finalizeRecord($this->withRuleData($this->withCommonData($record, $extracted), $extracted));
             }
             if ($records !== []) {
                 return $records;
             }
         }
 
-        $record = $this->baseRecord($page, $options->profile !== 'page' ? $options->profile : 'page', $options);
+        $record = $this->baseRecord($page, $options->recordType ?: ($options->profile !== 'page' ? $options->profile : 'page'), $options);
         $record['record_key'] = $record['final_url'] ?: $record['source_url'];
         $record['page_title'] = $record['title'];
         $record['page_description'] = $this->string($page['meta']['description'] ?? null);
         $record['canonical_url'] = $this->string($page['meta']['canonical'] ?? null);
-        $records[] = $this->finalizeRecord($this->withCommonData($record, $extracted));
+        $records[] = $this->finalizeRecord($this->withRuleData($this->withCommonData($record, $extracted), $extracted));
 
         return $records;
     }
@@ -108,6 +108,23 @@ final class RecordBuilder
             }
         }
 
+        return $record;
+    }
+
+
+    /** @param array<string,mixed> $record @param array<string,mixed> $extracted @return array<string,mixed> */
+    private function withRuleData(array $record, array $extracted): array
+    {
+        foreach ($extracted as $key => $value) {
+            $key = trim((string) $key);
+            if ($key === '' || str_starts_with($key, '_')) {
+                continue;
+            }
+            $record[$key] = $value;
+            if (is_array($value)) {
+                $record[$key . '_text'] = implode(' | ', array_map(static fn ($v): string => is_scalar($v) ? (string) $v : json_encode($v, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $value));
+            }
+        }
         return $record;
     }
 

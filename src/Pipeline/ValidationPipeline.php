@@ -19,6 +19,11 @@ final class ValidationPipeline
             }
         }
 
+        foreach ($options->validators as $field => $rule) {
+            $value = $record[$field] ?? ($record['fields'][$field] ?? null);
+            $this->validateExplicit((string) $field, (string) $rule, $value, $issues);
+        }
+
         foreach ($record as $field => $value) {
             if ($field === 'fields' && is_array($value)) {
                 foreach ($value as $nestedField => $nestedValue) {
@@ -30,6 +35,43 @@ final class ValidationPipeline
         }
 
         return $this->uniqueIssues($issues);
+    }
+
+
+    /** @param array<int,array<string,string>> $issues */
+    private function validateExplicit(string $field, string $rule, mixed $value, array &$issues): void
+    {
+        $rule = strtolower(trim($rule));
+        if ($rule === 'required') {
+            if (!$this->hasValue($value)) {
+                $issues[] = ['field' => $field, 'rule' => 'required', 'message' => 'Required field is missing or empty.'];
+            }
+            return;
+        }
+        if (!$this->hasValue($value)) {
+            return;
+        }
+        if (is_array($value)) {
+            foreach ($value as $item) {
+                $this->validateExplicit($field, $rule, $item, $issues);
+            }
+            return;
+        }
+        if (!is_scalar($value)) {
+            return;
+        }
+        $value = trim((string) $value);
+        match ($rule) {
+            'url' => filter_var($value, FILTER_VALIDATE_URL) ? null : $issues[] = ['field' => $field, 'rule' => 'url', 'message' => 'Value is not a valid URL.'],
+            'email' => filter_var($value, FILTER_VALIDATE_EMAIL) ? null : $issues[] = ['field' => $field, 'rule' => 'email', 'message' => 'Value is not a valid email.'],
+            'phone' => $this->validPhone($value) ? null : $issues[] = ['field' => $field, 'rule' => 'phone', 'message' => 'Value does not look like a valid phone number.'],
+            'doi' => $this->validDoi($value) ? null : $issues[] = ['field' => $field, 'rule' => 'doi', 'message' => 'Value is not a valid DOI pattern.'],
+            'issn' => $this->validIssn($value) ? null : $issues[] = ['field' => $field, 'rule' => 'issn', 'message' => 'Value is not a valid ISSN.'],
+            'isbn' => $this->validIsbn($value) ? null : $issues[] = ['field' => $field, 'rule' => 'isbn', 'message' => 'Value is not a valid ISBN.'],
+            'date' => strtotime($value) !== false ? null : $issues[] = ['field' => $field, 'rule' => 'date', 'message' => 'Value is not a parseable date.'],
+            'price', 'number' => preg_match('/[-+]?\d+(?:\.\d+)?/', str_replace([',', ' '], '', $value)) === 1 ? null : $issues[] = ['field' => $field, 'rule' => $rule, 'message' => 'Value is not a parseable number/amount.'],
+            default => null,
+        };
     }
 
     /** @param array<int,array<string,string>> $issues */
