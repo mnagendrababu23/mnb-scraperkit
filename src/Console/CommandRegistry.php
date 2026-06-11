@@ -37,6 +37,12 @@ final class CommandRegistry
             'plugin:enable' => 'Enable an installed plugin manifest.',
             'plugin:disable' => 'Disable an installed plugin manifest.',
             'plugin:doctor' => 'Validate all discovered plugins and report issues.',
+            'api:routes' => 'List lightweight JSON API routes for local dashboards and automation.',
+            'api:token' => 'Generate a local API Bearer token for api:serve.',
+            'api:serve' => 'Serve the optional lightweight JSON API using PHP built-in server.',
+            'webhook:list' => 'List webhook endpoints from config/webhooks.json or a custom config file.',
+            'webhook:test' => 'Create or send a test webhook event.',
+            'webhook:send' => 'Send one JSON payload as a webhook event to an endpoint.',
             'http:test' => 'Test the HTTP engine, redirects, headers, and challenge/protection detection.',
             'bulk:crawl' => 'Crawl a URL list with gaps, pauses, checkpoint state, and resume support.',
             'url:process' => 'Process URLs sequentially with retry, method ladder, backoff, checkpoint, and resume.',
@@ -287,6 +293,15 @@ final class CommandRegistry
             'plugin-dir',
             'plugin-id',
             'plugins-dir',
+            'host',
+            'port',
+            'prefix',
+            'print-command',
+            'webhook-url',
+            'webhook-header',
+            'webhook-secret',
+            'config',
+            'payload',
         ];
     }
 
@@ -342,6 +357,7 @@ final class CommandRegistry
             'failed-jobs',
             'all',
             'force',
+            'print-command',
         ];
     }
 }

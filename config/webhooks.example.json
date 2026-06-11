@@ -1,0 +1,10 @@
+{
+  "endpoints": [
+    {
+      "name": "ops",
+      "url": "https://example.com/webhook",
+      "events": ["job.completed", "job.failed", "report.created"],
+      "enabled": true
+    }
+  ]
+}

@@ -1,8 +1,8 @@
-# MNB ScraperKit V1.8.0
+# MNB ScraperKit V1.9.0
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V1.8.0 is the Plugin System Update. It adds config-only plugins, plugin manifests, plugin validation, plugin installation, plugin enable/disable controls, and plugin-contributed profile schemas while keeping ScraperKit lightweight and safe by default.
+V1.9.0 is the API and Webhook Automation Update. It adds an optional lightweight JSON API, API token generation, API route discovery, a PHP built-in server entry point, webhook event testing, webhook payload sending, and local webhook event files for automation/debugging while keeping the core CLI package lightweight.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,21 +16,23 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V1.8.0 update focus
+## V1.9.0 update focus
 
-V1.8.0 focuses on safe extensibility. It lets users package reusable profiles, extractor rules, command aliases, source templates, and export templates as plugins without editing ScraperKit core files.
+V1.9.0 focuses on automation integration. It gives users a small API layer and webhook utilities for local dashboards, internal automation, worker monitoring, external notifications, and script-to-script integration without requiring Laravel, Symfony HTTP Kernel, Redis, or a permanent daemon.
 
-- Added a config-only plugin manifest format: `mnb-plugin.json`.
-- Added bundled plugin discovery from `plugins/` and installed plugin discovery from `storage/plugins/`.
-- Added plugin commands: `plugin:list`, `plugin:show`, `plugin:validate`, `plugin:install`, `plugin:enable`, `plugin:disable`, and `plugin:doctor`.
-- Added plugin-contributed profile schema discovery in `profile:list`, `profile:show`, `extract:rules`, and pipeline/profile workflows.
-- Added example plugin: `plugins/example-profile-addon` with a `research-paper` profile.
-- Kept plugin execution safe by default: V1.8.0 does not auto-run arbitrary plugin PHP code.
-- Kept V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
+- Added optional lightweight JSON API router under `public/api-router.php`.
+- Added API commands: `api:routes`, `api:token`, and `api:serve`.
+- Added API endpoints for health, version, command metadata, queue status, job listing, job creation, monitoring summary, plugin listing, and profile listing.
+- Added Bearer-token support through `MNB_SCRAPERKIT_API_TOKEN`.
+- Added webhook commands: `webhook:list`, `webhook:test`, and `webhook:send`.
+- Added local webhook event output for safe testing without network calls.
+- Added webhook endpoint config reader for `config/webhooks.json`.
+- Kept V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
 
 ## Highlights
 
 - **Professional PHP CLI framework** built as a Composer package with Symfony Console commands.
+- **Lightweight API and webhook layer** for local dashboards, internal automation, queue/job monitoring, API job creation, health checks, and notification hooks.
 - **Plugin system** for config-only add-ons with reusable profile schemas, extractor rule files, source templates, export templates, command aliases, validation, install, enable/disable, and doctor checks.
 - **Advanced retry, scheduling, and monitoring** with safe retry plans, local schedules, due-job enqueueing, health summaries, and stale lock diagnostics.
 - **Optional database storage layer** using PDO with SQLite and MySQL/MariaDB support for jobs, pages, records, failures, validation issues, and export metadata.
@@ -45,12 +47,12 @@ V1.8.0 focuses on safe extensibility. It lets users package reusable profiles, e
 - **Professional exports and reports** including JSON, CSV, XML, HTML summaries, failed URL reports, validation issue reports, and ZIP project bundles.
 - **Automation friendly** for PHP CLI, CMD, PowerShell, cron, Windows Task Scheduler, and server-side workflows.
 - **Source connector system** for collecting crawl targets from sitemaps, RSS/Atom feeds, CSV files, JSON files, generic JSON APIs, PLOS, and Elsevier/ScienceDirect.
-- **Future-ready architecture** designed for later expansion into dashboards, Redis queues, API/webhooks, richer reports, and ML-assisted intelligence.
+- **Future-ready architecture** designed for later expansion into dashboards, Redis queues, richer reports, browser-worker orchestration, and ML-assisted intelligence.
 
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V1.8.0 CLI/library release.
+This section lists the main functionality available in the current V1.9.0 CLI/library release.
 
 ### Package and CLI
 
@@ -127,7 +129,24 @@ This section lists the main functionality available in the current V1.8.0 CLI/li
 - Plugin enable/disable controls by editing the manifest `enabled` flag.
 - Plugin doctor command for validating all discovered plugins.
 - Plugin-contributed profiles available to `profile:list`, `profile:show`, `extract:rules`, and pipeline/profile workflows.
-- Safe-by-default design: V1.8.0 does not automatically execute arbitrary plugin PHP code.
+- Safe-by-default design: V1.9.0 does not automatically execute arbitrary plugin PHP code.
+
+### Lightweight API and webhooks
+
+- Optional no-framework JSON API router in `public/api-router.php`.
+- API server command using PHP built-in server: `api:serve`.
+- API route discovery command: `api:routes`.
+- API token generation command: `api:token`.
+- Bearer-token authentication using `MNB_SCRAPERKIT_API_TOKEN`.
+- Health/version endpoints for local monitors.
+- Queue status endpoint for pending/running/completed/failed job counts.
+- Job list, job show, and job create API endpoints.
+- Monitoring summary endpoint for queue, schedules, and locks.
+- Plugin and profile listing endpoints for lightweight dashboards.
+- Webhook endpoint listing from `config/webhooks.json`.
+- Webhook test command that can write a local event file without network calls.
+- Webhook send command for posting JSON payloads to authorized HTTP/HTTPS endpoints.
+- Webhook endpoint safety uses URL safety checks and blocks unsupported/private targets by default.
 
 ### Advanced retry, scheduling, and monitoring
 
@@ -318,16 +337,16 @@ This section lists the main functionality available in the current V1.8.0 CLI/li
 
 - Optional browser-assisted crawling layer for JavaScript-rendered pages.
 - Network profile and exit-point manager classes for future network policy expansion.
-- Modular architecture ready for future dashboard, workers, API/webhooks, richer reports, and ML-assisted intelligence.
+- Modular architecture ready for future dashboard, Redis queues, richer reports, browser-worker orchestration, and ML-assisted intelligence.
 
 ## Package direction
 
 - First public version: **1.0.0**
-- Current version: **1.8.0** — plugin system update
+- Current version: **1.9.0** — API and webhook automation update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
-- Reusable PHP core classes for crawler, HTTP, parser, profile schemas, extractor rules, pipeline, manifest, checkpoint, exporter, reports, bundles, source connectors, queue workers, scheduling, monitoring, database storage, browser fallback, and plugins
+- Reusable PHP core classes for crawler, HTTP, parser, profile schemas, extractor rules, pipeline, manifest, checkpoint, exporter, reports, bundles, source connectors, queue workers, scheduling, monitoring, database storage, browser fallback, plugins, API router, and webhooks
 - CMD, PowerShell, cron, Windows Task Scheduler, and server worker friendly
 - Clean release package without `vendor/` or generated crawl outputs
 - Single documentation file: this `README.md`
@@ -345,6 +364,73 @@ This section lists the main functionality available in the current V1.8.0 CLI/li
 - `symfony/panther` optional, only for browser-assisted crawling
 - Chrome/Chromium optional, only for browser-assisted crawling
 
+
+## API and webhook examples
+
+List available API routes:
+
+```bash
+php bin/mnb-scraper api:routes
+php bin/mnb-scraper api:routes --json
+```
+
+Generate a Bearer token for the optional API server:
+
+```bash
+php bin/mnb-scraper api:token
+php bin/mnb-scraper api:token --prefix=mnb_sk
+```
+
+Start the optional lightweight API server on localhost:
+
+```bash
+export MNB_SCRAPERKIT_API_TOKEN="paste-generated-token-here"
+php bin/mnb-scraper api:serve --host=127.0.0.1 --port=8787
+```
+
+Check the health endpoint:
+
+```bash
+curl -H "Authorization: Bearer paste-generated-token-here" http://127.0.0.1:8787/api/v1/health
+```
+
+Create a queued job through the API:
+
+```bash
+curl -X POST http://127.0.0.1:8787/api/v1/jobs \
+  -H "Authorization: Bearer paste-generated-token-here" \
+  -H "Content-Type: application/json" \
+  -d '{"job_id":"api-seo-job","command":"source:sitemap","args":["https://example.com/sitemap.xml"],"options":{"profile":"seo"}}'
+```
+
+Create a local webhook test event without making a network request:
+
+```bash
+php bin/mnb-scraper webhook:test --event=job.completed
+```
+
+Send a webhook payload to an authorized HTTP/HTTPS endpoint:
+
+```bash
+php bin/mnb-scraper webhook:send storage/jobs/job_001/job-manifest.json \
+  --url=https://example.com/webhook \
+  --event=job.completed \
+  --webhook-header="X-Project: scraperkit"
+```
+
+Example `config/webhooks.json`:
+
+```json
+{
+  "endpoints": [
+    {
+      "name": "ops",
+      "url": "https://example.com/webhook",
+      "events": ["job.completed", "job.failed"]
+    }
+  ]
+}
+```
 
 ## Plugin system examples
 
@@ -951,7 +1037,7 @@ ScraperKit focuses on practical export-ready outputs:
 - pipeline summaries
 - job manifest summaries
 
-Dashboard, PDF reports, large worker queues, browser-worker orchestration, API/webhooks, and ML-assisted intelligence are future upgrade areas, not required for the current V1.x CLI release.
+Dashboard UI, PDF reports, Redis/distributed queues, browser-worker orchestration, and ML-assisted intelligence are future upgrade areas, not required for the current V1.x CLI release.
 
 ## Windows CMD
 
@@ -978,7 +1064,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V1.8.0 plugin system package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V1.9.0 API and webhook automation package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 

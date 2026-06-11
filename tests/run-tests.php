@@ -5,6 +5,8 @@ declare(strict_types=1);
 require __DIR__ . '/../autoload.php';
 
 use Mnb\ScraperKit\Browser\BrowserCrawlService;
+use Mnb\ScraperKit\Api\ApiRouter;
+use Mnb\ScraperKit\Api\ApiToken;
 use Mnb\ScraperKit\Browser\BrowserFallbackDetector;
 use Mnb\ScraperKit\Browser\BrowserOptions;
 use Mnb\ScraperKit\Browser\BrowserPageResult;
@@ -38,6 +40,8 @@ use Mnb\ScraperKit\Source\Sitemap\SitemapReader;
 use Mnb\ScraperKit\Source\Csv\CsvUrlSourceReader;
 use Mnb\ScraperKit\Source\Json\JsonUrlSourceReader;
 use Mnb\ScraperKit\Support\UrlNormalizer;
+use Mnb\ScraperKit\Webhook\WebhookDispatcher;
+use Mnb\ScraperKit\Webhook\WebhookEndpointStore;
 
 $tests = [];
 
@@ -55,7 +59,7 @@ $tests['database config defaults to local SQLite and schema exposes storage tabl
     assert(count(DatabaseSchema::statements('mysql')) >= 6, 'MySQL schema statements missing');
 };
 
-$tests['database command registry exposes v1.8.0 database commands and options'] = function (): void {
+$tests['database command registry exposes v1.9.0 database commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['db:init', 'db:test', 'db:status', 'db:save-crawl', 'db:save-pipeline', 'db:export'] as $command) {
         assert(isset($commands[$command]), 'missing database command: ' . $command);
@@ -66,22 +70,22 @@ $tests['database command registry exposes v1.8.0 database commands and options']
     }
 };
 
-$tests['v1.8.0 command registry exposes retry scheduling and monitoring commands'] = function (): void {
+$tests['v1.9.0 command registry exposes retry scheduling and monitoring commands'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['retry:plan', 'queue:retry-safe', 'schedule:create', 'schedule:list', 'schedule:show', 'schedule:run-due', 'schedule:enable', 'schedule:disable', 'monitor:summary', 'monitor:stale-locks'] as $command) {
-        assert(isset($commands[$command]), 'missing v1.8.0 command: ' . $command);
+        assert(isset($commands[$command]), 'missing v1.9.0 command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['command', 'arg', 'schedule-id', 'every-minutes', 'every-hours', 'dry-run', 'failed-jobs', 'ttl-seconds'] as $option) {
-        assert(in_array($option, $options, true), 'missing v1.8.0 option: ' . $option);
+        assert(in_array($option, $options, true), 'missing v1.9.0 option: ' . $option);
     }
 };
 
 
-$tests['v1.8.0 plugin command registry exposes plugin commands and options'] = function (): void {
+$tests['v1.9.0 plugin command registry exposes plugin commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['plugin:list', 'plugin:show', 'plugin:validate', 'plugin:install', 'plugin:enable', 'plugin:disable', 'plugin:doctor'] as $command) {
-        assert(isset($commands[$command]), 'missing v1.8.0 plugin command: ' . $command);
+        assert(isset($commands[$command]), 'missing v1.9.0 plugin command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['plugin-dir', 'plugin-id', 'plugins-dir', 'all', 'force'] as $option) {
@@ -156,6 +160,72 @@ $tests['local schedule store creates due schedules and monitoring snapshot repor
 };
 
 
+
+
+$tests['v1.9.0 API and webhook command registry exposes automation commands and options'] = function (): void {
+    $commands = CommandRegistry::commands();
+    foreach (['api:routes', 'api:token', 'api:serve', 'webhook:list', 'webhook:test', 'webhook:send'] as $command) {
+        assert(isset($commands[$command]), 'missing v1.9.0 command: ' . $command);
+    }
+    $options = CommandRegistry::optionNames();
+    foreach (['host', 'port', 'prefix', 'print-command', 'webhook-url', 'webhook-header', 'webhook-secret', 'config', 'payload'] as $option) {
+        assert(in_array($option, $options, true), 'missing v1.9.0 option: ' . $option);
+    }
+};
+
+$tests['lightweight API router exposes health routes and queue job creation'] = function (): void {
+    $root = sys_get_temp_dir() . '/mnb_api_' . bin2hex(random_bytes(4));
+    mkdir($root, 0775, true);
+    $token = ApiToken::generate('test');
+    $router = new ApiRouter($root, $token);
+    $unauthorized = $router->handle('GET', '/api/v1/health', []);
+    assert($unauthorized->status === 401, 'API should require token when configured');
+    $health = $router->handle('GET', '/api/v1/health', ['Authorization' => 'Bearer ' . $token]);
+    assert($health->status === 200 && ($health->body['ok'] ?? false) === true, 'health route failed');
+    $created = $router->handle('POST', '/api/v1/jobs', ['Authorization' => 'Bearer ' . $token], [
+        'job_id' => 'api-job',
+        'command' => 'source:csv',
+        'args' => ['urls.csv'],
+        'options' => ['url-column' => 'url'],
+    ]);
+    assert($created->status === 201, 'API job creation failed');
+    $queue = $router->handle('GET', '/api/v1/queue/status', ['Authorization' => 'Bearer ' . $token]);
+    assert(($queue->body['counts']['pending'] ?? 0) === 1, 'API queue count mismatch');
+};
+
+$tests['webhook dispatcher writes local events and endpoint store reads config'] = function (): void {
+    $root = sys_get_temp_dir() . '/mnb_webhook_' . bin2hex(random_bytes(4));
+    mkdir($root . '/config', 0775, true);
+    $config = $root . '/config/webhooks.json';
+    file_put_contents($config, json_encode(['endpoints' => [[
+        'name' => 'ops',
+        'url' => 'https://example.com/webhook',
+        'events' => ['job.completed'],
+    ]]], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    $endpoints = (new WebhookEndpointStore($root))->list();
+    assert(count($endpoints) === 1 && ($endpoints[0]['name'] ?? null) === 'ops', 'webhook endpoint config mismatch');
+    $out = $root . '/storage/webhooks/test.json';
+    $result = (new WebhookDispatcher())->writeLocalEvent($out, 'job.completed', ['job_id' => 'abc']);
+    assert(is_file($out), 'local webhook event missing');
+    assert(($result['event'] ?? null) === 'job.completed', 'webhook event mismatch');
+};
+
+$tests['native API and webhook commands run without network by default'] = function (): void {
+    $root = sys_get_temp_dir() . '/mnb_api_cli_' . bin2hex(random_bytes(4));
+    mkdir($root, 0775, true);
+    $config = is_file(dirname(__DIR__) . '/config/scraper.php') ? require dirname(__DIR__) . '/config/scraper.php' : [];
+    $app = new NativeCliApplication($config, $root);
+    ob_start();
+    $routesCode = $app->run(['mnb-scraper', 'api:routes', '--json']);
+    $tokenCode = $app->run(['mnb-scraper', 'api:token', '--prefix=test']);
+    $serveCode = $app->run(['mnb-scraper', 'api:serve', '--dry-run', '--json']);
+    $webhookCode = $app->run(['mnb-scraper', 'webhook:test', '--event=test.event']);
+    ob_end_clean();
+    assert($routesCode === 0, 'api:routes failed');
+    assert($tokenCode === 0, 'api:token failed');
+    assert($serveCode === 0, 'api:serve dry-run failed');
+    assert($webhookCode === 0, 'webhook:test failed');
+};
 
 $tests['Symfony command option registry has no duplicate option names'] = function (): void {
     $names = CommandRegistry::optionNames();
@@ -248,7 +318,7 @@ $tests['failure classifier maps common crawl failures'] = function (): void {
     assert(FailureClassifier::fromSafetyMessage('URL safety check failed: private/reserved IP targets are blocked.') === 'private_ip_blocked');
 };
 
-$tests['rate limiter accepts v1.8.0 pacing options without sleeping unnecessarily'] = function (): void {
+$tests['rate limiter accepts v1.9.0 pacing options without sleeping unnecessarily'] = function (): void {
     $limiter = new RateLimiter();
     $options = CrawlOptions::fromArray([
         'delay_ms' => 0,
@@ -266,7 +336,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
     mkdir($dir, 0775, true);
     $checkpoint = $dir . '/checkpoint.json';
     file_put_contents($checkpoint, json_encode([
-        'checkpoint_version' => '1.8.0',
+        'checkpoint_version' => '1.9.0',
         'updated_at' => '2026-01-01T00:00:00+00:00',
         'queues' => [
             'pending' => ['https://example.com/pending'],
@@ -280,7 +350,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
 
     $manifestPath = JobManifest::write($dir, 'bulk-crawl', [], ['checkpoint' => $checkpoint], []);
     $manifest = JobManifest::read($manifestPath);
-    assert(($manifest['version'] ?? null) === '1.8.0');
+    assert(($manifest['version'] ?? null) === '1.9.0');
     assert(($manifest['resume']['counts']['pending'] ?? null) === 1);
     assert(($manifest['resume']['last_processed_url'] ?? null) === 'https://example.com/done');
 };
@@ -468,7 +538,7 @@ $tests['export and report upgrade creates XML, HTML summary and ZIP bundle'] = f
     mkdir($dir . '/logs', 0775, true);
 
     file_put_contents($dir . '/job-manifest.json', json_encode([
-        'version' => '1.8.0',
+        'version' => '1.9.0',
         'job_id' => 'test-job',
         'type' => 'crawl',
         'resume' => ['counts' => ['completed' => 1, 'failed' => 1]],

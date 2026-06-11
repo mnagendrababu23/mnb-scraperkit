@@ -8,6 +8,8 @@ use Mnb\ScraperKit\Browser\BrowserCrawlService;
 use Mnb\ScraperKit\Browser\BrowserFallbackDetector;
 use Mnb\ScraperKit\Browser\BrowserOptions;
 use Mnb\ScraperKit\Browser\BrowserPageResult;
+use Mnb\ScraperKit\Api\ApiRouter;
+use Mnb\ScraperKit\Api\ApiToken;
 use Mnb\ScraperKit\Core\CrawlOptions;
 use Mnb\ScraperKit\Database\DatabaseConfig;
 use Mnb\ScraperKit\Database\DatabaseConnectionFactory;
@@ -52,6 +54,8 @@ use Mnb\ScraperKit\Report\ReportExporter;
 use Mnb\ScraperKit\Safety\UrlSafetyGuard;
 use Mnb\ScraperKit\Storage\CsvExporter;
 use Mnb\ScraperKit\Storage\JsonExporter;
+use Mnb\ScraperKit\Webhook\WebhookDispatcher;
+use Mnb\ScraperKit\Webhook\WebhookEndpointStore;
 use Mnb\ScraperKit\Source\Plos\PlosApiClient;
 use Mnb\ScraperKit\Source\Plos\PlosJournalCatalog;
 use Mnb\ScraperKit\Source\Elsevier\ElsevierApiClient;
@@ -113,6 +117,12 @@ final class NativeCliApplication
                 'plugin:enable' => $this->pluginEnable($args, $opts),
                 'plugin:disable' => $this->pluginDisable($args, $opts),
                 'plugin:doctor' => $this->pluginDoctor($args, $opts),
+                'api:routes' => $this->apiRoutes($args, $opts),
+                'api:token' => $this->apiToken($args, $opts),
+                'api:serve' => $this->apiServe($args, $opts),
+                'webhook:list' => $this->webhookList($args, $opts),
+                'webhook:test' => $this->webhookTest($args, $opts),
+                'webhook:send' => $this->webhookSend($args, $opts),
                 'http:test' => $this->httpTest($args, $opts),
                 'bulk:crawl' => $this->bulkCrawl($args, $opts),
                 'url:process', 'urls:process' => $this->urlProcess($args, $opts),
@@ -176,7 +186,7 @@ final class NativeCliApplication
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 1.8.0 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 1.9.0 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -209,6 +219,12 @@ final class NativeCliApplication
             'plugin:enable <plugin-id>' => 'Enable an installed plugin manifest.',
             'plugin:disable <plugin-id>' => 'Disable an installed plugin manifest.',
             'plugin:doctor' => 'Validate all discovered plugins and report issues.',
+            'api:routes' => 'List lightweight JSON API routes for local dashboards and automation.',
+            'api:token' => 'Generate a local API Bearer token for api:serve.',
+            'api:serve' => 'Serve the optional lightweight JSON API using PHP built-in server.',
+            'webhook:list' => 'List webhook endpoints from config/webhooks.json or a custom config file.',
+            'webhook:test' => 'Create or send a test webhook event.',
+            'webhook:send <payload.json>' => 'Send a JSON payload as a webhook event to one endpoint.',
             'http:test <url>' => 'Test native PHP HTTP engines: auto, curl, or stream/file_get_contents.',
             'bulk:crawl <urls.txt>' => 'Crawl many URLs with gaps, pauses, checkpoint, and resume.',
             'url:process <urls.txt>' => 'Process URLs one by one with retry, method ladder, checkpoint, and resume.',
@@ -555,6 +571,152 @@ final class NativeCliApplication
             $this->outJson($data);
         }
         return empty($data['fallback_assessment']['should_use_browser']) ? 0 : 2;
+    }
+
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function apiRoutes(array $args, array $opts): int
+    {
+        $data = [
+            'ok' => true,
+            'api_version' => ApiRouter::VERSION,
+            'routes' => ApiRouter::routes(),
+            'token_required_when_configured' => true,
+        ];
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($data);
+            return 0;
+        }
+        $this->out('MNB ScraperKit API routes:');
+        foreach (ApiRouter::routes() as $route) {
+            $this->out(sprintf('  %-6s %-28s %s', $route['method'], $route['path'], $route['description']));
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function apiToken(array $args, array $opts): int
+    {
+        $prefix = $this->optString($opts, 'prefix', 'mnb_sk') ?? 'mnb_sk';
+        $token = ApiToken::generate($prefix);
+        $data = [
+            'ok' => true,
+            'token' => $token,
+            'usage' => 'Set MNB_SCRAPERKIT_API_TOKEN and send Authorization: Bearer <token>.',
+        ];
+        $this->outJson($data);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function apiServe(array $args, array $opts): int
+    {
+        $host = $this->optString($opts, 'host', '127.0.0.1') ?? '127.0.0.1';
+        $port = (int) ($this->optString($opts, 'port', '8787') ?? '8787');
+        $router = $this->rootDir . '/public/api-router.php';
+        if (!is_file($router)) {
+            $router = dirname(__DIR__, 2) . '/public/api-router.php';
+        }
+        if (!is_file($router)) {
+            throw new \RuntimeException('API router file missing: ' . $router);
+        }
+        $command = PHP_BINARY . ' -S ' . escapeshellarg($host . ':' . $port) . ' ' . escapeshellarg($router);
+        $data = [
+            'ok' => true,
+            'api_version' => ApiRouter::VERSION,
+            'url' => 'http://' . $host . ':' . $port . '/api/v1/health',
+            'router' => $router,
+            'command' => $command,
+            'token_env' => 'MNB_SCRAPERKIT_API_TOKEN',
+        ];
+        if ($this->bool($opts, 'json') || $this->bool($opts, 'dry-run') || $this->bool($opts, 'print-command')) {
+            $this->outJson($data);
+            return 0;
+        }
+        $this->out('Starting MNB ScraperKit API server. Press Ctrl+C to stop.');
+        $this->out('Health URL: ' . $data['url']);
+        $this->out('Use MNB_SCRAPERKIT_API_TOKEN to require Bearer token auth.');
+        passthru($command, $exitCode);
+        return (int) $exitCode;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function webhookList(array $args, array $opts): int
+    {
+        $configPath = $this->optString($opts, 'config');
+        $endpoints = (new WebhookEndpointStore($this->rootDir))->list($configPath);
+        $data = [
+            'ok' => true,
+            'webhook_version' => WebhookDispatcher::VERSION,
+            'config' => $configPath ?: $this->rootDir . '/config/webhooks.json',
+            'endpoints_total' => count($endpoints),
+            'endpoints' => $endpoints,
+        ];
+        $this->outJson($data);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function webhookTest(array $args, array $opts): int
+    {
+        $event = $this->optString($opts, 'event', 'scraperkit.test') ?? 'scraperkit.test';
+        $url = $this->optString($opts, 'url') ?: $this->optString($opts, 'webhook-url');
+        $output = $this->optString($opts, 'output') ?: $this->storagePath('webhooks/test-' . date('Ymd-His') . '.json');
+        $payload = [
+            'message' => 'MNB ScraperKit webhook test event',
+            'version' => '1.9.0',
+            'generated_at' => date(DATE_ATOM),
+        ];
+        $dispatcher = new WebhookDispatcher($this->safetyGuard());
+        if ($url) {
+            $result = $dispatcher->send($url, $event, $payload, $this->webhookHeadersFromOptions($opts), (int) ($this->optString($opts, 'timeout', '10') ?? '10'));
+            $this->outJson($result);
+            return ($result['ok'] ?? false) ? 0 : 2;
+        }
+        $result = $dispatcher->writeLocalEvent($output, $event, $payload);
+        $this->outJson($result);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function webhookSend(array $args, array $opts): int
+    {
+        $payloadFile = $args[0] ?? $this->optString($opts, 'payload');
+        if (!$payloadFile || !is_file($payloadFile)) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper webhook:send <payload.json> --url=https://example.com/webhook [--event=name]');
+        }
+        $payload = json_decode((string) file_get_contents($payloadFile), true);
+        if (!is_array($payload)) {
+            throw new \RuntimeException('Invalid webhook payload JSON file.');
+        }
+        $event = $this->optString($opts, 'event', (string) ($payload['event'] ?? 'scraperkit.event')) ?? 'scraperkit.event';
+        $url = $this->optString($opts, 'url') ?: $this->optString($opts, 'webhook-url');
+        $output = $this->optString($opts, 'output');
+        $dispatcher = new WebhookDispatcher($this->safetyGuard());
+        if ($url) {
+            $result = $dispatcher->send($url, $event, $payload, $this->webhookHeadersFromOptions($opts), (int) ($this->optString($opts, 'timeout', '10') ?? '10'));
+        } else {
+            $result = $dispatcher->writeLocalEvent($output ?: $this->storagePath('webhooks/event-' . date('Ymd-His') . '.json'), $event, $payload);
+        }
+        $this->outJson($result);
+        return ($result['ok'] ?? false) ? 0 : 2;
+    }
+
+    /** @param array<string,mixed> $opts @return array<string,string> */
+    private function webhookHeadersFromOptions(array $opts): array
+    {
+        $headers = [];
+        foreach ($this->stringList($opts['webhook-header'] ?? $opts['header'] ?? null) as $line) {
+            if (str_contains($line, ':')) {
+                [$name, $value] = explode(':', $line, 2);
+                $headers[trim($name)] = trim($value);
+            }
+        }
+        $secret = $this->optString($opts, 'webhook-secret');
+        if ($secret) {
+            $headers['X-MNB-ScraperKit-Secret'] = $secret;
+        }
+        return $headers;
     }
 
     /** @param array<int,string> $args @param array<string,mixed> $opts */
@@ -2866,7 +3028,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $result = (new DatabaseMigrator($pdo, $config->driver()))->migrate();
         $this->outJson([
             'ok' => true,
-            'version' => '1.8.0',
+            'version' => '1.9.0',
             'driver' => $result['driver'],
             'statements_executed' => $result['statements'],
             'tables' => $result['tables'],
@@ -2882,7 +3044,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $pdo = (new DatabaseConnectionFactory())->connect($config);
         $this->outJson([
             'ok' => true,
-            'version' => '1.8.0',
+            'version' => '1.9.0',
             'driver' => $config->driver(),
             'pdo_driver' => (string) $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME),
             'dsn' => $this->safeDsn($config->dsn),
@@ -3096,7 +3258,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '1.8.0',
+            'checkpoint_version' => '1.9.0',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),
