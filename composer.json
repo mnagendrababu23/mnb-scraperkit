@@ -1,9 +1,9 @@
 {
   "name": "mnb/scraperkit",
-  "description": "MNB ScraperKit V1.6.0 - professional PHP crawling and data extraction framework with Symfony Console commands, safe crawling, source connectors, exports, reports, profile schemas, queue workers, browser fallback, and optional database storage.",
+  "description": "MNB ScraperKit V1.7.0 - professional PHP crawling and data extraction framework with Symfony Console commands, safe crawling, source connectors, exports, reports, profile schemas, queue workers, browser fallback, database storage, advanced retry, scheduling, and monitoring.",
   "type": "library",
   "license": "MIT",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "require": {
     "php": ">=8.2",
     "ext-dom": "*",
@@ -77,6 +77,16 @@
     "mysql",
     "mariadb",
     "persistent-storage",
-    "crawl-history"
+    "crawl-history",
+    "advanced-retry",
+    "retry-policy",
+    "safe-retry",
+    "scheduler",
+    "scheduling",
+    "local-schedules",
+    "monitoring",
+    "health-check",
+    "stale-locks",
+    "operations"
   ]
 }

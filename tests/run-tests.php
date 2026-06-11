@@ -22,6 +22,9 @@ use Mnb\ScraperKit\Pipeline\ProfessionalCrawlPipeline;
 use Mnb\ScraperKit\Profile\ProfileSchemaLoader;
 use Mnb\ScraperKit\Profile\ProfileSchemaValidator;
 use Mnb\ScraperKit\Queue\LocalJobQueue;
+use Mnb\ScraperKit\Retry\RetryPolicy;
+use Mnb\ScraperKit\Scheduler\LocalScheduleStore;
+use Mnb\ScraperKit\Monitoring\MonitoringSnapshot;
 use Mnb\ScraperKit\Extractor\RuleBasedExtractor;
 use Mnb\ScraperKit\Parser\HtmlParser;
 use Mnb\ScraperKit\Report\ProjectBundleExporter;
@@ -50,7 +53,7 @@ $tests['database config defaults to local SQLite and schema exposes storage tabl
     assert(count(DatabaseSchema::statements('mysql')) >= 6, 'MySQL schema statements missing');
 };
 
-$tests['database command registry exposes v1.6.0 database commands and options'] = function (): void {
+$tests['database command registry exposes v1.7.0 database commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['db:init', 'db:test', 'db:status', 'db:save-crawl', 'db:save-pipeline', 'db:export'] as $command) {
         assert(isset($commands[$command]), 'missing database command: ' . $command);
@@ -59,6 +62,48 @@ $tests['database command registry exposes v1.6.0 database commands and options']
     foreach (['database-url', 'sqlite', 'db-user', 'db-pass', 'table', 'limit'] as $option) {
         assert(in_array($option, $options, true), 'missing database option: ' . $option);
     }
+};
+
+$tests['v1.7.0 command registry exposes retry scheduling and monitoring commands'] = function (): void {
+    $commands = CommandRegistry::commands();
+    foreach (['retry:plan', 'queue:retry-safe', 'schedule:create', 'schedule:list', 'schedule:show', 'schedule:run-due', 'schedule:enable', 'schedule:disable', 'monitor:summary', 'monitor:stale-locks'] as $command) {
+        assert(isset($commands[$command]), 'missing v1.7.0 command: ' . $command);
+    }
+    $options = CommandRegistry::optionNames();
+    foreach (['command', 'arg', 'schedule-id', 'every-minutes', 'every-hours', 'dry-run', 'failed-jobs', 'ttl-seconds'] as $option) {
+        assert(in_array($option, $options, true), 'missing v1.7.0 option: ' . $option);
+    }
+};
+
+$tests['retry policy allows temporary failures and blocks policy failures'] = function (): void {
+    $policy = new RetryPolicy(maxAttempts: 3, baseDelaySeconds: 10, multiplier: 2.0, maxDelaySeconds: 100);
+    $timeout = $policy->decision(['url' => 'https://example.com/a', 'failure_type' => 'timeout', 'attempts' => 1]);
+    assert($timeout['retry_eligible'] === true, 'timeout should be retryable');
+    assert($timeout['retry_delay_seconds'] === 20, 'backoff delay mismatch');
+    $robots = $policy->decision(['url' => 'https://example.com/b', 'failure_type' => 'robots_blocked', 'attempts' => 0]);
+    assert($robots['retry_eligible'] === false, 'robots blocked should not be retried');
+    $plan = $policy->plan([['failure_type' => 'timeout'], ['failure_type' => 'robots_blocked']]);
+    assert($plan['total'] === 2 && $plan['eligible'] === 1, 'retry plan counts mismatch');
+};
+
+$tests['local schedule store creates due schedules and monitoring snapshot reports health'] = function (): void {
+    $root = sys_get_temp_dir() . '/mnb_schedule_' . bin2hex(random_bytes(4));
+    mkdir($root, 0775, true);
+    $store = new LocalScheduleStore($root);
+    $schedule = $store->create([
+        'schedule_id' => 'test_schedule',
+        'command' => 'crawl',
+        'args' => ['https://example.com'],
+        'interval_seconds' => 60,
+        'next_run_at' => date(DATE_ATOM, time() - 60),
+    ]);
+    assert($schedule['schedule_id'] === 'test_schedule', 'schedule id mismatch');
+    assert(count($store->due()) === 1, 'schedule should be due');
+    $store->markRun($schedule, 'job_1');
+    assert(count($store->due()) === 0, 'schedule should move to future after run');
+    $snapshot = (new MonitoringSnapshot($root))->collect(900);
+    assert(isset($snapshot['queue_counts'], $snapshot['schedule_counts']), 'monitoring snapshot missing counts');
+    assert(($snapshot['schedule_counts']['total'] ?? 0) === 1, 'monitoring schedule count mismatch');
 };
 
 
@@ -154,7 +199,7 @@ $tests['failure classifier maps common crawl failures'] = function (): void {
     assert(FailureClassifier::fromSafetyMessage('URL safety check failed: private/reserved IP targets are blocked.') === 'private_ip_blocked');
 };
 
-$tests['rate limiter accepts v1.6.0 pacing options without sleeping unnecessarily'] = function (): void {
+$tests['rate limiter accepts v1.7.0 pacing options without sleeping unnecessarily'] = function (): void {
     $limiter = new RateLimiter();
     $options = CrawlOptions::fromArray([
         'delay_ms' => 0,
@@ -172,7 +217,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
     mkdir($dir, 0775, true);
     $checkpoint = $dir . '/checkpoint.json';
     file_put_contents($checkpoint, json_encode([
-        'checkpoint_version' => '1.6.0',
+        'checkpoint_version' => '1.7.0',
         'updated_at' => '2026-01-01T00:00:00+00:00',
         'queues' => [
             'pending' => ['https://example.com/pending'],
@@ -186,7 +231,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
 
     $manifestPath = JobManifest::write($dir, 'bulk-crawl', [], ['checkpoint' => $checkpoint], []);
     $manifest = JobManifest::read($manifestPath);
-    assert(($manifest['version'] ?? null) === '1.6.0');
+    assert(($manifest['version'] ?? null) === '1.7.0');
     assert(($manifest['resume']['counts']['pending'] ?? null) === 1);
     assert(($manifest['resume']['last_processed_url'] ?? null) === 'https://example.com/done');
 };
@@ -374,7 +419,7 @@ $tests['export and report upgrade creates XML, HTML summary and ZIP bundle'] = f
     mkdir($dir . '/logs', 0775, true);
 
     file_put_contents($dir . '/job-manifest.json', json_encode([
-        'version' => '1.6.0',
+        'version' => '1.7.0',
         'job_id' => 'test-job',
         'type' => 'crawl',
         'resume' => ['counts' => ['completed' => 1, 'failed' => 1]],

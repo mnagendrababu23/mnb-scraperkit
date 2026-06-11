@@ -1,8 +1,8 @@
-# MNB ScraperKit V1.6.0
+# MNB ScraperKit V1.7.0
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V1.6.0 is the Database Storage Layer Update. It adds optional PDO-based SQLite/MySQL storage for crawl jobs, pages, pipeline records, failed URLs, validation issues, and export metadata while keeping file-based JSON/CSV workflows as the default.
+V1.7.0 is the Advanced Retry, Scheduling, and Monitoring Update. It adds safe retry planning, local job schedules, due-schedule enqueueing, queue health summaries, and stale worker lock diagnostics while keeping ScraperKit lightweight and file/database storage optional.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,23 +16,25 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V1.6.0 update focus
+## V1.7.0 update focus
 
-V1.6.0 focuses on optional database storage for users who want persistent crawl history, searchable records, audit data, and reusable job outputs. The existing file-based outputs remain the default, so the library stays lightweight for CLI users.
+V1.7.0 focuses on operational reliability for long-running crawl automation. It improves how failed work is retried, how jobs are scheduled, and how users can monitor queue/worker health without adding Redis, a dashboard, or a required database.
 
-- Added PDO-based database configuration for SQLite and MySQL/MariaDB.
-- Added `db:init`, `db:test`, `db:status`, `db:save-crawl`, `db:save-pipeline`, and `db:export` commands.
-- Added storage tables for jobs, pages, normalized pipeline records, failed URLs, validation issues, and export metadata.
-- Added SQLite schema for local/single-user automation and MySQL schema for server/team usage.
-- Added safe DSN handling and optional database usage without making DB storage required for all users.
-- Kept V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
+- Added safe retry planning through `retry:plan` with retry eligibility, backoff delay, failure type counts, and recommended next actions.
+- Added `queue:retry-safe` to move only retry-eligible failed jobs back to pending.
+- Added local schedule commands: `schedule:create`, `schedule:list`, `schedule:show`, `schedule:run-due`, `schedule:enable`, and `schedule:disable`.
+- Added monitoring commands: `monitor:summary` and `monitor:stale-locks`.
+- Added file-based schedule storage under `storage/schedules/`.
+- Added conservative retry policy defaults for temporary failures such as timeout, DNS/SSL issues, 429, and 5xx responses.
+- Kept V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
 
 ## Highlights
 
 - **Professional PHP CLI framework** built as a Composer package with Symfony Console commands.
+- **Advanced retry, scheduling, and monitoring** with safe retry plans, local schedules, due-job enqueueing, health summaries, and stale lock diagnostics.
 - **Optional database storage layer** using PDO with SQLite and MySQL/MariaDB support for jobs, pages, records, failures, validation issues, and export metadata.
 - **Optional browser-assisted crawling** for JavaScript-heavy pages using `--browser=auto` or `--browser=always`, with optional rendered HTML and screenshot artifacts.
-- **Queue and worker commands** for local file-based job automation, worker loops, job pause/resume/cancel, failed queue retry, and worker locks.
+- **Queue and worker commands** for local file-based job automation, worker loops, job pause/resume/cancel, safe failed queue retry, and worker locks.
 - **Safe crawling controls** including URL safety checks, redirect safety, scope rules, robots-aware behavior, userinfo blocking, URL length limits, and private/reserved IP protection.
 - **Bulk crawling support** for processing many URLs with pacing, random jitter, cooldowns, checkpointing, failed queues, skipped queues, and resume support.
 - **Manifest-driven jobs** for reproducible crawl configuration, including input URLs, scope, pacing, extraction profile, output settings, and resume state.
@@ -47,7 +49,7 @@ V1.6.0 focuses on optional database storage for users who want persistent crawl 
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V1.6.0 CLI/library release.
+This section lists the main functionality available in the current V1.7.0 CLI/library release.
 
 ### Package and CLI
 
@@ -114,6 +116,21 @@ This section lists the main functionality available in the current V1.6.0 CLI/li
 - Multi-value fields using `many: true` or `[]` rule suffix.
 - Common data extraction for emails, phones, metadata, links, documents, and profile-oriented data.
 - Common data type/profile listing command.
+
+### Advanced retry, scheduling, and monitoring
+
+- Safe retry policy for temporary failures such as timeout, DNS/SSL errors, 429 rate limits, 5xx errors, no response, and temporary network issues.
+- Conservative non-retry defaults for robots blocks, private IP blocks, unsupported schemes, auth/cookie redirects, final-domain guard failures, validation failures, redirect loops, and most 4xx responses.
+- `retry:plan` command for generating retry decisions from crawl JSON, failed URL reports, or failed queue jobs.
+- Retry plan fields: failure type, status code, attempts, eligibility, retry delay, next attempt time, reason, and recommended action.
+- `queue:retry-safe` command to retry only eligible failed jobs instead of blindly retrying everything.
+- Local file-based schedules stored under `storage/schedules/`.
+- `schedule:create` for cron-like scheduled crawl/source jobs without requiring a daemon.
+- `schedule:run-due` for cron, Task Scheduler, Supervisor, systemd timers, or worker loop handoff.
+- `schedule:list`, `schedule:show`, `schedule:enable`, and `schedule:disable` commands.
+- Schedule options for one-time runs, interval runs, delay, explicit run time, and max run count.
+- `monitor:summary` for queue counts, schedule counts, worker locks, stale locks, and health status.
+- `monitor:stale-locks` for diagnosing stuck workers or interrupted jobs.
 
 ### Database storage layer
 
@@ -294,7 +311,7 @@ This section lists the main functionality available in the current V1.6.0 CLI/li
 ## Package direction
 
 - First public version: **1.0.0**
-- Current version: **1.6.0** — database storage layer update
+- Current version: **1.7.0** — advanced retry, scheduling, and monitoring update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
@@ -495,6 +512,45 @@ Useful help commands:
 php bin/mnb-scraper list
 php bin/mnb-scraper crawl --help
 php bin/mnb-scraper pipeline:run --help
+```
+
+## Advanced retry, scheduling, and monitoring examples
+
+Create a retry plan from a crawl output or failed URL report:
+
+```bash
+php bin/mnb-scraper retry:plan storage/jobs/example/crawl.json --output=storage/jobs/example/retry-plan.json
+php bin/mnb-scraper retry:plan --failed-jobs --json
+```
+
+Retry only failed queue jobs that are safe to retry:
+
+```bash
+php bin/mnb-scraper queue:retry-safe
+php bin/mnb-scraper queue:retry-safe --dry-run --json
+```
+
+Create a local schedule that enqueues a crawl job every hour:
+
+```bash
+php bin/mnb-scraper schedule:create --command=crawl https://example.com --every-minutes=60 --profile=seo
+php bin/mnb-scraper schedule:list
+php bin/mnb-scraper schedule:run-due
+```
+
+Use cron or Windows Task Scheduler to run due schedules periodically:
+
+```bash
+php bin/mnb-scraper schedule:run-due
+php bin/mnb-scraper worker:run --stop-when-empty
+```
+
+Check queue/schedule/worker health:
+
+```bash
+php bin/mnb-scraper monitor:summary
+php bin/mnb-scraper monitor:summary --json
+php bin/mnb-scraper monitor:stale-locks --ttl-seconds=900
 ```
 
 ## Database storage examples
@@ -843,7 +899,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V1.6.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V1.7.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 

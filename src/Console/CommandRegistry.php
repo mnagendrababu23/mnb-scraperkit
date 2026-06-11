@@ -21,6 +21,15 @@ final class CommandRegistry
             'db:save-crawl' => 'Save crawl JSON pages to the database storage layer.',
             'db:save-pipeline' => 'Save pipeline records and validation issues to database storage.',
             'db:export' => 'Export supported database storage table rows as JSON or CSV.',
+            'retry:plan' => 'Create safe retry plans with backoff decisions for crawl failures or failed jobs.',
+            'schedule:create' => 'Create a local schedule that enqueues a ScraperKit job when due.',
+            'schedule:list' => 'List local schedules and due status.',
+            'schedule:show' => 'Show one local schedule JSON file.',
+            'schedule:run-due' => 'Enqueue all due schedules into the local job queue.',
+            'schedule:enable' => 'Enable one local schedule.',
+            'schedule:disable' => 'Disable one local schedule.',
+            'monitor:summary' => 'Show queue, schedule, lock, and health monitoring summary.',
+            'monitor:stale-locks' => 'Report stale worker locks that need attention.',
             'http:test' => 'Test the HTTP engine, redirects, headers, and challenge/protection detection.',
             'bulk:crawl' => 'Crawl a URL list with gaps, pauses, checkpoint state, and resume support.',
             'url:process' => 'Process URLs sequentially with retry, method ladder, backoff, checkpoint, and resume.',
@@ -43,6 +52,7 @@ final class CommandRegistry
             'worker:status' => 'Show queue counts and active worker locks.',
             'queue:failed' => 'List failed queue jobs.',
             'queue:retry' => 'Retry one failed queue job.',
+            'queue:retry-safe' => 'Retry only failed queue jobs that pass the safe retry policy.',
             'queue:retry-all' => 'Retry all failed queue jobs.',
             'queue:clear-failed' => 'Clear failed queue job files.',
             'report:failed' => 'Create failed/skipped URL diagnostics from crawl JSON.',
@@ -252,6 +262,19 @@ final class CommandRegistry
             'title',
             'worker-id',
             'view',
+            'command',
+            'arg',
+            'schedule-id',
+            'every-seconds',
+            'every-minutes',
+            'every-hours',
+            'delay-seconds',
+            'at',
+            'max-runs',
+            'dry-run',
+            'failed-jobs',
+            'stale-lock-ttl',
+            'ttl-seconds',
         ];
     }
 
@@ -303,6 +326,8 @@ final class CommandRegistry
             'strip-final-url-query-params',
             'until-success',
             'use-cookie-jar',
+            'dry-run',
+            'failed-jobs',
         ];
     }
 }

@@ -39,6 +39,9 @@ use Mnb\ScraperKit\Pipeline\ProfessionalCrawlPipeline;
 use Mnb\ScraperKit\Profile\ProfileSchemaLoader;
 use Mnb\ScraperKit\Profile\ProfileSchemaValidator;
 use Mnb\ScraperKit\Queue\LocalJobQueue;
+use Mnb\ScraperKit\Retry\RetryPolicy;
+use Mnb\ScraperKit\Scheduler\LocalScheduleStore;
+use Mnb\ScraperKit\Monitoring\MonitoringSnapshot;
 use Mnb\ScraperKit\Report\ProjectBundleExporter;
 use Mnb\ScraperKit\Report\RecordExportService;
 use Mnb\ScraperKit\Report\ReportDataCollector;
@@ -91,6 +94,15 @@ final class NativeCliApplication
                 'db:save-crawl' => $this->dbSaveCrawl($args, $opts),
                 'db:save-pipeline' => $this->dbSavePipeline($args, $opts),
                 'db:export' => $this->dbExport($args, $opts),
+                'retry:plan' => $this->retryPlan($args, $opts),
+                'schedule:create' => $this->scheduleCreate($args, $opts),
+                'schedule:list' => $this->scheduleList($args, $opts),
+                'schedule:show' => $this->scheduleShow($args, $opts),
+                'schedule:run-due' => $this->scheduleRunDue($args, $opts),
+                'schedule:enable' => $this->scheduleEnable($args, $opts),
+                'schedule:disable' => $this->scheduleDisable($args, $opts),
+                'monitor:summary' => $this->monitorSummary($args, $opts),
+                'monitor:stale-locks' => $this->monitorStaleLocks($args, $opts),
                 'http:test' => $this->httpTest($args, $opts),
                 'bulk:crawl' => $this->bulkCrawl($args, $opts),
                 'url:process', 'urls:process' => $this->urlProcess($args, $opts),
@@ -113,6 +125,7 @@ final class NativeCliApplication
                 'worker:status' => $this->workerStatus($args, $opts),
                 'queue:failed' => $this->queueFailed($args, $opts),
                 'queue:retry' => $this->queueRetry($args, $opts),
+                'queue:retry-safe' => $this->queueRetrySafe($args, $opts),
                 'queue:retry-all' => $this->queueRetryAll($args, $opts),
                 'queue:clear-failed' => $this->queueClearFailed($args, $opts),
                 'report:failed' => $this->reportFailed($args, $opts),
@@ -153,7 +166,7 @@ final class NativeCliApplication
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 1.6.0 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 1.7.0 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -170,6 +183,15 @@ final class NativeCliApplication
             'db:save-crawl <crawl.json>' => 'Save crawl JSON pages to the database storage layer.',
             'db:save-pipeline <records.json>' => 'Save pipeline records and validation issues to database storage.',
             'db:export <table>' => 'Export supported database storage table rows as JSON or CSV.',
+            'retry:plan <crawl.json>' => 'Create a safe retry plan with backoff decisions for crawl failures or failed jobs.',
+            'schedule:create' => 'Create a local schedule that enqueues a ScraperKit job when due.',
+            'schedule:list' => 'List local schedules and due status.',
+            'schedule:show <schedule-id>' => 'Show one local schedule JSON file.',
+            'schedule:run-due' => 'Enqueue all due schedules into the local job queue.',
+            'schedule:enable <schedule-id>' => 'Enable a local schedule.',
+            'schedule:disable <schedule-id>' => 'Disable a local schedule.',
+            'monitor:summary' => 'Show queue, schedule, lock, and health monitoring summary.',
+            'monitor:stale-locks' => 'Report stale worker locks that need attention.',
             'http:test <url>' => 'Test native PHP HTTP engines: auto, curl, or stream/file_get_contents.',
             'bulk:crawl <urls.txt>' => 'Crawl many URLs with gaps, pauses, checkpoint, and resume.',
             'url:process <urls.txt>' => 'Process URLs one by one with retry, method ladder, checkpoint, and resume.',
@@ -192,6 +214,7 @@ final class NativeCliApplication
             'worker:status' => 'Show queue counts and active worker locks.',
             'queue:failed' => 'List failed queue jobs.',
             'queue:retry <job-id>' => 'Move one failed job back to pending for retry.',
+            'queue:retry-safe' => 'Move only retry-eligible failed jobs back to pending.',
             'queue:retry-all' => 'Move all failed jobs back to pending for retry.',
             'queue:clear-failed' => 'Delete failed queue job files.',
             'report:failed <crawl.json>' => 'Create failed/skipped URL report.',
@@ -1215,6 +1238,279 @@ final class NativeCliApplication
     {
         $count = $this->jobQueue()->clearFailed();
         $this->out('Failed jobs cleared: ' . $count);
+        return 0;
+    }
+
+
+    private function scheduleStore(): LocalScheduleStore
+    {
+        return new LocalScheduleStore($this->rootDir);
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function retryPlan(array $args, array $opts): int
+    {
+        $input = $args[0] ?? $this->optString($opts, 'input') ?? $this->optString($opts, 'file');
+        $rows = [];
+        if ($this->bool($opts, 'failed-jobs')) {
+            $rows = $this->jobQueue()->list('failed');
+        } elseif ($input && is_file($input)) {
+            $data = json_decode((string) file_get_contents($input), true);
+            if (!is_array($data)) {
+                throw new 
+untimeException('Invalid JSON input for retry plan.');
+            }
+            $rows = $this->retryRowsFromData($data);
+        } else {
+            throw new 
+untimeException('Usage: php bin/mnb-scraper retry:plan <crawl.json|failed-report.json> OR --failed-jobs');
+        }
+        $policy = $this->retryPolicyFromOptions($opts);
+        $plan = $policy->plan($rows);
+        $output = $this->optString($opts, 'output');
+        if ($output) {
+            $this->writeJson($output, $plan);
+        }
+        if ($this->bool($opts, 'json') || $output === null) {
+            $this->outJson($plan);
+        } else {
+            $this->out('Retry plan: total=' . $plan['total'] . ' eligible=' . $plan['eligible'] . ' output=' . $output);
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function queueRetrySafe(array $args, array $opts): int
+    {
+        $queue = $this->jobQueue();
+        $policy = $this->retryPolicyFromOptions($opts);
+        $dryRun = $this->bool($opts, 'dry-run');
+        $retried = [];
+        $skipped = [];
+        foreach ($queue->list('failed') as $job) {
+            $decision = $policy->decision($job);
+            if (!empty($decision['retry_eligible'])) {
+                if (!$dryRun) {
+                    $retried[] = $queue->retry((string) ($job['job_id'] ?? ''));
+                } else {
+                    $retried[] = $job;
+                }
+            } else {
+                $skipped[] = ['job_id' => $job['job_id'] ?? null, 'reason' => $decision['reason'], 'failure_type' => $decision['failure_type']];
+            }
+        }
+        $result = ['ok' => true, 'dry_run' => $dryRun, 'retried' => count($retried), 'skipped' => count($skipped), 'skipped_jobs' => $skipped];
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($result);
+        } else {
+            $this->out('Safe retry jobs: ' . count($retried));
+            $this->out('Skipped jobs: ' . count($skipped));
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function scheduleCreate(array $args, array $opts): int
+    {
+        $command = $this->optString($opts, 'command', $this->optString($opts, 'type', 'crawl')) ?? 'crawl';
+        $target = $args[0] ?? $this->optString($opts, 'url') ?? $this->optString($opts, 'source-url') ?? $this->optString($opts, 'input') ?? $this->optString($opts, 'file');
+        $argList = $this->stringList($this->opt($opts, 'arg', []));
+        if ($target) {
+            array_unshift($argList, (string) $target);
+        }
+        if ($argList === [] && !in_array($command, ['job:list', 'worker:status', 'monitor:summary'], true)) {
+            throw new 
+untimeException('Usage: php bin/mnb-scraper schedule:create --command=crawl https://example.com --every-minutes=60');
+        }
+        $interval = $this->scheduleIntervalSeconds($opts);
+        $delay = max(0, (int) $this->opt($opts, 'delay-seconds', 0));
+        $at = $this->optString($opts, 'at');
+        $scheduleOpts = $opts;
+        foreach (['command','type','url','source-url','input','file','arg','schedule-id','title','every-seconds','every-minutes','every-hours','delay-seconds','at','max-runs','json'] as $drop) {
+            unset($scheduleOpts[$drop]);
+        }
+        $schedule = $this->scheduleStore()->create([
+            'schedule_id' => $this->optString($opts, 'schedule-id'),
+            'title' => $this->optString($opts, 'title', ucfirst(str_replace(':', ' ', $command)) . ' schedule'),
+            'command' => $command,
+            'args' => $argList,
+            'options' => $scheduleOpts,
+            'interval_seconds' => $interval,
+            'delay_seconds' => $delay,
+            'next_run_at' => $at ? date(DATE_ATOM, strtotime($at) ?: time()) : '',
+            'max_runs' => max(0, (int) $this->opt($opts, 'max-runs', 0)),
+        ]);
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($schedule);
+        } else {
+            $this->out('Created schedule: ' . $schedule['schedule_id']);
+            $this->out('Next run: ' . (string) $schedule['next_run_at']);
+            $this->out('Schedules: ' . $this->scheduleStore()->scheduleDir());
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function scheduleList(array $args, array $opts): int
+    {
+        $store = $this->scheduleStore();
+        $items = $store->list();
+        if ($this->bool($opts, 'json')) {
+            $this->outJson(['schedule_dir' => $store->scheduleDir(), 'schedules' => $items, 'due' => $store->due()]);
+            return 0;
+        }
+        $this->out('Schedules: ' . $store->scheduleDir());
+        foreach ($items as $item) {
+            $this->out(sprintf('  %-28s %-7s next=%-25s %s',
+                (string) ($item['schedule_id'] ?? ''),
+                !empty($item['enabled']) ? 'enabled' : 'disabled',
+                (string) ($item['next_run_at'] ?? ''),
+                (string) ($item['command'] ?? '')
+            ));
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function scheduleShow(array $args, array $opts): int
+    {
+        $id = $args[0] ?? null;
+        if (!$id) { throw new 
+untimeException('Usage: php bin/mnb-scraper schedule:show <schedule-id>'); }
+        $this->outJson($this->scheduleStore()->load($id));
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function scheduleRunDue(array $args, array $opts): int
+    {
+        $store = $this->scheduleStore();
+        $queue = $this->jobQueue();
+        $dryRun = $this->bool($opts, 'dry-run');
+        $created = [];
+        foreach ($store->due() as $schedule) {
+            $jobPayload = [
+                'title' => (string) ($schedule['title'] ?? 'Scheduled job'),
+                'command' => (string) ($schedule['command'] ?? 'crawl'),
+                'args' => is_array($schedule['args'] ?? null) ? array_values($schedule['args']) : [],
+                'options' => is_array($schedule['options'] ?? null) ? $schedule['options'] : [],
+                'schedule_id' => (string) ($schedule['schedule_id'] ?? ''),
+                'source' => ['type' => 'schedule', 'target' => (string) ($schedule['schedule_id'] ?? '')],
+            ];
+            if ($dryRun) {
+                $created[] = $jobPayload;
+                continue;
+            }
+            $job = $queue->create($jobPayload);
+            $store->markRun($schedule, (string) ($job['job_id'] ?? ''));
+            $created[] = $job;
+        }
+        $result = ['ok' => true, 'dry_run' => $dryRun, 'due_count' => count($created), 'jobs' => $created];
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($result);
+        } else {
+            $this->out('Due schedules enqueued: ' . count($created));
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function scheduleEnable(array $args, array $opts): int
+    {
+        $id = $args[0] ?? null;
+        if (!$id) { throw new 
+untimeException('Usage: php bin/mnb-scraper schedule:enable <schedule-id>'); }
+        $schedule = $this->scheduleStore()->setEnabled($id, true);
+        $this->out('Enabled schedule: ' . (string) $schedule['schedule_id']);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function scheduleDisable(array $args, array $opts): int
+    {
+        $id = $args[0] ?? null;
+        if (!$id) { throw new 
+untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
+        $schedule = $this->scheduleStore()->setEnabled($id, false);
+        $this->out('Disabled schedule: ' . (string) $schedule['schedule_id']);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function monitorSummary(array $args, array $opts): int
+    {
+        $ttl = max(1, (int) $this->opt($opts, 'stale-lock-ttl', $this->opt($opts, 'ttl-seconds', 900)));
+        $snapshot = (new MonitoringSnapshot($this->rootDir))->collect($ttl);
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($snapshot);
+        } else {
+            $this->out('Health: ' . $snapshot['health']);
+            $this->out('Queue: ' . $snapshot['queue_dir']);
+            foreach ($snapshot['queue_counts'] as $name => $count) {
+                $this->out(sprintf('  %-10s %d', $name . ':', $count));
+            }
+            $this->out('Schedules: total=' . $snapshot['schedule_counts']['total'] . ' enabled=' . $snapshot['schedule_counts']['enabled'] . ' due=' . $snapshot['schedule_counts']['due']);
+            $this->out('Locks: total=' . $snapshot['locks_total'] . ' stale=' . $snapshot['stale_locks_total']);
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function monitorStaleLocks(array $args, array $opts): int
+    {
+        $ttl = max(1, (int) $this->opt($opts, 'ttl-seconds', $this->opt($opts, 'stale-lock-ttl', 900)));
+        $snapshot = (new MonitoringSnapshot($this->rootDir))->collect($ttl);
+        if ($this->bool($opts, 'json')) {
+            $this->outJson(['ttl_seconds' => $ttl, 'stale_locks' => $snapshot['stale_locks']]);
+        } else {
+            $this->out('Stale locks: ' . count($snapshot['stale_locks']));
+            foreach ($snapshot['stale_locks'] as $lock) {
+                $this->out('  ' . (string) ($lock['job_id'] ?? '') . ' worker=' . (string) ($lock['worker_id'] ?? '') . ' heartbeat=' . (string) ($lock['heartbeat_at'] ?? ''));
+            }
+        }
+        return count($snapshot['stale_locks']) > 0 ? 2 : 0;
+    }
+
+    /** @param array<string,mixed> $opts */
+    private function retryPolicyFromOptions(array $opts): RetryPolicy
+    {
+        return new RetryPolicy(
+            maxAttempts: max(1, (int) $this->opt($opts, 'max-attempts', 3)),
+            baseDelaySeconds: max(0, (int) $this->opt($opts, 'retry-delay-seconds', $this->opt($opts, 'retry-delay', 60))),
+            multiplier: max(1.0, (float) $this->opt($opts, 'backoff-multiplier', $this->opt($opts, 'backoff', 2.0))),
+            maxDelaySeconds: max(0, (int) $this->opt($opts, 'max-delay-seconds', 3600))
+        );
+    }
+
+    /** @param array<string,mixed> $data @return array<int,array<string,mixed>> */
+    private function retryRowsFromData(array $data): array
+    {
+        foreach (['failed', 'failed_urls', 'failed_pages', 'items', 'rows', 'decisions'] as $key) {
+            if (isset($data[$key]) && is_array($data[$key])) {
+                return array_values(array_filter($data[$key], 'is_array'));
+            }
+        }
+        if (isset($data['pages']) && is_array($data['pages'])) {
+            return array_values(array_filter($data['pages'], static fn($row): bool => is_array($row) && ((int) ($row['status_code'] ?? 0) >= 400 || !empty($row['error']) || !empty($row['failure_type']))));
+        }
+        if (array_is_list($data)) {
+            return array_values(array_filter($data, 'is_array'));
+        }
+        return [$data];
+    }
+
+    /** @param array<string,mixed> $opts */
+    private function scheduleIntervalSeconds(array $opts): int
+    {
+        if (isset($opts['every-seconds'])) {
+            return max(0, (int) $this->opt($opts, 'every-seconds', 0));
+        }
+        if (isset($opts['every-minutes'])) {
+            return max(0, (int) $this->opt($opts, 'every-minutes', 0)) * 60;
+        }
+        if (isset($opts['every-hours'])) {
+            return max(0, (int) $this->opt($opts, 'every-hours', 0)) * 3600;
+        }
         return 0;
     }
 
@@ -2394,7 +2690,7 @@ final class NativeCliApplication
         $result = (new DatabaseMigrator($pdo, $config->driver()))->migrate();
         $this->outJson([
             'ok' => true,
-            'version' => '1.6.0',
+            'version' => '1.7.0',
             'driver' => $result['driver'],
             'statements_executed' => $result['statements'],
             'tables' => $result['tables'],
@@ -2410,7 +2706,7 @@ final class NativeCliApplication
         $pdo = (new DatabaseConnectionFactory())->connect($config);
         $this->outJson([
             'ok' => true,
-            'version' => '1.6.0',
+            'version' => '1.7.0',
             'driver' => $config->driver(),
             'pdo_driver' => (string) $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME),
             'dsn' => $this->safeDsn($config->dsn),
@@ -2624,7 +2920,7 @@ final class NativeCliApplication
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '1.6.0',
+            'checkpoint_version' => '1.7.0',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),
