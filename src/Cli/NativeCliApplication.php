@@ -4,20 +4,27 @@ declare(strict_types=1);
 
 namespace Mnb\ScraperKit\Cli;
 
+use Mnb\ScraperKit\Browser\BrowserCrawlService;
+use Mnb\ScraperKit\Browser\BrowserFallbackDetector;
+use Mnb\ScraperKit\Browser\BrowserOptions;
+use Mnb\ScraperKit\Browser\BrowserPageResult;
 use Mnb\ScraperKit\Core\CrawlOptions;
 use Mnb\ScraperKit\Core\CrawlResult;
 use Mnb\ScraperKit\Core\HttpClient;
 use Mnb\ScraperKit\Core\RobotsPolicy;
 use Mnb\ScraperKit\Core\Scraper;
+use Mnb\ScraperKit\Core\PageResult;
 use Mnb\ScraperKit\Core\ProtectionPageDetector;
 use Mnb\ScraperKit\Discovery\FallbackSourceDiscovery;
 use Mnb\ScraperKit\Encoding\EncodingConverter;
 use Mnb\ScraperKit\Encoding\EncodingDetector;
 use Mnb\ScraperKit\Extractor\CommonDataExtractor;
+use Mnb\ScraperKit\Extractor\RuleBasedExtractor;
 use Mnb\ScraperKit\Network\ExitPointManager;
 use Mnb\ScraperKit\Processing\SequentialUrlProcessor;
 use Mnb\ScraperKit\Processing\UrlProcessOptions;
 use Mnb\ScraperKit\Parser\HtmlParser;
+use Mnb\ScraperKit\Parser\PresetExtractor;
 use Mnb\ScraperKit\Pipeline\CrawlJsonReader;
 use Mnb\ScraperKit\Pipeline\FailedUrlExtractor;
 use Mnb\ScraperKit\Pipeline\JobManifest;
@@ -72,6 +79,7 @@ final class NativeCliApplication
                 '', 'help', '--help', '-h' => $this->help(),
                 'list' => $this->listCommands(),
                 'crawl' => $this->crawl($args, $opts),
+                'browser:test' => $this->browserTest($args, $opts),
                 'http:test' => $this->httpTest($args, $opts),
                 'bulk:crawl' => $this->bulkCrawl($args, $opts),
                 'url:process', 'urls:process' => $this->urlProcess($args, $opts),
@@ -134,7 +142,7 @@ final class NativeCliApplication
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 1.4.0 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 1.5.0 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -143,7 +151,8 @@ final class NativeCliApplication
     private function listCommands(): int
     {
         $commands = [
-            'crawl <url>' => 'Crawl one URL/site with rules, presets, common data, and optional pipeline.',
+            'crawl <url>' => 'Crawl one URL/site with rules, presets, common data, optional browser fallback, and optional pipeline.',
+            'browser:test <url>' => 'Diagnose browser fallback need and optionally render one URL with the optional browser adapter.',
             'http:test <url>' => 'Test native PHP HTTP engines: auto, curl, or stream/file_get_contents.',
             'bulk:crawl <urls.txt>' => 'Crawl many URLs with gaps, pauses, checkpoint, and resume.',
             'url:process <urls.txt>' => 'Process URLs one by one with retry, method ladder, checkpoint, and resume.',
@@ -215,9 +224,33 @@ final class NativeCliApplication
         $logger = new Logger($jobDir ? $jobDir . '/logs/crawl.log' : null);
         $options = $this->crawlOptions($opts);
         $rules = $this->rulesFromOptions($opts);
+        $browserOptions = $this->browserOptionsFromCli($opts);
+        if ($browserOptions->outputDir === null && $jobDir) {
+            $browserOptions->outputDir = rtrim($jobDir, '/\\') . '/browser';
+        }
 
-        $this->out('Starting crawl...');
-        $result = (new Scraper($this->config, $logger))->crawl($url, $options, $rules);
+        if ($browserOptions->mode === 'always') {
+            $this->out('Starting browser-assisted crawl...');
+            $result = $this->browserCrawlResult($url, $options, $browserOptions, $rules);
+        } else {
+            $this->out('Starting crawl...');
+            $result = (new Scraper($this->config, $logger))->crawl($url, $options, $rules);
+            if ($browserOptions->mode === 'auto') {
+                $firstPage = $result->pages()[0] ?? null;
+                if ($firstPage instanceof PageResult) {
+                    $assessment = (new BrowserFallbackDetector())->assessPage($firstPage, $browserOptions);
+                    if (!empty($assessment['should_use_browser'])) {
+                        $service = new BrowserCrawlService($this->config);
+                        if ($service->isAvailable($browserOptions)) {
+                            $this->out('Browser fallback triggered: ' . implode(', ', (array) ($assessment['reasons'] ?? [])));
+                            $result = $this->browserCrawlResult($url, $options, $browserOptions, $rules);
+                        } else {
+                            $this->out('Browser fallback recommended but unavailable: ' . $service->availability($browserOptions));
+                        }
+                    }
+                }
+            }
+        }
 
         $format = strtolower($this->optString($opts, 'format', 'json') ?? 'json');
         $output = $this->optString($opts, 'output');
@@ -417,6 +450,55 @@ final class NativeCliApplication
         return ((int) ($summary['failed'] ?? 0) > 0 || (int) ($summary['challenge'] ?? 0) > 0) ? 2 : 0;
     }
 
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function browserTest(array $args, array $opts): int
+    {
+        $url = $args[0] ?? null;
+        if (!$url) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper browser:test <url> [--browser=auto|always] [--render] [--json]');
+        }
+
+        $opts['url'] = $url;
+        $browserOptions = $this->browserOptionsFromCli($opts);
+        if ($browserOptions->mode === 'off') {
+            $browserOptions->mode = 'auto';
+        }
+        $options = $this->crawlOptions($opts);
+        $service = new BrowserCrawlService($this->config);
+        $data = [
+            'url' => $url,
+            'browser' => $browserOptions->toArray(),
+            'adapter_available' => $service->isAvailable($browserOptions),
+            'availability' => $service->availability($browserOptions),
+        ];
+
+        $shouldRender = $this->bool($opts, 'render') || $browserOptions->mode === 'always';
+        if ($shouldRender) {
+            $rendered = $service->render($url, $options, $browserOptions);
+            $data['rendered'] = $rendered->toArray(!$this->bool($opts, 'no-html'));
+        } else {
+            $probeOptions = $options;
+            $probeOptions->maxPages = 1;
+            $probeOptions->maxDepth = 0;
+            $probe = (new Scraper($this->config, new Logger()))->crawl($url, $probeOptions, $this->rulesFromOptions($opts));
+            $page = $probe->pages()[0] ?? null;
+            if ($page instanceof PageResult) {
+                $data['http_probe'] = $page->toArray(false);
+                $data['fallback_assessment'] = (new BrowserFallbackDetector())->assessPage($page, $browserOptions);
+            }
+        }
+
+        $output = $this->optString($opts, 'output');
+        if ($output) {
+            $this->writeJson($output, $data);
+            $this->out('Output: ' . $output);
+        }
+        if ($this->bool($opts, 'json') || !$output) {
+            $this->outJson($data);
+        }
+        return empty($data['fallback_assessment']['should_use_browser']) ? 0 : 2;
+    }
 
     /** @param array<int,string> $args @param array<string,mixed> $opts */
     private function httpTest(array $args, array $opts): int
@@ -921,6 +1003,7 @@ final class NativeCliApplication
         if (!isset($jobOpts['job-dir'])) {
             $jobOpts['job-dir'] = $this->storagePath('jobs/' . ($this->optString($opts, 'job-id') ?: 'queued-' . date('Ymd-His')));
         }
+        $browserJobOptions = $this->browserOptionsFromCli($opts);
 
         $job = $queue->create([
             'job_id' => $this->optString($opts, 'job-id'),
@@ -930,6 +1013,7 @@ final class NativeCliApplication
             'options' => $jobOpts,
             'source' => ['type' => $source ?: $type, 'target' => (string) $target],
             'profile' => $this->optString($opts, 'profile'),
+            'browser' => $browserJobOptions->toArray(),
             'job_dir' => (string) ($jobOpts['job-dir'] ?? ''),
         ]);
 
@@ -1180,6 +1264,90 @@ final class NativeCliApplication
         return $this->crawl([$url], $merged);
     }
 
+
+    /** @param array<string,mixed> $opts */
+    private function browserOptionsFromCli(array $opts): BrowserOptions
+    {
+        $data = [];
+        foreach ($opts as $key => $value) {
+            $data[str_replace('-', '_', (string) $key)] = $value;
+        }
+        if (array_key_exists('browser', $opts)) {
+            $data['browser'] = $opts['browser'];
+        }
+        if (array_key_exists('browser-mode', $opts)) {
+            $data['browser_mode'] = $opts['browser-mode'];
+        }
+        if ($this->bool($opts, 'force-browser')) {
+            $data['force_browser'] = true;
+        }
+        if ($this->bool($opts, 'no-browser-fallback')) {
+            $data['no_browser_fallback'] = true;
+        }
+        if ($this->bool($opts, 'browser-auto')) {
+            $data['browser'] = 'auto';
+        }
+        return BrowserOptions::fromArray($data);
+    }
+
+    /** @param array<string,mixed> $rules */
+    private function browserCrawlResult(string $url, CrawlOptions $options, BrowserOptions $browserOptions, array $rules = []): CrawlResult
+    {
+        $service = new BrowserCrawlService($this->config);
+        $rendered = $service->render($url, $options, $browserOptions);
+        $crawlResult = new CrawlResult($url);
+        $crawlResult->addPage($this->pageFromBrowserResult($rendered, $options, $rules));
+        $crawlResult->finish();
+        return $crawlResult;
+    }
+
+    /** @param array<string,mixed> $rules */
+    private function pageFromBrowserResult(BrowserPageResult $rendered, CrawlOptions $options, array $rules = []): PageResult
+    {
+        $baseUrl = $rendered->finalUrl ?: $rendered->url;
+        $parser = new HtmlParser();
+        $doc = $parser->load($rendered->html, $baseUrl);
+        $links = $parser->links($doc, $baseUrl);
+        $text = $parser->text($doc) ?: $rendered->text;
+        $title = $parser->title($doc) ?: $rendered->title;
+        $meta = [
+            'description' => $parser->meta($doc, 'description'),
+            'keywords' => $parser->meta($doc, 'keywords'),
+            'canonical' => $parser->canonical($doc, $baseUrl),
+            'robots' => $parser->meta($doc, 'robots'),
+        ];
+        $extracted = [];
+        if ($rules !== []) {
+            $extracted = (new RuleBasedExtractor($parser, new UrlNormalizer()))->extract($doc, $rules, $baseUrl);
+        }
+        $presetData = (new PresetExtractor(new UrlNormalizer()))->extract($doc, $options->extractPreset, $baseUrl);
+        if ($presetData !== []) {
+            $extracted['_preset'] = $presetData;
+        }
+        if ($options->commonData) {
+            $extracted['_common_data'] = (new CommonDataExtractor($parser, new UrlNormalizer()))->extract($doc, $baseUrl, $options->commonDataTypes, $options->commonDataProfile);
+        }
+        return new PageResult(
+            url: $rendered->url,
+            finalUrl: $rendered->finalUrl,
+            rawFinalUrl: $rendered->finalUrl,
+            statusCode: 200,
+            title: $title,
+            html: $rendered->html,
+            text: $text,
+            links: $links,
+            meta: $meta,
+            extracted: $extracted,
+            contentHash: hash('sha256', $text ?: $rendered->html),
+            error: $rendered->error,
+            failureType: $rendered->error ? 'browser_render_failed' : null,
+            depth: 0,
+            responseTimeMs: $rendered->loadTimeMs,
+            redirectCount: 0,
+            protection: ['browser_assisted' => true, 'browser_metadata' => $rendered->metadata],
+            httpEngine: 'browser:' . $rendered->engine,
+        );
+    }
 
     /** @param array<int,string> $args @param array<string,mixed> $opts */
     private function sourceDiscover(array $args, array $opts): int
@@ -1751,6 +1919,7 @@ final class NativeCliApplication
             $command = (string) ($job['command'] ?? 'crawl');
             $jobArgs = is_array($job['args'] ?? null) ? array_values(array_map('strval', $job['args'])) : [];
             $jobOpts = is_array($job['options'] ?? null) ? $job['options'] : [];
+            $jobOpts = array_merge($jobOpts, $this->workerForwardOptions($workerOpts));
             $argv = array_merge(['mnb-scraper', $command], $jobArgs, $this->optionsToArgv($jobOpts));
             $this->out('Running queued job: ' . $jobId . ' (' . $command . ')');
             $code = $this->run($argv);
@@ -1770,6 +1939,25 @@ final class NativeCliApplication
         } finally {
             $queue->releaseLock($jobId);
         }
+    }
+
+    /** @param array<string,mixed> $workerOpts @return array<string,mixed> */
+    private function workerForwardOptions(array $workerOpts): array
+    {
+        $allowed = [
+            'browser', 'browser-mode', 'browser-profile', 'browser-engine', 'browser-auto',
+            'force-browser', 'no-browser-fallback', 'wait-selector', 'wait-ms', 'wait-until',
+            'browser-timeout-ms', 'viewport-width', 'viewport-height', 'screenshot',
+            'rendered-html', 'save-rendered-html', 'block-assets', 'browser-output-dir',
+            'fallback-min-text', 'fallback-required-field',
+        ];
+        $out = [];
+        foreach ($allowed as $key) {
+            if (array_key_exists($key, $workerOpts)) {
+                $out[$key] = $workerOpts[$key];
+            }
+        }
+        return $out;
     }
 
     /** @param array<string,mixed> $opts @return array<int,string> */
@@ -2272,7 +2460,7 @@ final class NativeCliApplication
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '1.4.0',
+            'checkpoint_version' => '1.5.0',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),

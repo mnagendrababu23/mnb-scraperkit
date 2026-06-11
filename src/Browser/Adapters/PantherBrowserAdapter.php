@@ -4,19 +4,65 @@ declare(strict_types=1);
 
 namespace Mnb\ScraperKit\Browser\Adapters;
 
+use Mnb\ScraperKit\Browser\BrowserClientInterface;
 use Mnb\ScraperKit\Browser\BrowserEngine;
+use Mnb\ScraperKit\Browser\BrowserOptions;
 use Mnb\ScraperKit\Browser\BrowserPageResult;
 use Mnb\ScraperKit\Browser\BrowserProfile;
 use Symfony\Component\Panther\Client;
 
-final class PantherBrowserAdapter implements BrowserEngine
+final class PantherBrowserAdapter implements BrowserEngine, BrowserClientInterface
 {
     private ?Client $client = null;
+
+    public function isAvailable(): bool
+    {
+        return class_exists(Client::class);
+    }
+
+    public function availabilityMessage(): string
+    {
+        return $this->isAvailable()
+            ? 'Panther browser adapter is available.'
+            : 'Browser mode is optional. Install symfony/panther and a Chrome/Firefox driver to enable browser-assisted crawling.';
+    }
+
+    public function render(string $url, BrowserProfile $profile, BrowserOptions $options): BrowserPageResult
+    {
+        $result = $this->open($url, $profile);
+        if ($options->waitSelector) {
+            $this->waitFor($options->waitSelector, max(1, (int) ceil($options->timeoutMs / 1000)));
+        }
+        $html = $this->html();
+        $text = $this->text();
+        $screenshotPath = null;
+        if ($options->screenshot && $options->outputDir) {
+            $screenshotPath = rtrim($options->outputDir, '/\\') . '/screenshot.png';
+            if (!is_dir(dirname($screenshotPath))) {
+                mkdir(dirname($screenshotPath), 0775, true);
+            }
+            $this->screenshot($screenshotPath);
+        }
+        $this->close();
+
+        return new BrowserPageResult(
+            url: $result->url,
+            finalUrl: $result->finalUrl,
+            title: $result->title,
+            html: $html,
+            text: $text,
+            screenshotPath: $screenshotPath,
+            error: $result->error,
+            loadTimeMs: $result->loadTimeMs,
+            engine: 'panther',
+            metadata: ['profile' => $profile->name, 'mode' => $options->mode]
+        );
+    }
 
     public function open(string $url, BrowserProfile $profile): BrowserPageResult
     {
         if (!class_exists(Client::class)) {
-            throw new \RuntimeException('Install symfony/panther and Chrome/Firefox driver to use Panther browser mode.');
+            throw new \RuntimeException($this->availabilityMessage());
         }
 
         $arguments = [
@@ -25,6 +71,9 @@ final class PantherBrowserAdapter implements BrowserEngine
         ];
         if ($profile->headless) {
             $arguments[] = '--headless=new';
+        }
+        if ($profile->blockAssets) {
+            $arguments[] = '--blink-settings=imagesEnabled=false';
         }
 
         $started = microtime(true);
@@ -42,6 +91,8 @@ final class PantherBrowserAdapter implements BrowserEngine
             html: $this->client->getPageSource(),
             text: $crawler->text(null, false),
             loadTimeMs: (int) round((microtime(true) - $started) * 1000),
+            engine: 'panther',
+            metadata: ['profile' => $profile->name]
         );
     }
 

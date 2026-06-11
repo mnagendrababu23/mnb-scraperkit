@@ -4,9 +4,14 @@ declare(strict_types=1);
 
 require __DIR__ . '/../autoload.php';
 
+use Mnb\ScraperKit\Browser\BrowserCrawlService;
+use Mnb\ScraperKit\Browser\BrowserFallbackDetector;
+use Mnb\ScraperKit\Browser\BrowserOptions;
+use Mnb\ScraperKit\Browser\BrowserPageResult;
 use Mnb\ScraperKit\Console\CommandRegistry;
 use Mnb\ScraperKit\Cli\NativeCliApplication;
 use Mnb\ScraperKit\Core\FailureClassifier;
+use Mnb\ScraperKit\Core\PageResult;
 use Mnb\ScraperKit\Core\RateLimiter;
 use Mnb\ScraperKit\Core\CrawlOptions;
 use Mnb\ScraperKit\Pipeline\JobManifest;
@@ -34,6 +39,54 @@ $tests['Symfony command option registry has no duplicate option names'] = functi
     $names = CommandRegistry::optionNames();
     $duplicates = array_keys(array_filter(array_count_values($names), static fn (int $count): bool => $count > 1));
     assert($duplicates === [], 'duplicate Symfony option names: ' . implode(', ', $duplicates));
+};
+
+
+$tests['browser options normalize auto always and off modes'] = function (): void {
+    assert(BrowserOptions::fromArray(['browser' => true])->mode === 'auto');
+    assert(BrowserOptions::fromArray(['browser' => 'always'])->mode === 'always');
+    assert(BrowserOptions::fromArray(['browser' => 'off'])->mode === 'off');
+    $options = BrowserOptions::fromArray([
+        'browser' => 'auto',
+        'wait-selector' => '.product-title',
+        'viewport-width' => 1440,
+        'viewport-height' => 900,
+        'rendered-html' => true,
+        'screenshot' => true,
+        'fallback-required-field' => ['title', 'price'],
+    ]);
+    assert($options->enabled(), 'browser auto should be enabled');
+    assert($options->waitSelector === '.product-title', 'wait selector mismatch');
+    assert($options->viewportWidth === 1440 && $options->viewportHeight === 900, 'viewport mismatch');
+    assert($options->saveRenderedHtml === true && $options->screenshot === true, 'artifact flags mismatch');
+    assert($options->requiredFields === ['title', 'price'], 'required fields mismatch');
+};
+
+$tests['browser fallback detector identifies JavaScript app and low text pages'] = function (): void {
+    $page = new PageResult(
+        url: 'https://example.com/app',
+        statusCode: 200,
+        title: 'App',
+        html: '<!doctype html><div id="app"></div><script src="/bundle.js"></script>',
+        text: 'Loading...',
+        extracted: []
+    );
+    $assessment = (new BrowserFallbackDetector())->assessPage($page, BrowserOptions::fromArray([
+        'browser' => 'auto',
+        'fallback-min-text' => 50,
+        'fallback-required-field' => 'title,price',
+    ]));
+    assert(($assessment['should_use_browser'] ?? false) === true, 'browser fallback should be recommended');
+    assert(in_array('javascript_app_markers', $assessment['reasons'], true), 'JS app marker reason missing');
+};
+
+$tests['browser service stays optional when Panther is not installed'] = function (): void {
+    $service = new BrowserCrawlService([]);
+    $options = BrowserOptions::fromArray(['browser' => 'auto']);
+    assert(is_bool($service->isAvailable($options)), 'availability should be boolean');
+    assert($service->availability($options) !== '', 'availability message should be available');
+    $result = new BrowserPageResult('https://example.com', 'https://example.com', 'Title', '<html></html>', 'Title', null, null, 1, 'test');
+    assert(($result->toArray(false)['engine'] ?? null) === 'test', 'browser result array mismatch');
 };
 
 $tests['url normalizer removes tracking params and resolves relative URLs'] = function (): void {
@@ -73,7 +126,7 @@ $tests['failure classifier maps common crawl failures'] = function (): void {
     assert(FailureClassifier::fromSafetyMessage('URL safety check failed: private/reserved IP targets are blocked.') === 'private_ip_blocked');
 };
 
-$tests['rate limiter accepts v1.4.0 pacing options without sleeping unnecessarily'] = function (): void {
+$tests['rate limiter accepts v1.5.0 pacing options without sleeping unnecessarily'] = function (): void {
     $limiter = new RateLimiter();
     $options = CrawlOptions::fromArray([
         'delay_ms' => 0,
@@ -91,7 +144,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
     mkdir($dir, 0775, true);
     $checkpoint = $dir . '/checkpoint.json';
     file_put_contents($checkpoint, json_encode([
-        'checkpoint_version' => '1.4.0',
+        'checkpoint_version' => '1.5.0',
         'updated_at' => '2026-01-01T00:00:00+00:00',
         'queues' => [
             'pending' => ['https://example.com/pending'],
@@ -105,7 +158,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
 
     $manifestPath = JobManifest::write($dir, 'bulk-crawl', [], ['checkpoint' => $checkpoint], []);
     $manifest = JobManifest::read($manifestPath);
-    assert(($manifest['version'] ?? null) === '1.4.0');
+    assert(($manifest['version'] ?? null) === '1.5.0');
     assert(($manifest['resume']['counts']['pending'] ?? null) === 1);
     assert(($manifest['resume']['last_processed_url'] ?? null) === 'https://example.com/done');
 };
@@ -293,7 +346,7 @@ $tests['export and report upgrade creates XML, HTML summary and ZIP bundle'] = f
     mkdir($dir . '/logs', 0775, true);
 
     file_put_contents($dir . '/job-manifest.json', json_encode([
-        'version' => '1.4.0',
+        'version' => '1.5.0',
         'job_id' => 'test-job',
         'type' => 'crawl',
         'resume' => ['counts' => ['completed' => 1, 'failed' => 1]],

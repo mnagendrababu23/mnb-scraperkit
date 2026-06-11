@@ -1,9 +1,9 @@
 {
   "name": "mnb/scraperkit",
-  "description": "MNB ScraperKit V1.4.0 - professional PHP crawling and data extraction framework with Symfony Console commands, safe crawling, source connectors, exports, reports, profile schemas, extractor rules, and local queue/worker automation.",
+  "description": "MNB ScraperKit V1.5.0 - professional PHP crawling and data extraction framework with Symfony Console commands, safe crawling, source connectors, exports, reports, profile schemas, queue workers, and optional browser-assisted crawling.",
   "type": "library",
   "license": "MIT",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "require": {
     "php": ">=8.2",
     "ext-dom": "*",
@@ -13,7 +13,9 @@
   },
   "suggest": {
     "ext-curl": "Recommended for the cURL HTTP engine. The stream/file_get_contents engine works without cURL when allow_url_fopen is enabled.",
-    "ext-pdo": "Needed only for database storage features."
+    "ext-pdo": "Needed only for database storage features.",
+    "symfony/panther": "Optional browser-assisted crawling adapter for JavaScript-rendered pages. Normal PHP HTTP crawling works without it.",
+    "chrome/chromium": "Needed only when using browser-assisted crawling through Panther/Chrome."
   },
   "autoload": {
     "psr-4": {
@@ -59,6 +61,16 @@
     "automation",
     "cron",
     "task-scheduler",
-    "retry-queue"
-  ]
+    "retry-queue",
+    "browser-assisted-crawling",
+    "javascript-rendering",
+    "headless-browser",
+    "panther",
+    "chrome",
+    "fallback-crawling",
+    "spa-crawling"
+  ],
+  "require-dev": {
+    "symfony/panther": "^2.4"
+  }
 }

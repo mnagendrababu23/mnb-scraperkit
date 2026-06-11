@@ -1,8 +1,8 @@
-# MNB ScraperKit V1.4.0
+# MNB ScraperKit V1.5.0
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V1.4.0 is the Queue and Worker Commands Update. It adds a lightweight local JSON queue, queued job lifecycle commands, worker commands, retry helpers, queue status reporting, and lock files while keeping profile schemas, source connectors, exports, reports, safe crawling, and the Symfony Console CLI.
+V1.5.0 is the Browser-Assisted Crawling Update. It adds an optional browser fallback layer for JavaScript-heavy pages while keeping normal PHP HTTP crawling as the default. Browser rendering is optional and can be used in auto mode, forced mode, queued jobs, and worker runs without making browser dependencies mandatory for all users.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,22 +16,23 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V1.4.0 update focus
+## V1.5.0 update focus
 
-V1.4.0 focuses on local job automation: create jobs, queue jobs, run workers, pause/resume/cancel jobs, retry failed work, and inspect queue status from CLI/CMD/PowerShell/server workflows.
+V1.5.0 focuses on optional browser-assisted crawling for pages where fast PHP HTTP crawling is not enough. The normal HTTP crawler remains the default. Browser rendering is used only when requested or when auto fallback decides it is needed.
 
-- Added file-based local queue folders under `storage/queue/`.
-- Added `job:create`, `job:list`, `job:show`, `job:pause`, `job:resume`, and `job:cancel`.
-- Upgraded `job:run` to run queued jobs by ID while still supporting legacy JSON job files.
-- Added `worker:once`, `worker:run`, and `worker:status`.
-- Added failed queue helpers: `queue:failed`, `queue:retry`, `queue:retry-all`, and `queue:clear-failed`.
-- Added lock files to avoid two workers running the same job.
-- Added worker limits for max jobs, max runtime, sleep interval, and memory guard.
-- Kept V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
+- Added browser option model for `off`, `auto`, and `always` modes.
+- Added `browser:test` to diagnose whether a URL likely needs browser rendering.
+- Added browser fallback detection for low-text pages, SPA/root app markers, JavaScript-required messages, challenge/browser-required signals, and missing required fields.
+- Added optional Panther/Chrome browser adapter support without making browser dependencies required.
+- Added rendered HTML and screenshot artifact support when browser rendering is enabled.
+- Added browser options for wait selector, wait time, viewport, timeout, asset blocking, and output folder.
+- Added queue/worker forwarding for browser options so queued jobs can run with browser fallback.
+- Kept V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
 
 ## Highlights
 
 - **Professional PHP CLI framework** built as a Composer package with Symfony Console commands.
+- **Optional browser-assisted crawling** for JavaScript-heavy pages using `--browser=auto` or `--browser=always`, with optional rendered HTML and screenshot artifacts.
 - **Queue and worker commands** for local file-based job automation, worker loops, job pause/resume/cancel, failed queue retry, and worker locks.
 - **Safe crawling controls** including URL safety checks, redirect safety, scope rules, robots-aware behavior, userinfo blocking, URL length limits, and private/reserved IP protection.
 - **Bulk crawling support** for processing many URLs with pacing, random jitter, cooldowns, checkpointing, failed queues, skipped queues, and resume support.
@@ -47,7 +48,7 @@ V1.4.0 focuses on local job automation: create jobs, queue jobs, run workers, pa
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V1.4.0 CLI/library release.
+This section lists the main functionality available in the current V1.5.0 CLI/library release.
 
 ### Package and CLI
 
@@ -114,6 +115,19 @@ This section lists the main functionality available in the current V1.4.0 CLI/li
 - Multi-value fields using `many: true` or `[]` rule suffix.
 - Common data extraction for emails, phones, metadata, links, documents, and profile-oriented data.
 - Common data type/profile listing command.
+
+### Browser-assisted crawling
+
+- Normal PHP HTTP crawler remains the default.
+- Optional browser fallback mode with `--browser=auto`.
+- Forced browser rendering mode with `--browser=always` or `--force-browser`.
+- `browser:test <url>` command for fallback diagnostics.
+- Auto fallback detection for low-text pages, JavaScript app markers, required JavaScript messages, challenge/browser-required pages, and missing required fields.
+- Optional Panther/Chrome adapter through `symfony/panther`; not required for normal users.
+- Browser options for wait selector, wait time, timeout, viewport width/height, headless mode, asset blocking, rendered HTML, and screenshots.
+- Same URL safety guard, robots policy, scope rules, final-domain checks, and rate limits stay active in browser mode.
+- Browser options can be stored in queued jobs and forwarded from `worker:run`.
+- Browser output can save `rendered.html`, `browser-result.json`, and `screenshot.png` when configured.
 
 ### Common data profiles
 
@@ -260,14 +274,14 @@ This section lists the main functionality available in the current V1.4.0 CLI/li
 
 ### Optional/future-ready modules
 
-- Browser adapter structure for future browser-assisted crawling workflows.
+- Optional browser-assisted crawling layer for JavaScript-rendered pages.
 - Network profile and exit-point manager classes for future network policy expansion.
 - Modular architecture ready for future dashboard, workers, API/webhooks, richer reports, and ML-assisted intelligence.
 
 ## Package direction
 
 - First public version: **1.0.0**
-- Current version: **1.4.0** — queue and worker commands update
+- Current version: **1.5.0** — browser-assisted crawling update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
@@ -286,6 +300,8 @@ This section lists the main functionality available in the current V1.4.0 CLI/li
 - `symfony/console`
 - `ext-curl` recommended for the cURL HTTP engine
 - `ext-pdo` optional, only for database storage features
+- `symfony/panther` optional, only for browser-assisted crawling
+- Chrome/Chromium optional, only for browser-assisted crawling
 
 
 ## Profile schema and extractor rule examples
@@ -589,6 +605,44 @@ ScraperKit is built for reusable extraction profiles instead of one-off scraping
 | `seo` | Meta title, meta description, canonical URL, robots, schema, Open Graph, Twitter cards, headings, links, and sitemap hints |
 | `contact` / `document` | Emails, phones, addresses, document URLs, file metadata, and page-level contact information |
 
+## Browser-assisted crawling examples
+
+Diagnose whether a page likely needs browser fallback:
+
+```bash
+php bin/mnb-scraper browser:test https://example.com --browser=auto --json
+```
+
+Use auto fallback during a crawl:
+
+```bash
+php bin/mnb-scraper crawl https://example.com --browser=auto --pipeline
+```
+
+Force browser rendering for one crawl:
+
+```bash
+php bin/mnb-scraper crawl https://example.com \
+  --browser=always \
+  --wait-selector=.product-title \
+  --rendered-html \
+  --screenshot \
+  --job-dir=storage/jobs/browser-product-test
+```
+
+Create a queued browser fallback job:
+
+```bash
+php bin/mnb-scraper job:create --type=crawl https://example.com --profile=ecommerce --browser=auto
+php bin/mnb-scraper worker:run --stop-when-empty
+```
+
+Browser mode is optional. Normal crawling works without Panther or Chrome. To enable the Panther adapter locally, install the optional dependency and browser driver support:
+
+```bash
+composer require symfony/panther
+```
+
 ## Queue and worker examples
 
 Create a queued sitemap source job:
@@ -644,7 +698,7 @@ php bin/mnb-scraper queue:retry JOB_ID
 php bin/mnb-scraper queue:retry-all
 ```
 
-The V1.4.0 queue is intentionally local and dependency-free. It is suitable for CMD, PowerShell, cron, Windows Task Scheduler, systemd, and Supervisor. Future versions can add database/Redis queue drivers without changing the crawl/pipeline core.
+The V1.4.0 queue foundation remains local and dependency-free. It is suitable for CMD, PowerShell, cron, Windows Task Scheduler, systemd, and Supervisor. Future versions can add database/Redis queue drivers without changing the crawl/pipeline core.
 
 
 ## Job manifest and checkpoint
@@ -740,7 +794,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V1.4.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V1.5.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 

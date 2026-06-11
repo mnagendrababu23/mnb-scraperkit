@@ -15,7 +15,7 @@ return [
         'verify_ssl' => true,
         'same_domain' => true,
         'respect_robots' => true,
-        'user_agent' => 'MNB-ScraperKit/1.4.0 (+https://example.com)',
+        'user_agent' => 'MNB-ScraperKit/1.5.0 (+https://example.com)',
         'max_response_bytes' => 5242880,
         'skip_auth_links' => true,
         'avoid_duplicate_final_urls' => true,
@@ -114,7 +114,12 @@ return [
     ],
 
     'browser' => [
+        // Browser mode is optional. Normal crawling uses fast PHP HTTP first.
+        // Use --browser=auto for fallback or --browser=always for force rendering.
         'default' => 'chrome_headless',
+        'fallback_min_text_length' => 300,
+        'rendered_html' => false,
+        'screenshot' => false,
         'profiles' => [
             'chrome_headless' => [
                 'engine' => 'panther',
@@ -124,6 +129,7 @@ return [
                 'window_height' => 768,
                 'timeout_seconds' => 30,
                 'wait_after_load_ms' => 1000,
+                'block_assets' => true,
             ],
         ],
     ],

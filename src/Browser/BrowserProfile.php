@@ -15,6 +15,7 @@ final class BrowserProfile
         public int $windowHeight = 768,
         public int $timeoutSeconds = 30,
         public int $waitAfterLoadMs = 1000,
+        public bool $blockAssets = true,
     ) {
     }
 
@@ -30,6 +31,7 @@ final class BrowserProfile
             windowHeight: (int) ($data['window_height'] ?? 768),
             timeoutSeconds: (int) ($data['timeout_seconds'] ?? 30),
             waitAfterLoadMs: (int) ($data['wait_after_load_ms'] ?? 1000),
+            blockAssets: (bool) ($data['block_assets'] ?? true),
         );
     }
 }
