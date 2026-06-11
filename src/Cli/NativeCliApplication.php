@@ -16,6 +16,9 @@ use Mnb\ScraperKit\Database\DatabaseConfig;
 use Mnb\ScraperKit\Database\DatabaseConnectionFactory;
 use Mnb\ScraperKit\Database\DatabaseMigrator;
 use Mnb\ScraperKit\Database\DatabaseRepository;
+use Mnb\ScraperKit\Distributed\DistributedQueueConfig;
+use Mnb\ScraperKit\Distributed\DistributedQueueManager;
+use Mnb\ScraperKit\Distributed\DistributedJob;
 use Mnb\ScraperKit\Database\DatabaseSchema;
 use Mnb\ScraperKit\Dashboard\DashboardDataCollector;
 use Mnb\ScraperKit\Dashboard\DashboardRenderer;
@@ -120,6 +123,15 @@ final class NativeCliApplication
                 'browser:session-clear' => $this->browserSessionClear($args, $opts),
                 'browser:session-test' => $this->browserSessionTest($args, $opts),
                 'browser:login' => $this->browserLogin($args, $opts),
+                'distributed:doctor' => $this->distributedDoctor($args, $opts),
+                'distributed:status' => $this->distributedStatus($args, $opts),
+                'distributed:enqueue' => $this->distributedEnqueue($args, $opts),
+                'distributed:reserve' => $this->distributedReserve($args, $opts),
+                'distributed:ack' => $this->distributedAck($args, $opts),
+                'distributed:fail' => $this->distributedFail($args, $opts),
+                'distributed:heartbeat' => $this->distributedHeartbeat($args, $opts),
+                'distributed:purge' => $this->distributedPurge($args, $opts),
+                'worker:distributed' => $this->workerDistributed($args, $opts),
                 'db:init' => $this->dbInit($args, $opts),
                 'db:test' => $this->dbTest($args, $opts),
                 'db:status' => $this->dbStatus($args, $opts),
@@ -241,7 +253,7 @@ final class NativeCliApplication
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 3.4.0 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 3.5.0 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -258,6 +270,15 @@ final class NativeCliApplication
             'browser:session-clear <name>' => 'Clear session cookies/artifacts, optionally removing the profile.',
             'browser:session-test <name> <url>' => 'Test an authorized browser session against an allowed URL.',
             'browser:login <name>' => 'Create/update login instructions and optionally run a non-headless browser login assist.',
+            'distributed:doctor' => 'Inspect distributed queue capability, Redis availability, selected adapter, and worker settings.',
+            'distributed:status' => 'Show distributed queue counts, leases, completed jobs, failed jobs, namespace, and worker group.',
+            'distributed:enqueue' => 'Enqueue one command payload into the distributed queue.',
+            'distributed:reserve' => 'Reserve one distributed job for debugging and worker integration tests.',
+            'distributed:ack <job-id>' => 'Acknowledge a reserved distributed job as completed.',
+            'distributed:fail <job-id>' => 'Mark a reserved distributed job as failed.',
+            'distributed:heartbeat <job-id>' => 'Refresh a distributed job lease heartbeat.',
+            'distributed:purge' => 'Purge distributed queue state, usually with --force in test/dev environments.',
+            'worker:distributed' => 'Run a distributed worker loop using Redis when available or the file adapter fallback.',
             'db:init' => 'Initialize SQLite/MySQL storage tables for jobs, pages, records, failures, validation issues, and exports.',
             'db:test' => 'Test database connection settings and show the detected PDO driver.',
             'db:status' => 'Show database table row counts.',
@@ -1275,7 +1296,7 @@ final class NativeCliApplication
         $manifest = $context['manifest'];
         $datasetDir = (string) ($manifest['_dataset_dir'] ?? $this->rootDir . '/storage/datasets');
         $output = $this->optString($opts, 'output') ?: rtrim($datasetDir, '/\\') . '/annotations-export.' . ($format === 'csv' ? 'csv' : ($format === 'json' ? 'json' : 'jsonl'));
-        $this->exportRows($rows, $output, $format, ['annotation_export_version' => '3.4.0', 'rows_total' => count($rows)]);
+        $this->exportRows($rows, $output, $format, ['annotation_export_version' => '3.5.0', 'rows_total' => count($rows)]);
         $this->outJson(['ok' => true, 'rows_exported' => count($rows), 'format' => $format, 'output' => $output]);
         return 0;
     }
@@ -1411,7 +1432,7 @@ final class NativeCliApplication
         $output = $this->optString($opts, 'output') ?: $this->storagePath('webhooks/test-' . date('Ymd-His') . '.json');
         $payload = [
             'message' => 'MNB ScraperKit webhook test event',
-            'version' => '3.4.0',
+            'version' => '3.5.0',
             'generated_at' => date(DATE_ATOM),
         ];
         $dispatcher = new WebhookDispatcher($this->safetyGuard());
@@ -3945,7 +3966,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $result = (new DatabaseMigrator($pdo, $config->driver()))->migrate();
         $this->outJson([
             'ok' => true,
-            'version' => '3.4.0',
+            'version' => '3.5.0',
             'driver' => $result['driver'],
             'statements_executed' => $result['statements'],
             'tables' => $result['tables'],
@@ -3961,7 +3982,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $pdo = (new DatabaseConnectionFactory())->connect($config);
         $this->outJson([
             'ok' => true,
-            'version' => '3.4.0',
+            'version' => '3.5.0',
             'driver' => $config->driver(),
             'pdo_driver' => (string) $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME),
             'dsn' => $this->safeDsn($config->dsn),
@@ -4163,6 +4184,219 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $this->writeJson($output, $meta + ['rows_total' => count($rows), 'rows' => $rows]);
     }
 
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function distributedDoctor(array $args, array $opts): int
+    {
+        $this->outJson($this->distributedManager($opts)->doctor());
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function distributedStatus(array $args, array $opts): int
+    {
+        $this->outJson($this->distributedManager($opts)->status());
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function distributedEnqueue(array $args, array $opts): int
+    {
+        $payload = [];
+        $payloadFile = $this->optString($opts, 'payload-file') ?: $this->optString($opts, 'file') ?: $this->optString($opts, 'payload');
+        if ($payloadFile && is_file($payloadFile)) {
+            $data = json_decode((string) file_get_contents($payloadFile), true);
+            if (!is_array($data)) {
+                throw new \RuntimeException('Invalid JSON payload file: ' . $payloadFile);
+            }
+            $payload = $data;
+        }
+        $command = $this->optString($opts, 'command') ?: ($args[0] ?? null);
+        if (!$command && $payload === []) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper distributed:enqueue --command=crawl --arg=https://example.com [--distributed-adapter=file|redis]');
+        }
+        if ($command) {
+            $payload = array_replace($payload, [
+                'job_id' => $this->optString($opts, 'job-id') ?: ($payload['job_id'] ?? null),
+                'command' => (string) $command,
+                'args' => $this->stringList($this->opt($opts, 'arg', array_slice($args, 1))),
+                'options' => $this->distributedPayloadOptions($opts),
+                'created_by' => 'distributed:enqueue',
+            ]);
+        }
+        $job = $this->distributedManager($opts)->enqueue($payload);
+        $this->outJson(['ok' => true, 'job' => $job]);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function distributedReserve(array $args, array $opts): int
+    {
+        $workerId = $this->optString($opts, 'worker-id') ?: ('worker_' . getmypid());
+        $job = $this->distributedManager($opts)->reserve($workerId);
+        $this->outJson(['ok' => true, 'reserved' => $job?->toArray()]);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function distributedAck(array $args, array $opts): int
+    {
+        $jobId = $args[0] ?? $this->optString($opts, 'job-id');
+        if (!$jobId) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper distributed:ack <job-id> [--lease-id=...]');
+        }
+        $result = $this->distributedManager($opts)->ack((string) $jobId, $this->optString($opts, 'lease-id'));
+        $this->outJson(['ok' => true, 'job' => $result]);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function distributedFail(array $args, array $opts): int
+    {
+        $jobId = $args[0] ?? $this->optString($opts, 'job-id');
+        if (!$jobId) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper distributed:fail <job-id> [--message=...] [--lease-id=...]');
+        }
+        $message = $this->optString($opts, 'message', $this->optString($opts, 'note', 'manual failure') ?? 'manual failure') ?? 'manual failure';
+        $result = $this->distributedManager($opts)->fail((string) $jobId, $message, $this->optString($opts, 'lease-id'));
+        $this->outJson(['ok' => true, 'job' => $result]);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function distributedHeartbeat(array $args, array $opts): int
+    {
+        $jobId = $args[0] ?? $this->optString($opts, 'job-id');
+        if (!$jobId) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper distributed:heartbeat <job-id> [--worker-id=...] [--lease-id=...]');
+        }
+        $workerId = $this->optString($opts, 'worker-id') ?: ('worker_' . getmypid());
+        $result = $this->distributedManager($opts)->heartbeat((string) $jobId, $workerId, $this->optString($opts, 'lease-id'));
+        $this->outJson(['ok' => true, 'job' => $result]);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function distributedPurge(array $args, array $opts): int
+    {
+        if (!$this->bool($opts, 'force')) {
+            throw new \InvalidArgumentException('Refusing to purge distributed queue without --force.');
+        }
+        $state = $this->optString($opts, 'state', 'all') ?? 'all';
+        $this->outJson(['ok' => true, 'result' => $this->distributedManager($opts)->purge($state)]);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function workerDistributed(array $args, array $opts): int
+    {
+        $manager = $this->distributedManager($opts);
+        $workerId = $this->optString($opts, 'worker-id') ?: ('dist_worker_' . getmypid());
+        $maxJobs = max(1, (int) $this->opt($opts, 'max-jobs', $this->bool($opts, 'once') ? 1 : 100));
+        $sleep = max(0, (int) $this->opt($opts, 'sleep', 5));
+        $stopWhenEmpty = $this->bool($opts, 'stop-when-empty') || $this->bool($opts, 'once');
+        $processed = 0;
+        $empty = 0;
+        $started = time();
+        $maxRuntime = max(0, (int) $this->opt($opts, 'max-runtime', $this->opt($opts, 'max-runtime-seconds', 0)));
+
+        while ($processed < $maxJobs) {
+            if ($maxRuntime > 0 && (time() - $started) >= $maxRuntime) {
+                break;
+            }
+            $job = $manager->reserve($workerId);
+            if (!$job instanceof DistributedJob) {
+                $empty++;
+                if ($stopWhenEmpty) {
+                    break;
+                }
+                sleep($sleep);
+                continue;
+            }
+            $exitCode = 0;
+            try {
+                $payload = $job->payload;
+                $command = (string) ($payload['command'] ?? '');
+                if ($command === '' || $command === 'worker:distributed') {
+                    throw new \RuntimeException('Distributed job payload missing safe command.');
+                }
+                $argv = ['mnb-scraper', $command];
+                foreach ((array) ($payload['args'] ?? []) as $arg) {
+                    if (is_scalar($arg)) {
+                        $argv[] = (string) $arg;
+                    }
+                }
+                foreach ((array) ($payload['options'] ?? []) as $key => $value) {
+                    $key = str_replace('_', '-', (string) $key);
+                    if ($value === true) {
+                        $argv[] = '--' . $key;
+                    } elseif ($value === false || $value === null) {
+                        continue;
+                    } elseif (is_array($value)) {
+                        foreach ($value as $item) {
+                            if (is_scalar($item)) {
+                                $argv[] = '--' . $key . '=' . (string) $item;
+                            }
+                        }
+                    } else {
+                        $argv[] = '--' . $key . '=' . (string) $value;
+                    }
+                }
+                $manager->heartbeat($job->id, $workerId, (string) ($job->metadata['lease_id'] ?? ''));
+                if ($this->bool($opts, 'dry-run')) {
+                    $this->outJson(['dry_run' => true, 'job' => $job->toArray(), 'argv' => $argv]);
+                    $manager->ack($job->id, (string) ($job->metadata['lease_id'] ?? ''));
+                } else {
+                    $exitCode = $this->run($argv);
+                    if ($exitCode === 0) {
+                        $manager->ack($job->id, (string) ($job->metadata['lease_id'] ?? ''));
+                    } else {
+                        $manager->fail($job->id, 'Command exited with code ' . $exitCode, (string) ($job->metadata['lease_id'] ?? ''));
+                    }
+                }
+            } catch (\Throwable $e) {
+                $exitCode = 1;
+                $manager->fail($job->id, $e->getMessage(), (string) ($job->metadata['lease_id'] ?? ''));
+            }
+            $processed++;
+            if ($exitCode !== 0 && $this->bool($opts, 'stop-on-error')) {
+                break;
+            }
+        }
+        $this->outJson(['ok' => true, 'worker_id' => $workerId, 'processed' => $processed, 'empty_polls' => $empty, 'status' => $manager->status()]);
+        return 0;
+    }
+
+    /** @param array<string,mixed> $opts */
+    private function distributedManager(array $opts): DistributedQueueManager
+    {
+        return new DistributedQueueManager(DistributedQueueConfig::fromArray([
+            'adapter' => $this->optString($opts, 'distributed-adapter') ?: $this->optString($opts, 'adapter', 'auto'),
+            'redis-url' => $this->optString($opts, 'redis-url'),
+            'namespace' => $this->optString($opts, 'namespace') ?: $this->optString($opts, 'prefix', 'mnb_scraperkit'),
+            'queue-name' => $this->optString($opts, 'queue-name') ?: $this->optString($opts, 'queue', 'default'),
+            'worker-group' => $this->optString($opts, 'worker-group') ?: $this->optString($opts, 'group', 'default'),
+            'visibility-timeout' => $this->optString($opts, 'visibility-timeout') ?: $this->optString($opts, 'lease-seconds', '300'),
+            'heartbeat-ttl' => $this->optString($opts, 'heartbeat-ttl', '120'),
+            'distributed-dir' => $this->optString($opts, 'distributed-dir'),
+        ], $this->rootDir));
+    }
+
+    /** @param array<string,mixed> $opts @return array<string,mixed> */
+    private function distributedPayloadOptions(array $opts): array
+    {
+        $skip = array_flip([
+            'distributed-adapter','adapter','redis-url','namespace','prefix','queue-name','queue','worker-group','group','visibility-timeout','lease-seconds','heartbeat-ttl','distributed-dir','command','arg','payload-file','payload','file','json','force','state','worker-id','lease-id','max-jobs','sleep','once','stop-when-empty','dry-run'
+        ]);
+        $out = [];
+        foreach ($opts as $key => $value) {
+            if (!isset($skip[(string) $key])) {
+                $out[(string) $key] = $value;
+            }
+        }
+        return $out;
+    }
+
     /** @param array<string,mixed> $opts */
     private function databaseConfig(array $opts): DatabaseConfig
     {
@@ -4309,7 +4543,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '3.4.0',
+            'checkpoint_version' => '3.5.0',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),

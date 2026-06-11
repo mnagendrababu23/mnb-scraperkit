@@ -1,3 +1,3 @@
 @echo off
-REM MNB ScraperKit V3.4.0 - export ML-ready features from crawl/pipeline JSON
+REM MNB ScraperKit V3.5.0 - export ML-ready features from crawl/pipeline JSON
 php "%~dp0..\bin\mnb-scraper" intelligence:analyze %*

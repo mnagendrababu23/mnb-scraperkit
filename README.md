@@ -1,8 +1,8 @@
-# MNB ScraperKit V3.4.0
+# MNB ScraperKit V3.5.0
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V3.4.0 is the Advanced Browser Sessions and Authorized Login Workflows Update. It adds safe browser session profiles, allowed-domain session guards, manual login assist instructions, cookie/session file handling, authenticated crawl options, and session test commands for websites where you have explicit permission to crawl.
+V3.5.0 is the Distributed Workers and Redis Queue Update. It adds an optional distributed queue layer, Redis adapter support, a file-based distributed queue fallback, job leases, worker heartbeats, distributed worker commands, and API/dashboard-ready queue status for multi-worker crawling deployments.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,26 +16,26 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V3.4.0 update focus
+## V3.5.0 update focus
 
-V3.4.0 focuses on authorized browser workflows. After ScraperKit added optional browser-assisted crawling, rule generation, datasets, evaluation, and ML-ready intelligence, this release adds a safer session layer for owned sites, internal dashboards, client-approved portals, and other sources where the operator has permission.
+V3.5.0 focuses on distributed worker execution. After ScraperKit added local queues, scheduling, browser workflows, datasets, evaluation, and a dashboard/API layer, this release adds a distributed queue abstraction for running crawl jobs across multiple worker processes or servers.
 
-This release does **not** add CAPTCHA solving, stealth bypassing, credential harvesting, or unauthorized access features. Normal PHP HTTP crawling remains the default. Browser sessions are optional and domain-guarded.
+Redis support is optional. ScraperKit still works without Redis by using the file-based distributed queue adapter, which is useful for development, testing, and single-server deployments.
 
-- Added browser session profile storage in `config/browser-profiles/`.
-- Added cookie/session artifact storage in `storage/browser-sessions/`.
-- Added session commands: `browser:session-create`, `browser:session-list`, `browser:session-show`, `browser:session-clear`, `browser:session-test`, and `browser:login`.
-- Added `--session=<name>` support for browser-enabled crawl/test workflows.
-- Added allowed-domain checks before using a saved browser session.
-- Added manual login assist instructions without storing passwords in configuration.
-- Added best-effort cookie import/export hooks for optional Panther/Chrome browser sessions.
-- Added browser session metadata to rendered page artifacts and crawl output.
-- Added CMD/PowerShell helper scripts for session create, login assist, and session test workflows.
-- Kept V3.3.0 rule builder/auto-profile assistant, V3.2.0 evaluation/benchmarking/training quality, V3.1.0 dataset versioning/annotations, V3.0.0 ML-ready intelligence, V2.0.0 dashboard/admin UI, V1.9.0 API/webhooks, V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
+- Added distributed queue configuration and adapter contracts.
+- Added optional Redis queue adapter using PHP `ext-redis` when available.
+- Added file-based distributed queue fallback under `storage/distributed-queue/`.
+- Added job leasing, worker IDs, lease expiry, and heartbeat refresh support.
+- Added distributed commands: `distributed:doctor`, `distributed:status`, `distributed:enqueue`, `distributed:reserve`, `distributed:ack`, `distributed:fail`, `distributed:heartbeat`, and `distributed:purge`.
+- Added `worker:distributed` for distributed worker loops with `--max-jobs`, `--sleep`, `--stop-when-empty`, `--dry-run`, and adapter options.
+- Added API routes for distributed status and distributed doctor checks.
+- Added CMD/PowerShell helper scripts for distributed worker and doctor workflows.
+- Kept V3.4.0 browser sessions/authorized login workflows, V3.3.0 rule builder/auto-profile assistant, V3.2.0 evaluation/benchmarking/training quality, V3.1.0 dataset versioning/annotations, V3.0.0 ML-ready intelligence, V2.0.0 dashboard/admin UI, V1.9.0 API/webhooks, V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
 
 ## Highlights
 
 - **Professional PHP CLI framework** built as a Composer package with Symfony Console commands.
+- **Distributed workers and optional Redis queue** with adapter auto-selection, file fallback, job leases, heartbeats, distributed worker loops, and multi-worker deployment support.
 - **Advanced browser sessions for authorized workflows** with allowed-domain session profiles, manual login assist, cookie/session artifacts, session tests, and `--session` crawl support.
 - **Rule builder and auto-profile assistant** for analyzing HTML, suggesting profile types, generating starter schemas, testing rules, scaffolding profiles, and finding rule gaps.
 - **Evaluation, benchmarking, and training data quality layer** for field completeness, validation health, duplicate analysis, profile benchmarking, selector performance, annotation coverage, and training-ready exports.
@@ -56,12 +56,12 @@ This release does **not** add CAPTCHA solving, stealth bypassing, credential har
 - **Professional exports and reports** including JSON, CSV, XML, HTML summaries, failed URL reports, validation issue reports, and ZIP project bundles.
 - **Automation friendly** for PHP CLI, CMD, PowerShell, cron, Windows Task Scheduler, and server-side workflows.
 - **Source connector system** for collecting crawl targets from sitemaps, RSS/Atom feeds, CSV files, JSON files, generic JSON APIs, PLOS, and Elsevier/ScienceDirect.
-- **Future-ready architecture** designed for later expansion into richer dashboards, Redis queues, browser-worker orchestration, role-based access, and trainable ML models.
+- **Future-ready architecture** designed for later expansion into richer dashboards, advanced browser-worker orchestration, role-based access, and trainable ML models.
 
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V3.4.0 CLI/library release.
+This section lists the main functionality available in the current V3.5.0 CLI/library release.
 
 ### Package and CLI
 
@@ -71,6 +71,36 @@ This section lists the main functionality available in the current V3.4.0 CLI/li
 - Global binary support through `vendor/bin/mnb-scraper`.
 - Built-in command list and per-command help screens.
 - CMD, PowerShell, cron, Windows Task Scheduler, and server automation friendly scripts/workflows.
+
+### Distributed workers and Redis queue
+
+- `distributed:doctor` checks selected adapter, Redis availability, queue namespace, worker group, and file fallback status.
+- `distributed:status` shows pending, leased, completed, and failed distributed queue counts.
+- `distributed:enqueue --command=crawl --arg=https://example.com` adds one command payload to the distributed queue.
+- `distributed:reserve` reserves one job for debugging worker leases.
+- `distributed:ack <job-id>` marks a leased job as completed.
+- `distributed:fail <job-id>` marks a leased job as failed with a message.
+- `distributed:heartbeat <job-id>` refreshes a job lease heartbeat.
+- `distributed:purge --force` clears distributed queue state for local/dev cleanup.
+- `worker:distributed` runs distributed jobs using Redis when configured, or the file adapter fallback otherwise.
+- Distributed jobs use worker IDs, lease IDs, visibility timeouts, and heartbeats so crashed workers can be recovered.
+- Redis is optional. Use `--distributed-adapter=file` for local fallback or `--distributed-adapter=redis --redis-url=redis://127.0.0.1:6379/0` for Redis.
+
+Example:
+
+```bash
+php bin/mnb-scraper distributed:doctor --distributed-adapter=auto --json
+php bin/mnb-scraper distributed:enqueue --command=crawl --arg=https://example.com --pipeline --distributed-adapter=file
+php bin/mnb-scraper worker:distributed --distributed-adapter=file --stop-when-empty --max-jobs=5
+```
+
+Redis example:
+
+```bash
+set MNB_SCRAPERKIT_REDIS_URL=redis://127.0.0.1:6379/0
+php bin/mnb-scraper distributed:enqueue --command=bulk:crawl --arg=urls.txt --distributed-adapter=redis
+php bin/mnb-scraper worker:distributed --distributed-adapter=redis --worker-group=seo-workers --max-jobs=100
+```
 
 ### Advanced browser sessions and authorized login workflows
 
@@ -225,7 +255,7 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 - Plugin enable/disable controls by editing the manifest `enabled` flag.
 - Plugin doctor command for validating all discovered plugins.
 - Plugin-contributed profiles available to `profile:list`, `profile:show`, `extract:rules`, and pipeline/profile workflows.
-- Safe-by-default design: V3.4.0 does not automatically execute arbitrary plugin PHP code.
+- Safe-by-default design: V3.5.0 does not automatically execute arbitrary plugin PHP code.
 
 ### Lightweight API and webhooks
 
@@ -433,12 +463,12 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 
 - Optional browser-assisted crawling layer for JavaScript-rendered pages.
 - Network profile and exit-point manager classes for future network policy expansion.
-- Modular architecture ready for richer admin dashboards, Redis queues, browser-worker orchestration, role-based access, and ML-assisted intelligence.
+- Modular architecture ready for richer admin dashboards, advanced browser-worker orchestration, role-based access, distributed deployments, and ML-assisted intelligence.
 
 ## Package direction
 
 - First public version: **1.0.0**
-- Current version: **3.4.0** — Rule builder and auto-profile assistant update
+- Current version: **3.5.0** — Rule builder and auto-profile assistant update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
@@ -1133,7 +1163,7 @@ ScraperKit focuses on practical export-ready outputs:
 - pipeline summaries
 - job manifest summaries
 
-PDF reports, Redis/distributed queues, and dedicated browser-worker orchestration are future upgrade areas. The current V3.4.0 release already includes CLI workflows, queue/worker commands, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
+PDF reports and dedicated browser-worker orchestration remain future upgrade areas. The current V3.5.0 release already includes CLI workflows, local and distributed queue/worker commands, optional Redis queue support, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
 
 ## Windows CMD
 
@@ -1160,7 +1190,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V3.4.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V3.5.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 

@@ -21,6 +21,15 @@ final class CommandRegistry
             'browser:session-clear' => 'Clear browser session cookies/artifacts, optionally removing the profile.',
             'browser:session-test' => 'Test an authorized browser session against an allowed URL.',
             'browser:login' => 'Prepare manual login assist instructions and optional browser render for an authorized session.',
+            'distributed:doctor' => 'Inspect distributed queue capability, Redis availability, selected adapter, and worker settings.',
+            'distributed:status' => 'Show distributed queue counts, leases, completed jobs, failed jobs, namespace, and worker group.',
+            'distributed:enqueue' => 'Enqueue one command payload into the distributed queue.',
+            'distributed:reserve' => 'Reserve one distributed job for debugging and worker integration tests.',
+            'distributed:ack' => 'Acknowledge a reserved distributed job as completed.',
+            'distributed:fail' => 'Mark a reserved distributed job as failed.',
+            'distributed:heartbeat' => 'Refresh a distributed job lease heartbeat.',
+            'distributed:purge' => 'Purge distributed queue state, usually with --force in test/dev environments.',
+            'worker:distributed' => 'Run a distributed worker loop using Redis when available or the file adapter fallback.',
             'db:init' => 'Initialize SQLite/MySQL storage tables for jobs, pages, records, failures, validation issues, and exports.',
             'db:test' => 'Test database connection settings and show the detected PDO driver.',
             'db:status' => 'Show database table row counts.',
@@ -135,6 +144,7 @@ final class CommandRegistry
         ];
     }
 
+    /** @return list<string> */
     /** @return list<string> */
     public static function optionNames(): array
     {
@@ -376,6 +386,23 @@ final class CommandRegistry
             'no-headless',
             'allow-assets',
             'no-html',
+            'once',
+            'stop-on-error',
+            'distributed-adapter',
+            'adapter',
+            'redis-url',
+            'namespace',
+            'queue-name',
+            'queue',
+            'worker-group',
+            'group',
+            'visibility-timeout',
+            'lease-seconds',
+            'heartbeat-ttl',
+            'lease-id',
+            'distributed-dir',
+            'payload-file',
+            'message',
             'theme',
         ];
     }
@@ -438,6 +465,8 @@ final class CommandRegistry
             'no-headless',
             'allow-assets',
             'no-html',
+            'once',
+            'stop-on-error',
         ];
     }
 }

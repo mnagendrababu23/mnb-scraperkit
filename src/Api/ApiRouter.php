@@ -8,6 +8,8 @@ use Mnb\ScraperKit\Browser\BrowserSessionStore;
 use Mnb\ScraperKit\Console\CommandRegistry;
 use Mnb\ScraperKit\Dashboard\DashboardDataCollector;
 use Mnb\ScraperKit\Dataset\DatasetStore;
+use Mnb\ScraperKit\Distributed\DistributedQueueConfig;
+use Mnb\ScraperKit\Distributed\DistributedQueueManager;
 use Mnb\ScraperKit\Evaluation\DatasetEvaluator;
 use Mnb\ScraperKit\Monitoring\MonitoringSnapshot;
 use Mnb\ScraperKit\Plugin\PluginManager;
@@ -24,7 +26,7 @@ use Mnb\ScraperKit\RuleBuilder\AutoProfileAssistant;
  */
 final class ApiRouter
 {
-    public const VERSION = '3.4.0';
+    public const VERSION = '3.5.0';
 
     public function __construct(
         private readonly string $rootDir,
@@ -40,6 +42,8 @@ final class ApiRouter
             ['method' => 'GET', 'path' => '/api/v1/version', 'description' => 'ScraperKit API and library version.'],
             ['method' => 'GET', 'path' => '/api/v1/commands', 'description' => 'Registered CLI command metadata.'],
             ['method' => 'GET', 'path' => '/api/v1/queue/status', 'description' => 'Local queue counts and lock totals.'],
+            ['method' => 'GET', 'path' => '/api/v1/distributed/status', 'description' => 'Distributed queue counts, adapter, namespace, and worker group.'],
+            ['method' => 'GET', 'path' => '/api/v1/distributed/doctor', 'description' => 'Distributed queue adapter and Redis capability check.'],
             ['method' => 'GET', 'path' => '/api/v1/jobs', 'description' => 'List queued jobs. Optional query: state.'],
             ['method' => 'GET', 'path' => '/api/v1/jobs/{job_id}', 'description' => 'Read one queued job manifest.'],
             ['method' => 'POST', 'path' => '/api/v1/jobs', 'description' => 'Create one local queue job from JSON body.'],
@@ -116,6 +120,16 @@ final class ApiRouter
                 'counts' => $queue->counts(),
                 'locks' => $queue->locks(),
             ]);
+        }
+
+        if ($method === 'GET' && $path === '/api/v1/distributed/status') {
+            $manager = new DistributedQueueManager(DistributedQueueConfig::fromArray([], $this->rootDir));
+            return new ApiResponse(200, ['ok' => true, 'distributed' => $manager->status()]);
+        }
+
+        if ($method === 'GET' && $path === '/api/v1/distributed/doctor') {
+            $manager = new DistributedQueueManager(DistributedQueueConfig::fromArray([], $this->rootDir));
+            return new ApiResponse(200, ['ok' => true, 'distributed' => $manager->doctor()]);
         }
 
         if ($method === 'GET' && $path === '/api/v1/jobs') {

@@ -1,9 +1,9 @@
 {
     "name": "mnb/scraperkit",
-    "description": "MNB ScraperKit V3.4.0 - professional PHP crawling and data extraction framework with Symfony Console commands, safe crawling, source connectors, reports, profiles, rule builder, queue workers, browser-assisted crawling, authorized browser sessions, database storage, monitoring, plugins, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, annotations, evaluation, benchmarking, and training data quality tools.",
+    "description": "MNB ScraperKit V3.5.0 - professional PHP crawling and data extraction framework with Symfony Console commands, safe crawling, source connectors, reports, profiles, queue workers, browser-assisted crawling, authorized browser sessions, database storage, monitoring, plugins, API/webhooks, dashboard UI, ML-ready intelligence, datasets, evaluation tools, and optional distributed Redis workers.",
     "type": "library",
     "license": "MIT",
-    "version": "3.4.0",
+    "version": "3.5.0",
     "require": {
         "php": ">=8.2",
         "ext-dom": "*",
@@ -18,7 +18,8 @@
         "chrome/chromium": "Needed only when using browser-assisted crawling through Panther/Chrome.",
         "pdo_sqlite": "Optional SQLite driver for local database storage.",
         "pdo_mysql": "Optional MySQL/MariaDB driver for server database storage.",
-        "php-ai/php-ml": "Optional machine-learning toolkit for future model training/inference. V3.4.0 includes deterministic ML-ready features, dataset annotations, evaluation reports, rule-builder assisted profile creation, and training-ready exports without requiring this dependency."
+        "php-ai/php-ml": "Optional machine-learning toolkit for future model training/inference. V3.5.0 includes deterministic ML-ready features, dataset annotations, evaluation reports, rule-builder assisted profile creation, and training-ready exports without requiring this dependency.",
+        "ext-redis": "Optional Redis extension for distributed multi-worker queue mode. File-based distributed queue fallback works without Redis."
     },
     "autoload": {
         "psr-4": {
@@ -151,6 +152,14 @@
         "session-profiles",
         "cookie-session",
         "authenticated-crawl",
-        "domain-guarded-sessions"
+        "domain-guarded-sessions",
+        "distributed-workers",
+        "distributed-queue",
+        "redis-queue",
+        "redis-workers",
+        "job-leasing",
+        "worker-heartbeats",
+        "multi-worker",
+        "distributed-crawling"
     ]
 }
