@@ -18,7 +18,7 @@ final class DatasetExporter
             file_put_contents($output, implode("\n", array_map(static fn(array $r): string => json_encode($r, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $rows)) . (count($rows) > 0 ? "\n" : ''));
         } else {
             file_put_contents($output, json_encode([
-                'dataset_export_version' => '3.6.0',
+                'dataset_export_version' => '3.7.0',
                 'training_ready' => $trainingReady,
                 'training_type' => $trainingReady ? $trainingType : null,
                 'records_total' => count($rows),

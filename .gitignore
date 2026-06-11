@@ -6,3 +6,5 @@
 .DS_Store
 .phpunit.cache/
 coverage/
+/projects/
+/presets/

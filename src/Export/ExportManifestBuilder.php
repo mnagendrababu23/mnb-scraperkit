@@ -6,7 +6,7 @@ namespace Mnb\ScraperKit\Export;
 
 final class ExportManifestBuilder
 {
-    public const VERSION = '3.6.0';
+    public const VERSION = '3.7.0';
 
     /** @param list<string> $paths @param list<string> $allowedExtensions @return array<string,mixed> */
     public function build(array $paths, array $allowedExtensions = []): array

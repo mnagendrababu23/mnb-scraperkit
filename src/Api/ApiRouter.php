@@ -17,6 +17,7 @@ use Mnb\ScraperKit\Plugin\PluginManager;
 use Mnb\ScraperKit\Profile\ProfileSchemaLoader;
 use Mnb\ScraperKit\Queue\LocalJobQueue;
 use Mnb\ScraperKit\RuleBuilder\AutoProfileAssistant;
+use Mnb\ScraperKit\Template\TemplateCatalog;
 
 /**
  * Lightweight read-mostly JSON API router used by the optional api:serve command.
@@ -27,7 +28,7 @@ use Mnb\ScraperKit\RuleBuilder\AutoProfileAssistant;
  */
 final class ApiRouter
 {
-    public const VERSION = '3.6.0';
+    public const VERSION = '3.7.0';
 
     public function __construct(
         private readonly string $rootDir,
@@ -59,6 +60,10 @@ final class ApiRouter
             ['method' => 'GET', 'path' => '/api/v1/browser/sessions', 'description' => 'List authorized browser session profiles.'],
             ['method' => 'GET', 'path' => '/api/v1/export-connectors', 'description' => 'List configured export delivery connectors.'],
             ['method' => 'GET', 'path' => '/api/v1/export-connectors/{connector_id}', 'description' => 'Read one export delivery connector.'],
+            ['method' => 'GET', 'path' => '/api/v1/project-templates', 'description' => 'List bundled project templates.'],
+            ['method' => 'GET', 'path' => '/api/v1/project-templates/{template_id}', 'description' => 'Read one project template manifest.'],
+            ['method' => 'GET', 'path' => '/api/v1/preset-packs', 'description' => 'List bundled preset packs.'],
+            ['method' => 'GET', 'path' => '/api/v1/preset-packs/{pack_id}', 'description' => 'Read one preset pack manifest.'],
             ['method' => 'GET', 'path' => '/api/v1/browser/sessions/{name}', 'description' => 'Read one authorized browser session profile.'],
         ];
     }
@@ -214,6 +219,41 @@ final class ApiRouter
             return new ApiResponse(200, [
                 'ok' => true,
                 'connector' => $store->show(rawurldecode($m[1])),
+            ]);
+        }
+
+
+        if ($method === 'GET' && $path === '/api/v1/project-templates') {
+            $catalog = new TemplateCatalog($this->rootDir);
+            return new ApiResponse(200, [
+                'ok' => true,
+                'template_version' => self::VERSION,
+                'templates' => array_map(static fn($template): array => $template->summary(), $catalog->templates()),
+            ]);
+        }
+
+        if ($method === 'GET' && preg_match('#^/api/v1/project-templates/([^/]+)$#', $path, $m)) {
+            $catalog = new TemplateCatalog($this->rootDir);
+            return new ApiResponse(200, [
+                'ok' => true,
+                'template' => $catalog->template(rawurldecode($m[1]))->toArray(),
+            ]);
+        }
+
+        if ($method === 'GET' && $path === '/api/v1/preset-packs') {
+            $catalog = new TemplateCatalog($this->rootDir);
+            return new ApiResponse(200, [
+                'ok' => true,
+                'preset_pack_version' => self::VERSION,
+                'preset_packs' => array_map(static fn($pack): array => $pack->summary(), $catalog->presetPacks()),
+            ]);
+        }
+
+        if ($method === 'GET' && preg_match('#^/api/v1/preset-packs/([^/]+)$#', $path, $m)) {
+            $catalog = new TemplateCatalog($this->rootDir);
+            return new ApiResponse(200, [
+                'ok' => true,
+                'preset_pack' => $catalog->presetPack(rawurldecode($m[1]))->toArray(),
             ]);
         }
 

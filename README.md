@@ -1,8 +1,8 @@
-# MNB ScraperKit V3.6.0
+# MNB ScraperKit V3.7.0
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V3.6.0 is the Advanced Export Connectors Update. It adds safe export delivery connectors, checksum manifests, local delivery folders, webhook dry-run payloads, connector validation, and API-ready connector metadata for moving crawl/report/dataset artifacts into downstream workflows.
+V3.7.0 is the Project Templates and Preset Packs Update. It adds ready-to-run project scaffolds, workflow templates, preset packs, project manifests, generated command files, and API-ready template metadata so users can start SEO, ecommerce, academic, and tender monitoring projects without manually wiring every command.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,24 +16,24 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V3.6.0 update focus
+## V3.7.0 update focus
 
-V3.6.0 focuses on export delivery and downstream automation. After ScraperKit added reports, datasets, evaluation, API/webhooks, dashboard, distributed workers, and browser/session workflows, this release adds a connector layer for packaging and delivering generated artifacts.
+V3.7.0 focuses on project startup speed and repeatable workflow setup. Instead of forcing users to assemble source connectors, profile schemas, job manifests, reports, datasets, and evaluation commands by hand, this release provides bundled project templates and preset packs.
 
-Export connectors are configuration-only and safe by default. Local delivery works immediately. Webhook connectors generate a payload without sending unless `--send` is explicitly used.
+Templates and preset packs are configuration-only. They create local project folders, sample URL/source files, command cheat sheets, and job manifests. They do not run crawls automatically and they do not add unsafe behavior.
 
-- Added export connector configuration: `config/export-connectors.example.json`.
-- Added safe local export delivery into `storage/export-deliveries/`.
-- Added webhook delivery payload generation for automation systems.
-- Added checksum export manifests with file size, extension, SHA-256, and modified time.
-- Added connector validation and dry-run test commands.
-- Added commands: `export:connector-list`, `export:connector-show`, `export:connector-validate`, `export:connector-test`, `export:deliver`, and `export:manifest`.
-- Added API routes for export connector discovery.
-- Kept V3.5.0 distributed workers/Redis queue, V3.4.0 browser sessions/authorized login workflows, V3.3.0 rule builder/auto-profile assistant, V3.2.0 evaluation/benchmarking/training quality, V3.1.0 dataset versioning/annotations, V3.0.0 ML-ready intelligence, V2.0.0 dashboard/admin UI, V1.9.0 API/webhooks, V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
+- Added project templates in `config/project-templates/` for SEO audits, ecommerce monitoring, academic metadata, and tender/government notice monitoring.
+- Added preset packs in `config/preset-packs/` for grouped profile/template workflows.
+- Added commands: `template:list`, `template:show`, `template:validate`, `template:create`, `preset:list`, `preset:show`, `preset:validate`, and `preset:install`.
+- Added generated project manifests: `mnb-project.json`.
+- Added generated preset manifests: `mnb-preset-pack.json`.
+- Added API routes for project template and preset pack discovery.
+- Kept V3.7.0 advanced export connectors, V3.5.0 distributed workers/Redis queue, V3.4.0 browser sessions/authorized login workflows, V3.3.0 rule builder/auto-profile assistant, V3.2.0 evaluation/benchmarking/training quality, V3.1.0 dataset versioning/annotations, V3.0.0 ML-ready intelligence, V2.0.0 dashboard/admin UI, V1.9.0 API/webhooks, V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
 
 ## Highlights
 
 - **Professional PHP CLI framework** built as a Composer package with Symfony Console commands.
+- **Project templates and preset packs** for ready-to-run SEO, ecommerce, academic, tender, and research workflows with generated command files and job manifests.
 - **Advanced export connectors** for local artifact delivery, webhook payload automation, checksum manifests, connector validation, and downstream workflow handoff.
 - **Distributed workers and optional Redis queue** with adapter auto-selection, file fallback, job leases, heartbeats, distributed worker loops, and multi-worker deployment support.
 - **Advanced browser sessions for authorized workflows** with allowed-domain session profiles, manual login assist, cookie/session artifacts, session tests, and `--session` crawl support.
@@ -61,7 +61,7 @@ Export connectors are configuration-only and safe by default. Local delivery wor
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V3.6.0 CLI/library release.
+This section lists the main functionality available in the current V3.7.0 CLI/library release.
 
 ### Package and CLI
 
@@ -71,6 +71,19 @@ This section lists the main functionality available in the current V3.6.0 CLI/li
 - Global binary support through `vendor/bin/mnb-scraper`.
 - Built-in command list and per-command help screens.
 - CMD, PowerShell, cron, Windows Task Scheduler, and server automation friendly scripts/workflows.
+
+### Project templates and preset packs
+
+- `template:list` lists bundled project templates.
+- `template:show <template>` displays one template manifest and generated file plan.
+- `template:validate <template>` validates template JSON and generated file paths.
+- `template:create <template> --output-dir=projects/name --name=name` creates a ready-to-run project workspace.
+- `preset:list` lists bundled preset packs.
+- `preset:show <pack>` displays grouped profiles, templates, and workflow files.
+- `preset:validate <pack>` checks referenced profiles and templates.
+- `preset:install <pack> --output-dir=presets/name` installs a preset pack into a local project folder.
+- Bundled project templates include `seo-audit`, `ecommerce-monitor`, `academic-metadata`, and `tender-monitor`.
+- Bundled preset packs include `seo-research-pack` and `commerce-gov-pack`.
 
 ### Distributed workers and Redis queue
 
@@ -277,7 +290,7 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 - Plugin enable/disable controls by editing the manifest `enabled` flag.
 - Plugin doctor command for validating all discovered plugins.
 - Plugin-contributed profiles available to `profile:list`, `profile:show`, `extract:rules`, and pipeline/profile workflows.
-- Safe-by-default design: V3.6.0 does not automatically execute arbitrary plugin PHP code.
+- Safe-by-default design: V3.7.0 does not automatically execute arbitrary plugin PHP code.
 
 ### Lightweight API and webhooks
 
@@ -493,7 +506,7 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 ## Package direction
 
 - First public version: **1.0.0**
-- Current version: **3.6.0** — Advanced export connectors update
+- Current version: **3.7.0** — Advanced export connectors update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
@@ -1188,7 +1201,7 @@ ScraperKit focuses on practical export-ready outputs:
 - pipeline summaries
 - job manifest summaries
 
-PDF reports and richer role-based enterprise orchestration remain future upgrade areas. The current V3.6.0 release already includes CLI workflows, source connectors, exports/reports/bundles, export delivery connectors, local and distributed queue/worker commands, optional Redis queue support, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
+PDF reports and richer role-based enterprise orchestration remain future upgrade areas. The current V3.7.0 release already includes CLI workflows, source connectors, exports/reports/bundles, export delivery connectors, local and distributed queue/worker commands, optional Redis queue support, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
 
 ## Windows CMD
 
@@ -1215,7 +1228,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V3.6.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V3.7.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 
@@ -1344,6 +1357,38 @@ Suggest selectors from saved HTML:
 
 ```bash
 php bin/mnb-scraper intelligence:selectors page.html --profile=ecommerce --output=selectors.json
+```
+
+## Project template examples
+
+List available templates:
+
+```bash
+php bin/mnb-scraper template:list
+```
+
+Create an SEO audit project workspace:
+
+```bash
+php bin/mnb-scraper template:create seo-audit --output-dir=projects/seo-audit --name=seo-audit
+```
+
+Create an ecommerce monitoring workspace:
+
+```bash
+php bin/mnb-scraper template:create ecommerce-monitor --output-dir=projects/products --name=products
+```
+
+Install a preset pack with grouped profiles and workflow examples:
+
+```bash
+php bin/mnb-scraper preset:install commerce-gov-pack --output-dir=presets/commerce-gov
+```
+
+Validate a template before sharing it with a team:
+
+```bash
+php bin/mnb-scraper template:validate seo-audit
 ```
 
 ## License

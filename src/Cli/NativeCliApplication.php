@@ -92,6 +92,8 @@ use Mnb\ScraperKit\Source\Json\JsonUrlSourceReader;
 use Mnb\ScraperKit\Source\Api\ApiSourceReader;
 use Mnb\ScraperKit\Support\Logger;
 use Mnb\ScraperKit\Support\UrlNormalizer;
+use Mnb\ScraperKit\Template\TemplateCatalog;
+use Mnb\ScraperKit\Template\TemplateInstaller;
 
 final class NativeCliApplication
 {
@@ -232,6 +234,14 @@ final class NativeCliApplication
                 'export:connector-test' => $this->exportConnectorTest($args, $opts),
                 'export:deliver' => $this->exportDeliver($args, $opts),
                 'export:manifest' => $this->exportManifest($args, $opts),
+                'template:list' => $this->templateList($args, $opts),
+                'template:show' => $this->templateShow($args, $opts),
+                'template:validate' => $this->templateValidate($args, $opts),
+                'template:create' => $this->templateCreate($args, $opts),
+                'preset:list' => $this->presetList($args, $opts),
+                'preset:show' => $this->presetShow($args, $opts),
+                'preset:validate' => $this->presetValidate($args, $opts),
+                'preset:install' => $this->presetInstall($args, $opts),
                 'validate:records' => $this->validateRecords($args, $opts),
                 'job:summary' => $this->jobSummary($args, $opts),
                 'job:run' => $this->jobRun($args, $opts),
@@ -262,7 +272,7 @@ final class NativeCliApplication
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 3.6.0 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 3.7.0 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -694,6 +704,135 @@ final class NativeCliApplication
         return empty($data['fallback_assessment']['should_use_browser']) ? 0 : 2;
     }
 
+
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function templateList(array $args, array $opts): int
+    {
+        $templates = array_map(static fn($template): array => $template->summary(), (new TemplateCatalog($this->rootDir))->templates());
+        if ($this->bool($opts, 'json')) {
+            $this->outJson(['ok' => true, 'template_version' => '3.7.0', 'templates' => $templates]);
+            return 0;
+        }
+        $this->out('Project templates:');
+        foreach ($templates as $template) {
+            $this->out(sprintf('  %-22s %-12s %s', (string) $template['id'], (string) $template['category'], (string) $template['title']));
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function templateShow(array $args, array $opts): int
+    {
+        $id = $args[0] ?? $this->optString($opts, 'template');
+        if (!$id) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper template:show <template-id|template.json>');
+        }
+        $template = (new TemplateCatalog($this->rootDir))->template((string) $id);
+        $this->outJson(['ok' => true, 'template' => $template->toArray()]);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function templateValidate(array $args, array $opts): int
+    {
+        $id = $args[0] ?? $this->optString($opts, 'template');
+        if (!$id) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper template:validate <template-id|template.json>');
+        }
+        $result = (new TemplateCatalog($this->rootDir))->validateTemplate((string) $id);
+        $this->outJson($result);
+        return !empty($result['ok']) ? 0 : 2;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function templateCreate(array $args, array $opts): int
+    {
+        $id = $args[0] ?? $this->optString($opts, 'template');
+        if (!$id) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper template:create <template-id> --output-dir=projects/name [--name=...] [--force]');
+        }
+        $catalog = new TemplateCatalog($this->rootDir);
+        $template = $catalog->template((string) $id);
+        $projectName = $this->optString($opts, 'name') ?: $this->optString($opts, 'project-name') ?: $template->id . '-' . date('Ymd-His');
+        $outputDir = $this->optString($opts, 'output-dir') ?: $this->optString($opts, 'dir') ?: ('projects/' . $projectName);
+        $variables = [
+            'name' => $projectName,
+            'project_name' => $projectName,
+            'source_url' => $this->optString($opts, 'source-url', 'https://example.com/') ?? 'https://example.com/',
+            'profile' => $this->optString($opts, 'profile', $template->profile) ?? $template->profile,
+        ];
+        $result = (new TemplateInstaller($this->rootDir))->createProject($template, $outputDir, $variables, $this->bool($opts, 'force'));
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($result);
+        } else {
+            $this->out('Project template created: ' . $result['project_dir']);
+            foreach ((array) ($result['files_created'] ?? []) as $file) {
+                $this->out('  ' . (string) $file);
+            }
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function presetList(array $args, array $opts): int
+    {
+        $packs = array_map(static fn($pack): array => $pack->summary(), (new TemplateCatalog($this->rootDir))->presetPacks());
+        if ($this->bool($opts, 'json')) {
+            $this->outJson(['ok' => true, 'preset_pack_version' => '3.7.0', 'preset_packs' => $packs]);
+            return 0;
+        }
+        $this->out('Preset packs:');
+        foreach ($packs as $pack) {
+            $this->out(sprintf('  %-22s %-12s %s', (string) $pack['id'], (string) $pack['category'], (string) $pack['title']));
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function presetShow(array $args, array $opts): int
+    {
+        $id = $args[0] ?? $this->optString($opts, 'preset') ?? $this->optString($opts, 'pack');
+        if (!$id) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper preset:show <pack-id|pack.json>');
+        }
+        $pack = (new TemplateCatalog($this->rootDir))->presetPack((string) $id);
+        $this->outJson(['ok' => true, 'preset_pack' => $pack->toArray()]);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function presetValidate(array $args, array $opts): int
+    {
+        $id = $args[0] ?? $this->optString($opts, 'preset') ?? $this->optString($opts, 'pack');
+        if (!$id) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper preset:validate <pack-id|pack.json>');
+        }
+        $result = (new TemplateCatalog($this->rootDir))->validatePresetPack((string) $id);
+        $this->outJson($result);
+        return !empty($result['ok']) ? 0 : 2;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function presetInstall(array $args, array $opts): int
+    {
+        $id = $args[0] ?? $this->optString($opts, 'preset') ?? $this->optString($opts, 'pack');
+        if (!$id) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper preset:install <pack-id> --output-dir=presets/name [--force]');
+        }
+        $pack = (new TemplateCatalog($this->rootDir))->presetPack((string) $id);
+        $outputDir = $this->optString($opts, 'output-dir') ?: $this->optString($opts, 'dir') ?: ('storage/preset-packs/' . $pack->id);
+        $result = (new TemplateInstaller($this->rootDir))->installPresetPack($pack, $outputDir, $this->bool($opts, 'force'));
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($result);
+        } else {
+            $this->out('Preset pack installed: ' . $result['output_dir']);
+            foreach ((array) ($result['files_created'] ?? []) as $file) {
+                $this->out('  ' . (string) $file);
+            }
+        }
+        return 0;
+    }
 
     /** @param array<int,string> $args @param array<string,mixed> $opts */
     private function browserSessionCreate(array $args, array $opts): int
@@ -1305,7 +1444,7 @@ final class NativeCliApplication
         $manifest = $context['manifest'];
         $datasetDir = (string) ($manifest['_dataset_dir'] ?? $this->rootDir . '/storage/datasets');
         $output = $this->optString($opts, 'output') ?: rtrim($datasetDir, '/\\') . '/annotations-export.' . ($format === 'csv' ? 'csv' : ($format === 'json' ? 'json' : 'jsonl'));
-        $this->exportRows($rows, $output, $format, ['annotation_export_version' => '3.6.0', 'rows_total' => count($rows)]);
+        $this->exportRows($rows, $output, $format, ['annotation_export_version' => '3.7.0', 'rows_total' => count($rows)]);
         $this->outJson(['ok' => true, 'rows_exported' => count($rows), 'format' => $format, 'output' => $output]);
         return 0;
     }
@@ -1441,7 +1580,7 @@ final class NativeCliApplication
         $output = $this->optString($opts, 'output') ?: $this->storagePath('webhooks/test-' . date('Ymd-His') . '.json');
         $payload = [
             'message' => 'MNB ScraperKit webhook test event',
-            'version' => '3.6.0',
+            'version' => '3.7.0',
             'generated_at' => date(DATE_ATOM),
         ];
         $dispatcher = new WebhookDispatcher($this->safetyGuard());
@@ -2212,7 +2351,7 @@ final class NativeCliApplication
         $store = new ExportConnectorStore($this->rootDir);
         $connectors = $store->list($this->optString($opts, 'config'));
         $data = [
-            'export_connector_version' => '3.6.0',
+            'export_connector_version' => '3.7.0',
             'connectors_total' => count($connectors),
             'connectors' => $connectors,
         ];
@@ -2240,7 +2379,7 @@ final class NativeCliApplication
             throw new \InvalidArgumentException('Usage: php bin/mnb-scraper export:connector-show <connector-id>');
         }
         $connector = (new ExportConnectorStore($this->rootDir))->show($id, $this->optString($opts, 'config'));
-        $this->outJson(['ok' => true, 'export_connector_version' => '3.6.0', 'connector' => $connector]);
+        $this->outJson(['ok' => true, 'export_connector_version' => '3.7.0', 'connector' => $connector]);
         return 0;
     }
 
@@ -2269,7 +2408,7 @@ final class NativeCliApplication
         $sample = $this->storagePath('export-connector-test/sample-export.json');
         $this->writeJson($sample, [
             'export_connector_test' => true,
-            'version' => '3.6.0',
+            'version' => '3.7.0',
             'generated_at' => date(DATE_ATOM),
             'message' => 'Sample export artifact for connector dry run.',
         ]);
@@ -4118,7 +4257,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $result = (new DatabaseMigrator($pdo, $config->driver()))->migrate();
         $this->outJson([
             'ok' => true,
-            'version' => '3.6.0',
+            'version' => '3.7.0',
             'driver' => $result['driver'],
             'statements_executed' => $result['statements'],
             'tables' => $result['tables'],
@@ -4134,7 +4273,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $pdo = (new DatabaseConnectionFactory())->connect($config);
         $this->outJson([
             'ok' => true,
-            'version' => '3.6.0',
+            'version' => '3.7.0',
             'driver' => $config->driver(),
             'pdo_driver' => (string) $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME),
             'dsn' => $this->safeDsn($config->dsn),
@@ -4695,7 +4834,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '3.6.0',
+            'checkpoint_version' => '3.7.0',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),

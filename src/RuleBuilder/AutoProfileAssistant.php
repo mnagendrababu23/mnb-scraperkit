@@ -19,7 +19,7 @@ final class AutoProfileAssistant
             $profile = 'seo';
         }
         return [
-            'assistant_version' => '3.6.0',
+            'assistant_version' => '3.7.0',
             'suggested_profile' => $profile,
             'confidence' => $this->confidence($scores, $profile),
             'scores' => $scores,

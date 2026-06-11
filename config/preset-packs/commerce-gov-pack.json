@@ -1,0 +1,12 @@
+{
+  "id": "commerce-gov-pack",
+  "title": "Commerce and Government Preset Pack",
+  "description": "Profiles and starter templates for ecommerce price monitoring and tender/government notice monitoring.",
+  "category": "business",
+  "profiles": ["ecommerce", "jobs", "tender"],
+  "templates": ["ecommerce-monitor", "tender-monitor"],
+  "files": [
+    {"path": "README.txt", "type": "text", "content": "Commerce and Government preset pack installed. Use the project templates to create crawl-ready workspaces.\n"},
+    {"path": "commands.txt", "type": "text", "content": "php bin/mnb-scraper template:create ecommerce-monitor --output-dir=projects/ecommerce --name=ecommerce\nphp bin/mnb-scraper template:create tender-monitor --output-dir=projects/tenders --name=tenders\n"}
+  ]
+}

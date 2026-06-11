@@ -1,2 +1,2 @@
-# MNB ScraperKit V3.6.0 - export training-ready dataset rows
+# MNB ScraperKit V3.7.0 - export training-ready dataset rows
 php "$PSScriptRoot/../bin/mnb-scraper" dataset:export @args --training-ready

@@ -1,0 +1,12 @@
+{
+  "id": "seo-research-pack",
+  "title": "SEO and Research Preset Pack",
+  "description": "Profiles and starter templates for SEO audits, academic metadata, datasets, evaluation, and reports.",
+  "category": "mixed",
+  "profiles": ["seo", "academic"],
+  "templates": ["seo-audit", "academic-metadata"],
+  "files": [
+    {"path": "README.txt", "type": "text", "content": "SEO and Research preset pack installed. Copy profiles into your project or reference the bundled config/profiles directory.\n"},
+    {"path": "commands.txt", "type": "text", "content": "php bin/mnb-scraper template:create seo-audit --output-dir=projects/seo-audit --name=seo-audit\nphp bin/mnb-scraper template:create academic-metadata --output-dir=projects/academic --name=academic\n"}
+  ]
+}
