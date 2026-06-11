@@ -140,6 +140,16 @@ final class CommandRegistry
             'security:secrets-scan' => 'Scan project files for common committed secret patterns before release.',
             'security:policy' => 'Write or show the responsible crawling and release compliance policy template.',
             'compliance:report' => 'Generate a JSON or HTML responsible crawling/compliance report from the security audit.',
+            'enterprise:doctor' => 'Show v4 enterprise workspace/user/audit readiness summary.',
+            'enterprise:roles' => 'Show built-in enterprise role capability map.',
+            'workspace:create' => 'Create a local project workspace with optional owner and defaults.',
+            'workspace:list' => 'List enterprise workspaces.',
+            'workspace:show' => 'Show one enterprise workspace manifest.',
+            'workspace:assign-user' => 'Assign a user to a workspace with a role.',
+            'user:create' => 'Create a local enterprise user metadata record without storing passwords.',
+            'user:list' => 'List local enterprise users.',
+            'user:disable' => 'Disable a local enterprise user metadata record.',
+            'audit:events' => 'List recent enterprise audit events.',
             'validate:records' => 'Validate records using required fields.',
             'job:summary' => 'Show job manifest, crawl summary, and pipeline summary.',
             'job:run' => 'Run one queued job by ID, or run a legacy JSON job configuration.',
@@ -436,6 +446,17 @@ final class CommandRegistry
             'allowed-extension',
             'policy',
             'fail-on-high',
+            'workspace',
+            'workspace-id',
+            'description',
+            'display-name',
+            'owner',
+            'actor',
+            'role',
+            'status',
+            'active-only',
+            'retention-days',
+            'action',
         ];
     }
 
@@ -501,6 +522,7 @@ final class CommandRegistry
             'stop-on-error',
             'send',
             'fail-on-high',
+            'active-only',
         ];
     }
 }

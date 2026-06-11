@@ -11,6 +11,9 @@ use Mnb\ScraperKit\Plugin\PluginManager;
 use Mnb\ScraperKit\Profile\ProfileSchemaLoader;
 use Mnb\ScraperKit\Queue\LocalJobQueue;
 use Mnb\ScraperKit\Scheduler\LocalScheduleStore;
+use Mnb\ScraperKit\Enterprise\AuditLog;
+use Mnb\ScraperKit\Enterprise\UserStore;
+use Mnb\ScraperKit\Enterprise\WorkspaceStore;
 
 /**
  * Collects read-only dashboard data from the local ScraperKit workspace.
@@ -21,7 +24,7 @@ use Mnb\ScraperKit\Scheduler\LocalScheduleStore;
  */
 final class DashboardDataCollector
 {
-    public const VERSION = '3.8.0';
+    public const VERSION = '4.0.0';
 
     public function __construct(private readonly string $rootDir)
     {
@@ -40,6 +43,9 @@ final class DashboardDataCollector
         $monitor = (new MonitoringSnapshot($this->rootDir))->collect($staleLockTtlSeconds);
         $pluginItems = array_map(static fn($plugin): array => $plugin->toArray(), $plugins->list(false));
         $profiles = $profileLoader->list();
+        $workspaceStore = new WorkspaceStore($this->rootDir);
+        $userStore = new UserStore($this->rootDir);
+        $auditLog = new AuditLog($this->rootDir);
 
         return [
             'dashboard_version' => self::VERSION,
@@ -67,6 +73,11 @@ final class DashboardDataCollector
             'profiles' => [
                 'total' => count($profiles),
                 'items' => $profiles,
+            ],
+            'enterprise' => [
+                'workspaces' => $workspaceStore->summary(),
+                'users' => $userStore->summary(),
+                'recent_audit_events' => $auditLog->list(10),
             ],
             'api' => [
                 'routes' => ApiRouter::routes(),

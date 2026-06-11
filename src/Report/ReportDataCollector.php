@@ -59,7 +59,7 @@ final class ReportDataCollector
         }
 
         return [
-            'report_version' => '3.8.0',
+            'report_version' => '4.0.0',
             'generated_at' => date(DATE_ATOM),
             'job_dir' => $jobDir,
             'job' => [

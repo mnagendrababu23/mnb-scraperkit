@@ -1,8 +1,8 @@
-# MNB ScraperKit V3.8.0
+# MNB ScraperKit V4.0.0
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V3.8.0 is the Security Audit and Compliance Toolkit Update. It adds release hygiene checks, secret scanning, responsible crawling policy output, browser-session safety review, plugin/config checks, API/dashboard surface review, and JSON/HTML compliance reports for safer public releases and internal automation.
+V4.0.0 is the Enterprise Project Workspaces and Access Control Update. It adds local project workspaces, user metadata, role capability maps, workspace membership, audit events, enterprise dashboard/API summaries, and team-oriented project organization while keeping authentication/password handling outside the library core.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,22 +16,26 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V3.8.0 update focus
+## V4.0.0 update focus
 
-V3.8.0 focuses on security posture, release readiness, and responsible crawling compliance. It helps maintainers and professional users check a project/package before publishing, deploying, or running scheduled crawls.
+V4.0.0 focuses on enterprise-ready project organization and team workflow metadata. It does not turn ScraperKit into a heavy web application; instead, it adds a lightweight file-backed foundation that can support multi-project dashboards, API integrations, team roles, and auditability.
 
-The toolkit is read-only by default. It scans local files and configuration, reports risks, and generates policy/compliance output. It does not bypass robots policies, CAPTCHA, authentication, paywalls, private networks, or access controls.
+The enterprise layer is safe by design: it stores user metadata and role labels, but it does **not** store passwords. Use API tokens, reverse-proxy authentication, or your hosting layer for real login enforcement.
 
-- Added security audit layer under `src/Security/`.
-- Added commands: `security:audit`, `security:doctor`, `security:secrets-scan`, `security:policy`, and `compliance:report`.
-- Added responsible crawling policy template: `config/compliance-policy.example.json`.
-- Added checks for release hygiene, extra docs, committed `vendor/`, generated storage files, local env files, config JSON validity, browser-session domain guards, plugin PHP files, public API/dashboard surfaces, and common secret patterns.
-- Added JSON and HTML compliance/security reports.
-- Added API routes for security audit and compliance report summaries.
-- Kept V3.7.0 project templates/preset packs, V3.6.0 advanced export connectors, V3.5.0 distributed workers/Redis queue, V3.4.0 browser sessions/authorized login workflows, V3.3.0 rule builder/auto-profile assistant, V3.2.0 evaluation/benchmarking/training quality, V3.1.0 dataset versioning/annotations, V3.0.0 ML-ready intelligence, V2.0.0 dashboard/admin UI, V1.9.0 API/webhooks, V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
+- Added enterprise workspace layer under `src/Enterprise/`.
+- Added local workspace registry under `storage/enterprise/workspaces/`.
+- Added local user metadata registry under `storage/enterprise/users.json`.
+- Added append-only audit event log under `storage/enterprise/audit-events.jsonl`.
+- Added role capability map for `owner`, `admin`, `operator`, `analyst`, and `viewer`.
+- Added commands: `enterprise:doctor`, `enterprise:roles`, `workspace:create`, `workspace:list`, `workspace:show`, `workspace:assign-user`, `user:create`, `user:list`, `user:disable`, and `audit:events`.
+- Added read-only API routes for enterprise summary, workspaces, users, and audit events.
+- Added dashboard summary cards for workspaces and users.
+- Added `config/enterprise-roles.example.json` for team/project policy documentation.
+- Kept V3.8.0 security/compliance, V3.7.0 project templates/preset packs, V3.6.0 advanced export connectors, V3.5.0 distributed workers/Redis queue, V3.4.0 browser sessions/authorized login workflows, V3.3.0 rule builder/auto-profile assistant, V3.2.0 evaluation/benchmarking/training quality, V3.1.0 dataset versioning/annotations, V3.0.0 ML-ready intelligence, V2.0.0 dashboard/admin UI, V1.9.0 API/webhooks, V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
 
 ## Highlights
 
+- **Enterprise project workspaces and access control metadata** for local/team project organization, user roles, workspace membership, audit events, and dashboard/API summaries without storing passwords.
 - **Professional PHP CLI framework** built as a Composer package with Symfony Console commands.
 - **Security audit and compliance toolkit** for release hygiene, secret scanning, responsible crawling policy checks, browser-session safety review, plugin/config checks, and JSON/HTML compliance reports.
 - **Project templates and preset packs** for ready-to-run SEO, ecommerce, academic, tender, and research workflows with generated command files and job manifests.
@@ -62,7 +66,7 @@ The toolkit is read-only by default. It scans local files and configuration, rep
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V3.8.0 CLI/library release.
+This section lists the main functionality available in the current V4.0.0 CLI/library release.
 
 ### Package and CLI
 
@@ -72,6 +76,33 @@ This section lists the main functionality available in the current V3.8.0 CLI/li
 - Global binary support through `vendor/bin/mnb-scraper`.
 - Built-in command list and per-command help screens.
 - CMD, PowerShell, cron, Windows Task Scheduler, and server automation friendly scripts/workflows.
+
+### Enterprise project workspaces and access control
+
+- `enterprise:doctor` shows workspace, user, role, and audit readiness.
+- `enterprise:roles` prints the built-in role capability map.
+- `workspace:create <name>` creates a local project workspace manifest.
+- `workspace:list` lists project workspaces.
+- `workspace:show <workspace>` shows one workspace manifest.
+- `workspace:assign-user <workspace> <user> --role=operator` assigns a user to a workspace.
+- `user:create <user>` creates a local user metadata record without storing passwords.
+- `user:list` lists user metadata records.
+- `user:disable <user>` disables a user metadata record.
+- `audit:events` lists recent enterprise audit events.
+- Workspace files live under `storage/enterprise/workspaces/`.
+- User metadata lives in `storage/enterprise/users.json`.
+- Audit events live in append-only JSONL form under `storage/enterprise/audit-events.jsonl`.
+- Read-only API routes expose enterprise summary, workspaces, users, and audit events for dashboard/internal automation.
+
+Example:
+
+```bash
+php bin/mnb-scraper user:create admin@example.com --display-name="Admin User" --role=owner
+php bin/mnb-scraper workspace:create seo-team --owner=admin@example.com --profile=seo
+php bin/mnb-scraper workspace:assign-user seo-team analyst@example.com --role=analyst
+php bin/mnb-scraper enterprise:doctor
+php bin/mnb-scraper audit:events --limit=20
+```
 
 ### Security audit and compliance toolkit
 
@@ -310,7 +341,7 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 - Plugin enable/disable controls by editing the manifest `enabled` flag.
 - Plugin doctor command for validating all discovered plugins.
 - Plugin-contributed profiles available to `profile:list`, `profile:show`, `extract:rules`, and pipeline/profile workflows.
-- Safe-by-default design: V3.8.0 does not automatically execute arbitrary plugin PHP code.
+- Safe-by-default design: V4.0.0 does not automatically execute arbitrary plugin PHP code.
 
 ### Lightweight API and webhooks
 
@@ -526,7 +557,7 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 ## Package direction
 
 - First public version: **1.0.0**
-- Current version: **3.8.0** — Advanced export connectors update
+- Current version: **4.0.0** — Advanced export connectors update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
@@ -1221,7 +1252,7 @@ ScraperKit focuses on practical export-ready outputs:
 - pipeline summaries
 - job manifest summaries
 
-PDF reports and richer role-based enterprise orchestration remain future upgrade areas. The current V3.8.0 release already includes CLI workflows, source connectors, exports/reports/bundles, export delivery connectors, local and distributed queue/worker commands, optional Redis queue support, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
+PDF reports and richer role-based enterprise orchestration remain future upgrade areas. The current V4.0.0 release already includes CLI workflows, source connectors, exports/reports/bundles, export delivery connectors, local and distributed queue/worker commands, optional Redis queue support, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
 
 ## Windows CMD
 
@@ -1248,7 +1279,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V3.8.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V4.0.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 

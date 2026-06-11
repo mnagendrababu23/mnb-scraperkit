@@ -20,6 +20,10 @@ use Mnb\ScraperKit\RuleBuilder\AutoProfileAssistant;
 use Mnb\ScraperKit\Template\TemplateCatalog;
 use Mnb\ScraperKit\Security\SecurityAuditScanner;
 use Mnb\ScraperKit\Security\ComplianceReportBuilder;
+use Mnb\ScraperKit\Enterprise\AccessPolicy;
+use Mnb\ScraperKit\Enterprise\AuditLog;
+use Mnb\ScraperKit\Enterprise\UserStore;
+use Mnb\ScraperKit\Enterprise\WorkspaceStore;
 
 /**
  * Lightweight read-mostly JSON API router used by the optional api:serve command.
@@ -30,7 +34,7 @@ use Mnb\ScraperKit\Security\ComplianceReportBuilder;
  */
 final class ApiRouter
 {
-    public const VERSION = '3.8.0';
+    public const VERSION = '4.0.0';
 
     public function __construct(
         private readonly string $rootDir,
@@ -68,6 +72,11 @@ final class ApiRouter
             ['method' => 'GET', 'path' => '/api/v1/preset-packs/{pack_id}', 'description' => 'Read one preset pack manifest.'],
             ['method' => 'GET', 'path' => '/api/v1/security/audit', 'description' => 'Run read-only security audit summary for local admin/API consumers.'],
             ['method' => 'GET', 'path' => '/api/v1/compliance/report', 'description' => 'Run read-only responsible crawling/compliance report.'],
+            ['method' => 'GET', 'path' => '/api/v1/enterprise/summary', 'description' => 'Read enterprise workspace, user, role, and audit summary.'],
+            ['method' => 'GET', 'path' => '/api/v1/enterprise/workspaces', 'description' => 'List enterprise workspaces.'],
+            ['method' => 'GET', 'path' => '/api/v1/enterprise/workspaces/{workspace_id}', 'description' => 'Read one enterprise workspace.'],
+            ['method' => 'GET', 'path' => '/api/v1/enterprise/users', 'description' => 'List enterprise users.'],
+            ['method' => 'GET', 'path' => '/api/v1/enterprise/audit', 'description' => 'List recent enterprise audit events.'],
             ['method' => 'GET', 'path' => '/api/v1/browser/sessions/{name}', 'description' => 'Read one authorized browser session profile.'],
         ];
     }
@@ -273,6 +282,45 @@ final class ApiRouter
             return new ApiResponse(200, [
                 'ok' => true,
                 'compliance' => (new ComplianceReportBuilder($this->rootDir))->build(),
+            ]);
+        }
+
+        if ($method === 'GET' && $path === '/api/v1/enterprise/summary') {
+            return new ApiResponse(200, [
+                'ok' => true,
+                'enterprise_version' => self::VERSION,
+                'workspaces' => (new WorkspaceStore($this->rootDir))->summary(),
+                'users' => (new UserStore($this->rootDir))->summary(),
+                'roles' => AccessPolicy::describe(),
+                'recent_audit_events' => (new AuditLog($this->rootDir))->list(10),
+            ]);
+        }
+
+        if ($method === 'GET' && $path === '/api/v1/enterprise/workspaces') {
+            return new ApiResponse(200, [
+                'ok' => true,
+                'workspaces' => (new WorkspaceStore($this->rootDir))->list(),
+            ]);
+        }
+
+        if ($method === 'GET' && preg_match('#^/api/v1/enterprise/workspaces/([^/]+)$#', $path, $m)) {
+            return new ApiResponse(200, [
+                'ok' => true,
+                'workspace' => (new WorkspaceStore($this->rootDir))->show(rawurldecode($m[1])),
+            ]);
+        }
+
+        if ($method === 'GET' && $path === '/api/v1/enterprise/users') {
+            return new ApiResponse(200, [
+                'ok' => true,
+                'users' => (new UserStore($this->rootDir))->list(),
+            ]);
+        }
+
+        if ($method === 'GET' && $path === '/api/v1/enterprise/audit') {
+            return new ApiResponse(200, [
+                'ok' => true,
+                'events' => (new AuditLog($this->rootDir))->list(50),
             ]);
         }
 

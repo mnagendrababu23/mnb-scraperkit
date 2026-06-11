@@ -26,6 +26,9 @@ final class DashboardRenderer
         $schedules = (array) ($data['schedules']['recent'] ?? []);
         $commandsTotal = (int) ($data['commands']['total'] ?? 0);
         $apiTotal = (int) ($data['api']['routes_total'] ?? 0);
+        $enterprise = (array) ($data['enterprise'] ?? []);
+        $workspaceSummary = (array) ($enterprise['workspaces'] ?? []);
+        $userSummary = (array) ($enterprise['users'] ?? []);
 
         $metaRefresh = $refresh > 0 ? '<meta http-equiv="refresh" content="' . $refresh . '">' : '';
         $cards = [
@@ -38,6 +41,8 @@ final class DashboardRenderer
             ['Plugins', (string) ($data['plugins']['total'] ?? 0)],
             ['Commands', (string) $commandsTotal],
             ['API routes', (string) $apiTotal],
+            ['Workspaces', (string) ($workspaceSummary['workspaces_total'] ?? 0)],
+            ['Users', (string) ($userSummary['users_total'] ?? 0)],
         ];
 
         $html = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' . $metaRefresh . '<title>' . $title . '</title>';
@@ -51,7 +56,7 @@ final class DashboardRenderer
 
         $html .= '<section class="panel"><h2>Recent jobs</h2>' . $this->jobsTable($jobs) . '</section>';
         $html .= '<section class="grid two"><article class="panel"><h2>Schedules</h2>' . $this->schedulesTable($schedules) . '</article><article class="panel"><h2>Profiles and plugins</h2>' . $this->profilePluginList($profiles, $plugins) . '</article></section>';
-        $html .= '<section class="panel"><h2>Operations notes</h2><ul><li>Run <code>php bin/mnb-scraper worker:run</code> to process queued jobs.</li><li>Run <code>php bin/mnb-scraper schedule:run-due</code> from cron or Windows Task Scheduler to enqueue due schedules.</li><li>Set <code>MNB_SCRAPERKIT_DASHBOARD_TOKEN</code> to protect this dashboard when exposed beyond localhost.</li><li>Use <code>/dashboard.json</code> for a machine-readable dashboard snapshot.</li></ul></section>';
+        $html .= '<section class="panel"><h2>Operations notes</h2><ul><li>Run <code>php bin/mnb-scraper worker:run</code> to process queued jobs.</li><li>Run <code>php bin/mnb-scraper schedule:run-due</code> from cron or Windows Task Scheduler to enqueue due schedules.</li><li>Use <code>workspace:create</code> and <code>user:create</code> to organize team/project metadata.</li><li>Set <code>MNB_SCRAPERKIT_DASHBOARD_TOKEN</code> to protect this dashboard when exposed beyond localhost.</li><li>Use <code>/dashboard.json</code> for a machine-readable dashboard snapshot.</li></ul></section>';
         $html .= '<footer>Generated at ' . $generatedAt . ' from ' . $this->e((string) ($data['root_dir'] ?? '')) . '</footer></main></body></html>';
         return $html;
     }

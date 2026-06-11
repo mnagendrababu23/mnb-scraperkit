@@ -6,7 +6,7 @@ namespace Mnb\ScraperKit\Dataset;
 
 final class AnnotationStore
 {
-    public const VERSION = '3.8.0';
+    public const VERSION = '4.0.0';
 
     /** @return array<string,mixed> */
     public function init(string $datasetDir, ?string $output = null): array

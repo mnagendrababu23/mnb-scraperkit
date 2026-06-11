@@ -49,6 +49,10 @@ use Mnb\ScraperKit\Encoding\EncodingDetector;
 use Mnb\ScraperKit\Export\ExportConnectorStore;
 use Mnb\ScraperKit\Export\ExportDeliveryService;
 use Mnb\ScraperKit\Export\ExportManifestBuilder;
+use Mnb\ScraperKit\Enterprise\AccessPolicy;
+use Mnb\ScraperKit\Enterprise\AuditLog;
+use Mnb\ScraperKit\Enterprise\UserStore;
+use Mnb\ScraperKit\Enterprise\WorkspaceStore;
 use Mnb\ScraperKit\Extractor\CommonDataExtractor;
 use Mnb\ScraperKit\Extractor\RuleBasedExtractor;
 use Mnb\ScraperKit\Network\ExitPointManager;
@@ -251,6 +255,16 @@ final class NativeCliApplication
                 'security:secrets-scan' => $this->securitySecretsScan($args, $opts),
                 'security:policy' => $this->securityPolicy($args, $opts),
                 'compliance:report' => $this->complianceReport($args, $opts),
+                'enterprise:doctor' => $this->enterpriseDoctor($args, $opts),
+                'enterprise:roles' => $this->enterpriseRoles($args, $opts),
+                'workspace:create' => $this->workspaceCreate($args, $opts),
+                'workspace:list' => $this->workspaceList($args, $opts),
+                'workspace:show' => $this->workspaceShow($args, $opts),
+                'workspace:assign-user' => $this->workspaceAssignUser($args, $opts),
+                'user:create' => $this->userCreate($args, $opts),
+                'user:list' => $this->userList($args, $opts),
+                'user:disable' => $this->userDisable($args, $opts),
+                'audit:events' => $this->auditEvents($args, $opts),
                 'validate:records' => $this->validateRecords($args, $opts),
                 'job:summary' => $this->jobSummary($args, $opts),
                 'job:run' => $this->jobRun($args, $opts),
@@ -281,7 +295,7 @@ final class NativeCliApplication
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 3.8.0 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 4.0.0 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -417,6 +431,16 @@ final class NativeCliApplication
             'security:secrets-scan' => 'Scan project files for common committed secret patterns before release.',
             'security:policy' => 'Write or show the responsible crawling and release compliance policy template.',
             'compliance:report' => 'Generate a JSON or HTML responsible crawling/compliance report from the security audit.',
+            'enterprise:doctor' => 'Show v4 enterprise workspace/user/audit readiness summary.',
+            'enterprise:roles' => 'Show built-in enterprise role capability map.',
+            'workspace:create <name>' => 'Create a local project workspace with optional owner and defaults.',
+            'workspace:list' => 'List enterprise workspaces.',
+            'workspace:show <workspace>' => 'Show one enterprise workspace manifest.',
+            'workspace:assign-user <workspace> <user>' => 'Assign a user to a workspace with a role.',
+            'user:create <user>' => 'Create a local enterprise user metadata record without storing passwords.',
+            'user:list' => 'List local enterprise users.',
+            'user:disable <user>' => 'Disable a local enterprise user metadata record.',
+            'audit:events' => 'List recent enterprise audit events.',
             'validate:records <records.json>' => 'Validate records using required fields.',
             'job:summary <job-dir>' => 'Show job manifest and pipeline/crawl summaries.',
             'job:run <job-id|job.json>' => 'Run one queued job by ID, or run a legacy JSON job config file.',
@@ -740,7 +764,7 @@ final class NativeCliApplication
     {
         $templates = array_map(static fn($template): array => $template->summary(), (new TemplateCatalog($this->rootDir))->templates());
         if ($this->bool($opts, 'json')) {
-            $this->outJson(['ok' => true, 'template_version' => '3.8.0', 'templates' => $templates]);
+            $this->outJson(['ok' => true, 'template_version' => '4.0.0', 'templates' => $templates]);
             return 0;
         }
         $this->out('Project templates:');
@@ -808,7 +832,7 @@ final class NativeCliApplication
     {
         $packs = array_map(static fn($pack): array => $pack->summary(), (new TemplateCatalog($this->rootDir))->presetPacks());
         if ($this->bool($opts, 'json')) {
-            $this->outJson(['ok' => true, 'preset_pack_version' => '3.8.0', 'preset_packs' => $packs]);
+            $this->outJson(['ok' => true, 'preset_pack_version' => '4.0.0', 'preset_packs' => $packs]);
             return 0;
         }
         $this->out('Preset packs:');
@@ -1571,7 +1595,7 @@ final class NativeCliApplication
         $manifest = $context['manifest'];
         $datasetDir = (string) ($manifest['_dataset_dir'] ?? $this->rootDir . '/storage/datasets');
         $output = $this->optString($opts, 'output') ?: rtrim($datasetDir, '/\\') . '/annotations-export.' . ($format === 'csv' ? 'csv' : ($format === 'json' ? 'json' : 'jsonl'));
-        $this->exportRows($rows, $output, $format, ['annotation_export_version' => '3.8.0', 'rows_total' => count($rows)]);
+        $this->exportRows($rows, $output, $format, ['annotation_export_version' => '4.0.0', 'rows_total' => count($rows)]);
         $this->outJson(['ok' => true, 'rows_exported' => count($rows), 'format' => $format, 'output' => $output]);
         return 0;
     }
@@ -1707,7 +1731,7 @@ final class NativeCliApplication
         $output = $this->optString($opts, 'output') ?: $this->storagePath('webhooks/test-' . date('Ymd-His') . '.json');
         $payload = [
             'message' => 'MNB ScraperKit webhook test event',
-            'version' => '3.8.0',
+            'version' => '4.0.0',
             'generated_at' => date(DATE_ATOM),
         ];
         $dispatcher = new WebhookDispatcher($this->safetyGuard());
@@ -2478,7 +2502,7 @@ final class NativeCliApplication
         $store = new ExportConnectorStore($this->rootDir);
         $connectors = $store->list($this->optString($opts, 'config'));
         $data = [
-            'export_connector_version' => '3.8.0',
+            'export_connector_version' => '4.0.0',
             'connectors_total' => count($connectors),
             'connectors' => $connectors,
         ];
@@ -2506,7 +2530,7 @@ final class NativeCliApplication
             throw new \InvalidArgumentException('Usage: php bin/mnb-scraper export:connector-show <connector-id>');
         }
         $connector = (new ExportConnectorStore($this->rootDir))->show($id, $this->optString($opts, 'config'));
-        $this->outJson(['ok' => true, 'export_connector_version' => '3.8.0', 'connector' => $connector]);
+        $this->outJson(['ok' => true, 'export_connector_version' => '4.0.0', 'connector' => $connector]);
         return 0;
     }
 
@@ -2535,7 +2559,7 @@ final class NativeCliApplication
         $sample = $this->storagePath('export-connector-test/sample-export.json');
         $this->writeJson($sample, [
             'export_connector_test' => true,
-            'version' => '3.8.0',
+            'version' => '4.0.0',
             'generated_at' => date(DATE_ATOM),
             'message' => 'Sample export artifact for connector dry run.',
         ]);
@@ -2612,6 +2636,169 @@ final class NativeCliApplication
             return $path;
         }
         return $this->rootDir . '/' . ltrim($path, '/\\');
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function enterpriseDoctor(array $args, array $opts): int
+    {
+        $workspaceStore = new WorkspaceStore($this->rootDir);
+        $userStore = new UserStore($this->rootDir);
+        $audit = new AuditLog($this->rootDir);
+        $data = [
+            'ok' => true,
+            'enterprise_version' => '4.0.0',
+            'storage_dir' => $this->rootDir . '/storage/enterprise',
+            'workspaces' => $workspaceStore->summary(),
+            'users' => $userStore->summary(),
+            'recent_audit_events' => count($audit->list(10)),
+            'roles' => array_keys(AccessPolicy::capabilities()),
+            'password_storage' => 'disabled',
+            'recommended_auth' => 'API token, reverse-proxy authentication, or hosting-layer authentication.',
+        ];
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($data);
+        } else {
+            $this->out('Enterprise doctor: OK');
+            $this->out('Version: ' . $data['enterprise_version']);
+            $this->out('Workspaces: ' . (string) ($data['workspaces']['workspaces_total'] ?? 0));
+            $this->out('Users: ' . (string) ($data['users']['users_total'] ?? 0));
+            $this->out('Audit events: ' . (string) $data['recent_audit_events']);
+            $this->out('Roles: ' . implode(', ', $data['roles']));
+            $this->out('Password storage: disabled');
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function enterpriseRoles(array $args, array $opts): int
+    {
+        $this->outJson(AccessPolicy::describe());
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function workspaceCreate(array $args, array $opts): int
+    {
+        $name = $args[0] ?? $this->optString($opts, 'name');
+        if (!$name) {
+            throw new \InvalidArgumentException('Usage: workspace:create <name> [--owner=user] [--project-dir=path]');
+        }
+        $workspace = (new WorkspaceStore($this->rootDir))->create([
+            'name' => $name,
+            'workspace_id' => $this->optString($opts, 'workspace-id') ?: $this->optString($opts, 'id'),
+            'description' => $this->optString($opts, 'description') ?? '',
+            'project_dir' => $this->optString($opts, 'project-dir') ?? '',
+            'owner' => $this->optString($opts, 'owner') ?? $this->optString($opts, 'user') ?? '',
+            'profile' => $this->optString($opts, 'profile') ?? 'seo',
+            'queue' => $this->optString($opts, 'queue') ?? 'local',
+            'retention_days' => (int) ($this->optString($opts, 'retention-days', '90') ?? '90'),
+            'actor' => $this->optString($opts, 'actor', 'system') ?? 'system',
+        ]);
+        $this->outJson(['ok' => true, 'workspace' => $workspace]);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function workspaceList(array $args, array $opts): int
+    {
+        $store = new WorkspaceStore($this->rootDir);
+        $workspaces = $store->list($this->optString($opts, 'state') ?: $this->optString($opts, 'status'));
+        if ($this->bool($opts, 'json')) {
+            $this->outJson(['ok' => true, 'workspaces' => $workspaces, 'summary' => $store->summary()]);
+            return 0;
+        }
+        $this->out('Workspaces: ' . count($workspaces));
+        foreach ($workspaces as $workspace) {
+            $this->out(sprintf('  %-24s %-12s %s', (string) ($workspace['workspace_id'] ?? ''), (string) ($workspace['status'] ?? 'active'), (string) ($workspace['name'] ?? '')));
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function workspaceShow(array $args, array $opts): int
+    {
+        $id = $args[0] ?? $this->optString($opts, 'workspace') ?? $this->optString($opts, 'workspace-id');
+        if (!$id) {
+            throw new \InvalidArgumentException('Usage: workspace:show <workspace>');
+        }
+        $this->outJson(['ok' => true, 'workspace' => (new WorkspaceStore($this->rootDir))->show($id)]);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function workspaceAssignUser(array $args, array $opts): int
+    {
+        $workspace = $args[0] ?? $this->optString($opts, 'workspace') ?? $this->optString($opts, 'workspace-id');
+        $user = $args[1] ?? $this->optString($opts, 'user');
+        if (!$workspace || !$user) {
+            throw new \InvalidArgumentException('Usage: workspace:assign-user <workspace> <user> [--role=operator]');
+        }
+        $updated = (new WorkspaceStore($this->rootDir))->assignUser(
+            $workspace,
+            $user,
+            $this->optString($opts, 'role', 'viewer') ?? 'viewer',
+            $this->optString($opts, 'actor', 'system') ?? 'system'
+        );
+        $this->outJson(['ok' => true, 'workspace' => $updated]);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function userCreate(array $args, array $opts): int
+    {
+        $id = $args[0] ?? $this->optString($opts, 'user') ?? $this->optString($opts, 'email');
+        if (!$id) {
+            throw new \InvalidArgumentException('Usage: user:create <user-id|email> [--role=analyst]');
+        }
+        $user = (new UserStore($this->rootDir))->create([
+            'user_id' => $id,
+            'display_name' => $this->optString($opts, 'display-name') ?? $this->optString($opts, 'name') ?? $id,
+            'email' => $this->optString($opts, 'email') ?? (str_contains($id, '@') ? $id : ''),
+            'role' => $this->optString($opts, 'role', 'viewer') ?? 'viewer',
+            'actor' => $this->optString($opts, 'actor', 'system') ?? 'system',
+        ]);
+        $this->outJson(['ok' => true, 'user' => $user]);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function userList(array $args, array $opts): int
+    {
+        $store = new UserStore($this->rootDir);
+        $users = $store->list($this->optString($opts, 'role'), !$this->bool($opts, 'active-only'));
+        if ($this->bool($opts, 'json')) {
+            $this->outJson(['ok' => true, 'users' => $users, 'summary' => $store->summary()]);
+            return 0;
+        }
+        $this->out('Users: ' . count($users));
+        foreach ($users as $user) {
+            $this->out(sprintf('  %-24s %-10s %-10s %s', (string) ($user['user_id'] ?? ''), (string) ($user['role'] ?? ''), (string) ($user['status'] ?? ''), (string) ($user['display_name'] ?? '')));
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function userDisable(array $args, array $opts): int
+    {
+        $id = $args[0] ?? $this->optString($opts, 'user');
+        if (!$id) {
+            throw new \InvalidArgumentException('Usage: user:disable <user>');
+        }
+        $user = (new UserStore($this->rootDir))->disable($id, $this->optString($opts, 'actor', 'system') ?? 'system');
+        $this->outJson(['ok' => true, 'user' => $user]);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function auditEvents(array $args, array $opts): int
+    {
+        $events = (new AuditLog($this->rootDir))->list(
+            (int) ($this->optString($opts, 'limit', '50') ?? '50'),
+            $this->optString($opts, 'actor'),
+            $this->optString($opts, 'action')
+        );
+        $this->outJson(['ok' => true, 'events' => $events, 'total' => count($events)]);
+        return 0;
     }
 
     /** @param array<int,string> $args @param array<string,mixed> $opts */
@@ -4384,7 +4571,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $result = (new DatabaseMigrator($pdo, $config->driver()))->migrate();
         $this->outJson([
             'ok' => true,
-            'version' => '3.8.0',
+            'version' => '4.0.0',
             'driver' => $result['driver'],
             'statements_executed' => $result['statements'],
             'tables' => $result['tables'],
@@ -4400,7 +4587,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $pdo = (new DatabaseConnectionFactory())->connect($config);
         $this->outJson([
             'ok' => true,
-            'version' => '3.8.0',
+            'version' => '4.0.0',
             'driver' => $config->driver(),
             'pdo_driver' => (string) $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME),
             'dsn' => $this->safeDsn($config->dsn),
@@ -4961,7 +5148,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '3.8.0',
+            'checkpoint_version' => '4.0.0',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),

@@ -57,7 +57,7 @@ final class HtmlSignalAnalyzer
         $keywords = $this->detectKeywords($lowerText, $meta, array_values($jsonLdTypes), $selectors);
 
         return [
-            'signal_version' => '3.8.0',
+            'signal_version' => '4.0.0',
             'base_url' => $baseUrl,
             'title' => $parser->title($doc),
             'canonical_url' => $parser->canonical($doc, $baseUrl),

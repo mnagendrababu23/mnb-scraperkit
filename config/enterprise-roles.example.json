@@ -1,0 +1,15 @@
+{
+  "enterprise_version": "4.0.0",
+  "roles": {
+    "owner": ["*"],
+    "admin": ["workspace.manage", "user.manage", "job.manage", "queue.manage", "dashboard.view", "audit.view"],
+    "operator": ["job.create", "job.run", "queue.manage", "dashboard.view", "report.view"],
+    "analyst": ["dataset.view", "report.view", "evaluation.view", "dashboard.view"],
+    "viewer": ["dashboard.view", "report.view"]
+  },
+  "notes": [
+    "No passwords are stored by MNB ScraperKit v4.0.0.",
+    "Use API tokens, reverse-proxy authentication, or your hosting layer for actual login enforcement.",
+    "Workspaces and roles provide project organization, audit metadata, and future-ready access-control structure."
+  ]
+}
