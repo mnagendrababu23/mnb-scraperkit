@@ -10,6 +10,10 @@ use Mnb\ScraperKit\Core\CrawlOptions;
 use Mnb\ScraperKit\Pipeline\JobManifest;
 use Mnb\ScraperKit\Pipeline\PipelineOptions;
 use Mnb\ScraperKit\Pipeline\ProfessionalCrawlPipeline;
+use Mnb\ScraperKit\Report\ProjectBundleExporter;
+use Mnb\ScraperKit\Report\RecordExportService;
+use Mnb\ScraperKit\Report\ReportDataCollector;
+use Mnb\ScraperKit\Report\ReportExporter;
 use Mnb\ScraperKit\Safety\UrlSafetyGuard;
 use Mnb\ScraperKit\Source\Sitemap\SitemapReader;
 use Mnb\ScraperKit\Source\Csv\CsvUrlSourceReader;
@@ -55,7 +59,7 @@ $tests['failure classifier maps common crawl failures'] = function (): void {
     assert(FailureClassifier::fromSafetyMessage('URL safety check failed: private/reserved IP targets are blocked.') === 'private_ip_blocked');
 };
 
-$tests['rate limiter accepts v1.1.0 pacing options without sleeping unnecessarily'] = function (): void {
+$tests['rate limiter accepts v1.2.0 pacing options without sleeping unnecessarily'] = function (): void {
     $limiter = new RateLimiter();
     $options = CrawlOptions::fromArray([
         'delay_ms' => 0,
@@ -73,7 +77,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
     mkdir($dir, 0775, true);
     $checkpoint = $dir . '/checkpoint.json';
     file_put_contents($checkpoint, json_encode([
-        'checkpoint_version' => '1.1.0',
+        'checkpoint_version' => '1.2.0',
         'updated_at' => '2026-01-01T00:00:00+00:00',
         'queues' => [
             'pending' => ['https://example.com/pending'],
@@ -87,7 +91,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
 
     $manifestPath = JobManifest::write($dir, 'bulk-crawl', [], ['checkpoint' => $checkpoint], []);
     $manifest = JobManifest::read($manifestPath);
-    assert(($manifest['version'] ?? null) === '1.1.0');
+    assert(($manifest['version'] ?? null) === '1.2.0');
     assert(($manifest['resume']['counts']['pending'] ?? null) === 1);
     assert(($manifest['resume']['last_processed_url'] ?? null) === 'https://example.com/done');
 };
@@ -171,6 +175,56 @@ $tests['source connectors parse sitemap, CSV and JSON URL sources'] = function (
     $json = (new JsonUrlSourceReader())->read($jsonFile, 'items.*.url', 10);
     assert(($json['records_returned'] ?? 0) === 2, 'expected JSON URLs');
     assert(($json['records'][0]['url'] ?? null) === 'https://example.com/e', 'JSON URL mismatch');
+};
+
+
+$tests['export and report upgrade creates XML, HTML summary and ZIP bundle'] = function (): void {
+    $dir = sys_get_temp_dir() . '/mnb_reports_' . bin2hex(random_bytes(4));
+    mkdir($dir . '/pipeline', 0775, true);
+    mkdir($dir . '/logs', 0775, true);
+
+    file_put_contents($dir . '/job-manifest.json', json_encode([
+        'version' => '1.2.0',
+        'job_id' => 'test-job',
+        'type' => 'crawl',
+        'resume' => ['counts' => ['completed' => 1, 'failed' => 1]],
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    file_put_contents($dir . '/crawl.json', json_encode([
+        'pages' => [
+            ['url' => 'https://example.com/a', 'final_url' => 'https://example.com/a', 'status_code' => 200, 'title' => 'A'],
+            ['url' => 'https://example.com/b', 'final_url' => 'https://example.com/b', 'status_code' => 503, 'failure_type' => 'http_5xx', 'error' => 'Service unavailable'],
+        ],
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    file_put_contents($dir . '/pipeline/records.json', json_encode([
+        'records' => [[
+            'record_id' => 'rec_1',
+            'record_type' => 'page',
+            'record_key' => 'https://example.com/a',
+            'quality_score' => 90,
+            'validation' => ['status' => 'valid'],
+        ]],
+        'validation_issues' => [],
+        'duplicates' => [],
+        'dropped' => [],
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    file_put_contents($dir . '/logs/crawl.log', "ok\n");
+
+    $recordsXml = $dir . '/records.xml';
+    (new RecordExportService())->export([['title' => 'A', 'url' => 'https://example.com/a']], $recordsXml, 'xml');
+    assert(is_file($recordsXml) && str_contains((string) file_get_contents($recordsXml), '<records>'), 'records XML export missing');
+
+    $report = (new ReportDataCollector())->collectFromJobDir($dir);
+    assert(($report['counts']['pages_total'] ?? null) === 2, 'report page count mismatch');
+    assert(($report['failure_type_counts']['http_5xx'] ?? null) === 1, 'failure count mismatch');
+
+    $html = $dir . '/crawl-summary.html';
+    (new ReportExporter())->export($report, $html, 'html');
+    assert(is_file($html) && str_contains((string) file_get_contents($html), 'MNB ScraperKit Crawl Summary'), 'HTML report missing');
+
+    $zip = $dir . '/bundle.zip';
+    $bundle = (new ProjectBundleExporter())->create($dir, $zip);
+    assert(is_file($zip) && filesize($zip) > 0, 'ZIP bundle missing');
+    assert(($bundle['files_total'] ?? 0) >= 3, 'bundle file count mismatch');
 };
 
 $passed = 0;

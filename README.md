@@ -1,8 +1,8 @@
-# MNB ScraperKit V1.1.0
+# MNB ScraperKit V1.2.0
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V1.1.0 is the Source Connectors Update. It adds first-class connector commands for sitemap, RSS/Atom, CSV, JSON, and generic JSON API URL sources, while keeping the Symfony Console CLI and framework-independent PHP crawler core.
+V1.2.0 is the Export and Report Upgrade. It adds professional JSON/CSV/XML/HTML exports, crawl summary reports, validation reports, failed URL exports, and ZIP project bundles while keeping the Symfony Console CLI, safe crawling core, source connectors, and professional pipeline system.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,18 +16,17 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V1.1.0 update focus
+## V1.2.0 update focus
 
-V1.1.0 focuses on source connectors so users can collect crawl targets before running bulk crawls or pipelines.
+V1.2.0 focuses on the final professional output stage: exporting, reporting, and bundling crawl/pipeline results.
 
-- Added `source:sitemap` for sitemap.xml and sitemap index URL extraction.
-- Added `source:rss` for generic RSS/Atom feed records and URLs.
-- Added `source:csv` for CSV URL lists with configurable URL columns.
-- Added `source:json` for JSON URL lists using dot paths such as `items.*.url`.
-- Added `source:api` for generic JSON API endpoints using headers and URL extraction paths.
-- Added `source:urls` to convert connector JSON output into plain URL lists.
-- Added connector outputs in JSON, CSV, and TXT URL-list formats.
-- Kept V1.0.1 safety, checkpoint, failure classification, and pipeline improvements.
+- Added `report:summary` for professional job summary reports in HTML, JSON, CSV, or XML.
+- Added `bundle:create` for portable ZIP bundles containing records, failed URLs, reports, manifests, checkpoints, and logs.
+- Added `export:failed` as a clearer alias for failed/skipped URL diagnostics.
+- Added `export:validation` for exporting validation issues from pipeline output.
+- Upgraded `export:records` to support JSON, CSV, XML, and HTML table output.
+- Added lightweight built-in ZIP creation that works even when PHP `ext-zip` is not installed.
+- Kept V1.1.0 source connectors for sitemap, RSS/Atom, CSV, JSON, API, PLOS, and Elsevier/ScienceDirect workflows.
 
 ## Highlights
 
@@ -37,7 +36,7 @@ V1.1.0 focuses on source connectors so users can collect crawl targets before ru
 - **Manifest-driven jobs** for reproducible crawl configuration, including input URLs, scope, pacing, extraction profile, output settings, and resume state.
 - **Professional crawl pipeline** that converts raw page results into normalized records with metadata, validation, deduplication, transformation, quality scoring, and exports.
 - **Common data profiles** for academic, journal, conference, ecommerce, government, tender, jobs, SEO, contact, and document-focused extraction workflows.
-- **Export-ready outputs** including structured JSON and CSV results for crawl data, records, failed URLs, skipped URLs, validation issues, and pipeline summaries.
+- **Professional exports and reports** including JSON, CSV, XML, HTML summaries, failed URL reports, validation issue reports, and ZIP project bundles.
 - **Automation friendly** for PHP CLI, CMD, PowerShell, cron, Windows Task Scheduler, and server-side workflows.
 - **Source connector system** for collecting crawl targets from sitemaps, RSS/Atom feeds, CSV files, JSON files, generic JSON APIs, PLOS, and Elsevier/ScienceDirect.
 - **Future-ready architecture** designed for later expansion into dashboards, workers, richer reports, API/webhooks, and ML-assisted intelligence.
@@ -45,7 +44,7 @@ V1.1.0 focuses on source connectors so users can collect crawl targets before ru
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V1.1.0 CLI/library release.
+This section lists the main functionality available in the current V1.2.0 CLI/library release.
 
 ### Package and CLI
 
@@ -185,16 +184,22 @@ This section lists the main functionality available in the current V1.1.0 CLI/li
 - Retry list generation from failed crawl output.
 - Backoff/cooldown options for safer repeated runs.
 
-### Export and storage
+### Export, reports, and bundles
 
 - Crawl result JSON export.
 - Pipeline record JSON export.
 - Pipeline record CSV export.
-- Failed URL reports.
-- Skipped URL reports.
-- Validation issue summaries.
-- Pipeline summary JSON.
-- Job manifest summary.
+- Pipeline record XML export.
+- Pipeline record HTML table export.
+- Failed URL reports in JSON, CSV, XML, or HTML.
+- Skipped URL reports when enabled with `--include-skipped`.
+- Validation issue reports in JSON, CSV, XML, or HTML.
+- Professional crawl summary report with job metadata, page counts, record counts, failure counts, validation status counts, quality summary, resume state, and export file list.
+- HTML summary reports suitable for quick review or sharing with a team/client.
+- JSON/CSV/XML summary reports for downstream systems.
+- ZIP project bundle creation for records, failed URLs, skipped URLs, validation reports, manifest, checkpoint, logs, and summary report files.
+- Lightweight built-in ZIP writer that does not require PHP `ext-zip`.
+- Job manifest summary and export discovery.
 - Basic CSV storage/export helpers.
 
 ### Source connectors
@@ -222,11 +227,11 @@ This section lists the main functionality available in the current V1.1.0 CLI/li
 ## Package direction
 
 - First public version: **1.0.0**
-- Current version: **1.1.0** — source connectors update
+- Current version: **1.2.0** — export and report upgrade
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
-- Reusable PHP core classes for crawler, HTTP, parser, pipeline, manifest, checkpoint, exporter, and source connectors
+- Reusable PHP core classes for crawler, HTTP, parser, pipeline, manifest, checkpoint, exporter, reports, bundles, and source connectors
 - CMD, PowerShell, cron, Windows Task Scheduler, and server worker friendly
 - Clean release package without `vendor/` or generated crawl outputs
 - Single documentation file: this `README.md`
@@ -241,6 +246,42 @@ This section lists the main functionality available in the current V1.1.0 CLI/li
 - `symfony/console`
 - `ext-curl` recommended for the cURL HTTP engine
 - `ext-pdo` optional, only for database storage features
+
+
+## Export and report examples
+
+Export pipeline records:
+
+```bash
+php bin/mnb-scraper export:records storage/jobs/job-id/pipeline/records.json --format=csv
+php bin/mnb-scraper export:records storage/jobs/job-id/pipeline/records.json --format=xml
+php bin/mnb-scraper export:records storage/jobs/job-id/pipeline/records.json --format=html
+```
+
+Export failed URLs:
+
+```bash
+php bin/mnb-scraper export:failed storage/jobs/job-id/crawl.json --format=csv --include-skipped
+```
+
+Export validation issues:
+
+```bash
+php bin/mnb-scraper export:validation storage/jobs/job-id/pipeline/records.json --format=csv
+```
+
+Generate a professional crawl summary:
+
+```bash
+php bin/mnb-scraper report:summary storage/jobs/job-id --format=html
+php bin/mnb-scraper report:summary storage/jobs/job-id --format=json
+```
+
+Create a portable project bundle:
+
+```bash
+php bin/mnb-scraper bundle:create storage/jobs/job-id
+```
 
 ## Installation
 
@@ -541,7 +582,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V1.1.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V1.2.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 

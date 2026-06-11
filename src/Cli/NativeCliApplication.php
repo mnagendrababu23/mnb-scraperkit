@@ -24,6 +24,10 @@ use Mnb\ScraperKit\Pipeline\JobManifest;
 use Mnb\ScraperKit\Pipeline\PipelineExporter;
 use Mnb\ScraperKit\Pipeline\PipelineOptions;
 use Mnb\ScraperKit\Pipeline\ProfessionalCrawlPipeline;
+use Mnb\ScraperKit\Report\ProjectBundleExporter;
+use Mnb\ScraperKit\Report\RecordExportService;
+use Mnb\ScraperKit\Report\ReportDataCollector;
+use Mnb\ScraperKit\Report\ReportExporter;
 use Mnb\ScraperKit\Safety\UrlSafetyGuard;
 use Mnb\ScraperKit\Storage\CsvExporter;
 use Mnb\ScraperKit\Storage\JsonExporter;
@@ -73,9 +77,13 @@ final class NativeCliApplication
                 'common:extract' => $this->commonExtract($args, $opts),
                 'common:types' => $this->commonTypes($opts),
                 'report:failed' => $this->reportFailed($args, $opts),
+                'export:failed' => $this->reportFailed($args, $opts),
+                'report:summary' => $this->reportSummary($args, $opts),
+                'bundle:create' => $this->bundleCreate($args, $opts),
                 'pipeline:run' => $this->pipelineRun($args, $opts),
                 'retry:failed' => $this->retryFailed($args, $opts),
                 'export:records' => $this->exportRecords($args, $opts),
+                'export:validation' => $this->exportValidation($args, $opts),
                 'validate:records' => $this->validateRecords($args, $opts),
                 'job:summary' => $this->jobSummary($args, $opts),
                 'job:run' => $this->jobRun($args, $opts),
@@ -106,7 +114,7 @@ final class NativeCliApplication
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 1.1.0 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 1.2.0 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -124,9 +132,12 @@ final class NativeCliApplication
             'common:extract <url>' => 'Extract common data patterns from one URL.',
             'common:types' => 'List supported common data types and profiles.',
             'report:failed <crawl.json>' => 'Create failed/skipped URL report.',
+            'export:failed <crawl.json>' => 'Export failed/skipped URL report as JSON, CSV, or XML.',
+            'report:summary <job-dir>' => 'Generate professional job summary as HTML, JSON, CSV, or XML.',
+            'bundle:create <job-dir>' => 'Create a portable ZIP bundle with exports, reports, manifest, and logs.',
             'pipeline:run <crawl.json>' => 'Run professional record pipeline on crawl JSON.',
             'retry:failed <crawl.json>' => 'Create retry URL list from failed pages.',
-            'export:records <records.json>' => 'Export pipeline records to CSV or JSON.',
+            'export:records <records.json>' => 'Export pipeline records to JSON, CSV, XML, or HTML.',
             'validate:records <records.json>' => 'Validate records using required fields.',
             'job:summary <job-dir>' => 'Show job manifest and pipeline/crawl summaries.',
             'job:run <job.json>' => 'Run crawl job from JSON config.',
@@ -564,19 +575,54 @@ final class NativeCliApplication
     {
         $input = $args[0] ?? null;
         if (!$input) {
-            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper report:failed <crawl.json>');
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper report:failed <crawl.json> --format=csv');
         }
         $crawl = (new CrawlJsonReader())->read($input);
         $rows = (new FailedUrlExtractor())->extract($crawl, $this->optString($opts, 'only-type'), $this->bool($opts, 'include-skipped'));
         $format = strtolower($this->optString($opts, 'format', 'json') ?? 'json');
-        $output = $this->optString($opts, 'output') ?: $this->storagePath('failed-report-' . date('Ymd-His') . '.' . ($format === 'csv' ? 'csv' : 'json'));
-        if ($format === 'csv') {
-            (new PipelineExporter())->exportCsv($rows, $output);
-        } else {
-            $this->writeJson($output, $rows);
-        }
+        $output = $this->optString($opts, 'output') ?: $this->storagePath('failed-report-' . date('Ymd-His') . '.' . $this->extensionForFormat($format));
+        (new RecordExportService())->export($rows, $output, $format);
         $this->out('Failed rows: ' . count($rows));
         $this->out('Output: ' . $output);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function reportSummary(array $args, array $opts): int
+    {
+        $jobDir = $args[0] ?? null;
+        if (!$jobDir) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper report:summary <job-dir> --format=html');
+        }
+        $format = strtolower($this->optString($opts, 'format', 'html') ?? 'html');
+        $output = $this->optString($opts, 'output') ?: rtrim((string) $jobDir, '/\\') . '/crawl-summary.' . $this->extensionForFormat($format);
+        $report = (new ReportDataCollector())->collectFromJobDir((string) $jobDir);
+        (new ReportExporter())->export($report, $output, $format);
+        $this->out('Report: ' . $output);
+        $this->out('Pages: ' . (string) ($report['counts']['pages_total'] ?? 0));
+        $this->out('Records: ' . (string) ($report['counts']['records_total'] ?? 0));
+        $this->out('Failures: ' . (string) ($report['counts']['pages_failed'] ?? 0));
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function bundleCreate(array $args, array $opts): int
+    {
+        $jobDir = $args[0] ?? null;
+        if (!$jobDir) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper bundle:create <job-dir>');
+        }
+        $jobDir = rtrim((string) $jobDir, '/\\');
+        $summaryHtml = $jobDir . '/crawl-summary.html';
+        if (!is_file($summaryHtml)) {
+            $report = (new ReportDataCollector())->collectFromJobDir($jobDir);
+            (new ReportExporter())->export($report, $summaryHtml, 'html');
+        }
+        $output = $this->optString($opts, 'output') ?: $jobDir . '/mnb-scraperkit-bundle-' . date('Ymd-His') . '.zip';
+        $result = (new ProjectBundleExporter())->create($jobDir, $output);
+        $this->out('Bundle: ' . $output);
+        $this->out('Files: ' . (string) ($result['files_total'] ?? 0));
+        $this->out('Size: ' . (string) ($result['size_bytes'] ?? 0) . ' bytes');
         return 0;
     }
 
@@ -622,18 +668,50 @@ final class NativeCliApplication
         $data = json_decode((string) file_get_contents($input), true);
         $records = $this->recordsFromData($data);
         $format = strtolower($this->optString($opts, 'format', 'csv') ?? 'csv');
-        $output = $this->optString($opts, 'output') ?: preg_replace('/\.json$/i', '.' . $format, $input);
+        $output = $this->optString($opts, 'output') ?: preg_replace('/\.json$/i', '.' . $this->extensionForFormat($format), $input);
         if (!$output) {
-            $output = $this->storagePath('records.' . $format);
+            $output = $this->storagePath('records.' . $this->extensionForFormat($format));
         }
-        if ($format === 'json') {
-            $this->writeJson($output, $records);
-        } else {
-            (new PipelineExporter())->exportCsv($records, $output);
-        }
+        (new RecordExportService())->export($records, $output, $format);
         $this->out('Records: ' . count($records));
         $this->out('Output: ' . $output);
         return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function exportValidation(array $args, array $opts): int
+    {
+        $input = $args[0] ?? null;
+        if (!$input || !is_file($input)) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper export:validation <pipeline.json> --format=csv');
+        }
+        $data = json_decode((string) file_get_contents($input), true);
+        if (!is_array($data)) {
+            throw new \RuntimeException('Invalid pipeline JSON.');
+        }
+        $issues = [];
+        if (isset($data['validation_issues']) && is_array($data['validation_issues'])) {
+            $issues = array_values(array_filter($data['validation_issues'], 'is_array'));
+        } else {
+            foreach ($this->recordsFromData($data) as $index => $record) {
+                $validation = is_array($record['validation'] ?? null) ? $record['validation'] : [];
+                foreach ((array) ($validation['messages'] ?? $validation['issues'] ?? []) as $message) {
+                    $issues[] = [
+                        'index' => $index,
+                        'record_id' => $record['record_id'] ?? null,
+                        'record_key' => $record['record_key'] ?? $record['dedupe_key'] ?? null,
+                        'status' => $validation['status'] ?? null,
+                        'message' => is_array($message) ? json_encode($message, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : (string) $message,
+                    ];
+                }
+            }
+        }
+        $format = strtolower($this->optString($opts, 'format', 'csv') ?? 'csv');
+        $output = $this->optString($opts, 'output') ?: $this->storagePath('validation-report-' . date('Ymd-His') . '.' . $this->extensionForFormat($format));
+        (new RecordExportService())->export($issues, $output, $format);
+        $this->out('Validation issues: ' . count($issues));
+        $this->out('Output: ' . $output);
+        return count($issues) > 0 ? 2 : 0;
     }
 
     /** @param array<int,string> $args @param array<string,mixed> $opts */
@@ -1686,7 +1764,7 @@ final class NativeCliApplication
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '1.1.0',
+            'checkpoint_version' => '1.2.0',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),
@@ -1704,6 +1782,17 @@ final class NativeCliApplication
             ],
             'results' => $results,
         ]);
+    }
+
+    private function extensionForFormat(string $format): string
+    {
+        return match (strtolower($format)) {
+            'csv' => 'csv',
+            'xml' => 'xml',
+            'html', 'htm' => 'html',
+            'zip' => 'zip',
+            default => 'json',
+        };
     }
 
     private function storagePath(string $file): string
