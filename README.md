@@ -638,7 +638,7 @@ ScraperKit focuses on practical export-ready outputs:
 - pipeline summaries
 - job manifest summaries
 
-Dashboard, PDF reports, large worker queues, browser-worker orchestration, API/webhooks, and ML-assisted intelligence are future upgrade areas, not required for the V1.0 CLI release.
+Dashboard, PDF reports, large worker queues, browser-worker orchestration, API/webhooks, and ML-assisted intelligence are future upgrade areas, not required for the current V1.x CLI release.
 
 ## Windows CMD
 

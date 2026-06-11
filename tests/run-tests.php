@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/../autoload.php';
 
+use Mnb\ScraperKit\Console\CommandRegistry;
 use Mnb\ScraperKit\Core\FailureClassifier;
 use Mnb\ScraperKit\Core\RateLimiter;
 use Mnb\ScraperKit\Core\CrawlOptions;
@@ -25,6 +26,13 @@ use Mnb\ScraperKit\Source\Json\JsonUrlSourceReader;
 use Mnb\ScraperKit\Support\UrlNormalizer;
 
 $tests = [];
+
+
+$tests['Symfony command option registry has no duplicate option names'] = function (): void {
+    $names = CommandRegistry::optionNames();
+    $duplicates = array_keys(array_filter(array_count_values($names), static fn (int $count): bool => $count > 1));
+    assert($duplicates === [], 'duplicate Symfony option names: ' . implode(', ', $duplicates));
+};
 
 $tests['url normalizer removes tracking params and resolves relative URLs'] = function (): void {
     $normalizer = new UrlNormalizer();
