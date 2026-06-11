@@ -11,6 +11,9 @@ use Mnb\ScraperKit\Pipeline\JobManifest;
 use Mnb\ScraperKit\Pipeline\PipelineOptions;
 use Mnb\ScraperKit\Pipeline\ProfessionalCrawlPipeline;
 use Mnb\ScraperKit\Safety\UrlSafetyGuard;
+use Mnb\ScraperKit\Source\Sitemap\SitemapReader;
+use Mnb\ScraperKit\Source\Csv\CsvUrlSourceReader;
+use Mnb\ScraperKit\Source\Json\JsonUrlSourceReader;
 use Mnb\ScraperKit\Support\UrlNormalizer;
 
 $tests = [];
@@ -52,7 +55,7 @@ $tests['failure classifier maps common crawl failures'] = function (): void {
     assert(FailureClassifier::fromSafetyMessage('URL safety check failed: private/reserved IP targets are blocked.') === 'private_ip_blocked');
 };
 
-$tests['rate limiter accepts v1.0.1 pacing options without sleeping unnecessarily'] = function (): void {
+$tests['rate limiter accepts v1.1.0 pacing options without sleeping unnecessarily'] = function (): void {
     $limiter = new RateLimiter();
     $options = CrawlOptions::fromArray([
         'delay_ms' => 0,
@@ -70,7 +73,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
     mkdir($dir, 0775, true);
     $checkpoint = $dir . '/checkpoint.json';
     file_put_contents($checkpoint, json_encode([
-        'checkpoint_version' => '1.0.1',
+        'checkpoint_version' => '1.1.0',
         'updated_at' => '2026-01-01T00:00:00+00:00',
         'queues' => [
             'pending' => ['https://example.com/pending'],
@@ -84,7 +87,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
 
     $manifestPath = JobManifest::write($dir, 'bulk-crawl', [], ['checkpoint' => $checkpoint], []);
     $manifest = JobManifest::read($manifestPath);
-    assert(($manifest['version'] ?? null) === '1.0.1');
+    assert(($manifest['version'] ?? null) === '1.1.0');
     assert(($manifest['resume']['counts']['pending'] ?? null) === 1);
     assert(($manifest['resume']['last_processed_url'] ?? null) === 'https://example.com/done');
 };
@@ -144,6 +147,30 @@ $tests['pipeline validation catches invalid DOI, ISSN, ISBN, URL and email'] = f
 
     $result = (new ProfessionalCrawlPipeline())->runFromCrawlArray($crawl, PipelineOptions::fromArray([]));
     assert(count($result->validationIssues) >= 1, 'expected validation issues');
+};
+
+
+$tests['source connectors parse sitemap, CSV and JSON URL sources'] = function (): void {
+    $dir = sys_get_temp_dir() . '/mnb_sources_' . bin2hex(random_bytes(4));
+    mkdir($dir, 0775, true);
+
+    $sitemapFile = $dir . '/sitemap.xml';
+    file_put_contents($sitemapFile, '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://example.com/a</loc><lastmod>2026-01-01</lastmod></url><url><loc>https://example.com/b</loc></url></urlset>');
+    $sitemap = (new SitemapReader())->read($sitemapFile, CrawlOptions::fromArray([]), 10);
+    assert(($sitemap['records_returned'] ?? 0) === 2, 'expected sitemap URLs');
+    assert(($sitemap['records'][0]['url'] ?? null) === 'https://example.com/a', 'sitemap URL mismatch');
+
+    $csvFile = $dir . '/urls.csv';
+    file_put_contents($csvFile, "url,label\nhttps://example.com/c,one\nhttps://example.com/d,two\n");
+    $csv = (new CsvUrlSourceReader())->read($csvFile, 'url', 10);
+    assert(($csv['records_returned'] ?? 0) === 2, 'expected CSV URLs');
+    assert(($csv['records'][1]['metadata']['label'] ?? null) === 'two', 'CSV metadata mismatch');
+
+    $jsonFile = $dir . '/urls.json';
+    file_put_contents($jsonFile, json_encode(['items' => [['url' => 'https://example.com/e'], ['url' => 'https://example.com/f']]], JSON_UNESCAPED_SLASHES));
+    $json = (new JsonUrlSourceReader())->read($jsonFile, 'items.*.url', 10);
+    assert(($json['records_returned'] ?? 0) === 2, 'expected JSON URLs');
+    assert(($json['records'][0]['url'] ?? null) === 'https://example.com/e', 'JSON URL mismatch');
 };
 
 $passed = 0;

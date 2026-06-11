@@ -1,9 +1,9 @@
 {
   "name": "mnb/scraperkit",
-  "description": "MNB ScraperKit V1.0.1 - professional PHP crawling and data extraction framework with Symfony Console commands, stronger safety, resumable jobs, manifests, pipelines, exports, and reports.",
+  "description": "MNB ScraperKit V1.1.0 - professional PHP crawling and data extraction framework with Symfony Console commands, safe crawling, pipelines, and source connectors for sitemap, RSS, CSV, JSON, and API URL workflows.",
   "type": "library",
   "license": "MIT",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "require": {
     "php": ">=8.2",
     "ext-dom": "*",
@@ -35,6 +35,11 @@
     "cli",
     "symfony-console",
     "pipeline",
-    "data-extraction"
+    "data-extraction",
+    "sitemap",
+    "rss",
+    "source-connectors",
+    "csv",
+    "json-api"
   ]
 }

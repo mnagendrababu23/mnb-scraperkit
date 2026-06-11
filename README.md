@@ -1,8 +1,8 @@
-# MNB ScraperKit V1.0.1
+# MNB ScraperKit V1.1.0
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V1.0.1 is the stability, safety, and quality update for the first public release. It is packaged as a Composer library with a Symfony Console command-line interface, while the crawler core remains reusable framework-independent PHP code.
+V1.1.0 is the Source Connectors Update. It adds first-class connector commands for sitemap, RSS/Atom, CSV, JSON, and generic JSON API URL sources, while keeping the Symfony Console CLI and framework-independent PHP crawler core.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,16 +16,18 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V1.0.1 update focus
+## V1.1.0 update focus
 
-V1.0.1 focuses on stability, safety, and quality before adding larger features.
+V1.1.0 focuses on source connectors so users can collect crawl targets before running bulk crawls or pipelines.
 
-- Stronger HTTP-layer URL safety for every outgoing request and redirect.
-- Better SSRF protection for localhost, private/reserved IPs, numeric IPv4 forms, and URL userinfo credentials.
-- Improved failure classification for timeout, DNS, SSL, redirect loop, private IP block, unsupported scheme, body limit, HTTP 4xx/5xx, robots block, and final-domain guard cases.
-- Smarter pacing support with delay jitter, pause-after-N-URLs, and cooldown-after-repeated-failures options.
-- Better checkpoint and manifest resume metadata, including pending, completed, failed, skipped, challenge, and retry queue summaries.
-- Expanded tests for safety, failure classification, checkpoint/manifest metadata, and pipeline behavior.
+- Added `source:sitemap` for sitemap.xml and sitemap index URL extraction.
+- Added `source:rss` for generic RSS/Atom feed records and URLs.
+- Added `source:csv` for CSV URL lists with configurable URL columns.
+- Added `source:json` for JSON URL lists using dot paths such as `items.*.url`.
+- Added `source:api` for generic JSON API endpoints using headers and URL extraction paths.
+- Added `source:urls` to convert connector JSON output into plain URL lists.
+- Added connector outputs in JSON, CSV, and TXT URL-list formats.
+- Kept V1.0.1 safety, checkpoint, failure classification, and pipeline improvements.
 
 ## Highlights
 
@@ -37,12 +39,13 @@ V1.0.1 focuses on stability, safety, and quality before adding larger features.
 - **Common data profiles** for academic, journal, conference, ecommerce, government, tender, jobs, SEO, contact, and document-focused extraction workflows.
 - **Export-ready outputs** including structured JSON and CSV results for crawl data, records, failed URLs, skipped URLs, validation issues, and pipeline summaries.
 - **Automation friendly** for PHP CLI, CMD, PowerShell, cron, Windows Task Scheduler, and server-side workflows.
-- **Future-ready architecture** designed for later expansion into source connectors, dashboards, workers, APIs, reports, and ML-assisted intelligence.
+- **Source connector system** for collecting crawl targets from sitemaps, RSS/Atom feeds, CSV files, JSON files, generic JSON APIs, PLOS, and Elsevier/ScienceDirect.
+- **Future-ready architecture** designed for later expansion into dashboards, workers, richer reports, API/webhooks, and ML-assisted intelligence.
 
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V1.0.1 CLI/library release.
+This section lists the main functionality available in the current V1.1.0 CLI/library release.
 
 ### Package and CLI
 
@@ -196,9 +199,18 @@ This section lists the main functionality available in the current V1.0.1 CLI/li
 
 ### Source connectors
 
+- Sitemap.xml reader support.
+- Sitemap index support with nested sitemap discovery.
+- Sitemap metadata extraction: `lastmod`, `changefreq`, and `priority`.
+- RSS/Atom feed reader support.
+- CSV URL source reader with configurable `--url-column`.
+- JSON URL source reader with dot-path support, for example `items.*.url`.
+- Generic JSON API URL extraction with `--path` and custom `--header` values.
+- URL-list export from connector results using `source:urls`.
+- Connector outputs in JSON, CSV, or TXT URL-list formats.
+- Optional `--crawl` handoff from source connectors into `bulk:crawl`.
 - PLOS API/feed command support.
 - Elsevier/ScienceDirect API command support.
-- RSS/Atom feed reader support.
 - Fallback discovery for sitemap, feeds, robots, and well-known source candidates.
 
 ### Optional/future-ready modules
@@ -210,7 +222,7 @@ This section lists the main functionality available in the current V1.0.1 CLI/li
 ## Package direction
 
 - First public version: **1.0.0**
-- Current version: **1.0.1** — stability, safety, and quality update
+- Current version: **1.1.0** — source connectors update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
@@ -297,6 +309,12 @@ validate:records <records>  Validate records using required fields
 job:summary <job-dir>       Show manifest and summaries
 job:run <job.json>          Run crawl/bulk job from JSON config
 source:discover <url>       Find safer source candidates
+source:sitemap <source>     Read sitemap.xml or sitemap index URLs
+source:rss <feed-url>       Read RSS/Atom feed records and URLs
+source:csv <file.csv>       Read URLs from CSV using --url-column
+source:json <file.json>     Read URLs from JSON using --path
+source:api <endpoint>       Extract URLs from a generic JSON API
+source:urls <source.json>   Export URL list from connector JSON
 plos:*                      PLOS API/feed source commands
 elsevier:*                  Elsevier/ScienceDirect API source commands
 ```
@@ -307,6 +325,57 @@ Useful help commands:
 php bin/mnb-scraper list
 php bin/mnb-scraper crawl --help
 php bin/mnb-scraper pipeline:run --help
+```
+
+## Source connector examples
+
+Read URLs from a sitemap and save JSON:
+
+```bash
+php bin/mnb-scraper source:sitemap "https://example.com/sitemap.xml" --rows=1000 --output=sitemap-source.json
+```
+
+Export sitemap URLs as a plain TXT list for bulk crawling:
+
+```bash
+php bin/mnb-scraper source:sitemap "https://example.com/sitemap.xml" --format=txt --output=urls.txt
+php bin/mnb-scraper bulk:crawl urls.txt --delay-ms=1000 --pipeline
+```
+
+Read RSS/Atom records:
+
+```bash
+php bin/mnb-scraper source:rss "https://example.com/feed.xml" --rows=50 --format=json
+```
+
+Read URLs from CSV:
+
+```bash
+php bin/mnb-scraper source:csv urls.csv --url-column=url --format=txt --output=urls.txt
+```
+
+Read URLs from JSON with a dot path:
+
+```bash
+php bin/mnb-scraper source:json urls.json --path="items.*.url" --format=txt --output=urls.txt
+```
+
+Read URLs from a generic JSON API:
+
+```bash
+php bin/mnb-scraper source:api "https://api.example.com/items" --path="data.*.url" --header="Accept: application/json" --format=json
+```
+
+Export URLs from any connector JSON output:
+
+```bash
+php bin/mnb-scraper source:urls sitemap-source.json --output=urls.txt
+```
+
+Use `--crawl` on connector commands to hand the discovered URLs directly to `bulk:crawl`:
+
+```bash
+php bin/mnb-scraper source:sitemap "https://example.com/sitemap.xml" --format=txt --crawl --delay-ms=1000 --pipeline
 ```
 
 ## Professional pipeline
@@ -472,7 +541,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V1.0.1 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V1.1.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 

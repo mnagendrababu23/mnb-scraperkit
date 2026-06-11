@@ -32,6 +32,10 @@ use Mnb\ScraperKit\Source\Plos\PlosJournalCatalog;
 use Mnb\ScraperKit\Source\Elsevier\ElsevierApiClient;
 use Mnb\ScraperKit\Source\Elsevier\ElsevierJournalCatalog;
 use Mnb\ScraperKit\Source\Rss\RssFeedReader;
+use Mnb\ScraperKit\Source\Sitemap\SitemapReader;
+use Mnb\ScraperKit\Source\Csv\CsvUrlSourceReader;
+use Mnb\ScraperKit\Source\Json\JsonUrlSourceReader;
+use Mnb\ScraperKit\Source\Api\ApiSourceReader;
 use Mnb\ScraperKit\Support\Logger;
 use Mnb\ScraperKit\Support\UrlNormalizer;
 
@@ -76,6 +80,12 @@ final class NativeCliApplication
                 'job:summary' => $this->jobSummary($args, $opts),
                 'job:run' => $this->jobRun($args, $opts),
                 'source:discover' => $this->sourceDiscover($args, $opts),
+                'source:sitemap' => $this->sourceSitemap($args, $opts),
+                'source:rss' => $this->sourceRss($args, $opts),
+                'source:csv' => $this->sourceCsv($args, $opts),
+                'source:json' => $this->sourceJson($args, $opts),
+                'source:api' => $this->sourceApi($args, $opts),
+                'source:urls' => $this->sourceUrls($args, $opts),
                 'plos:journals' => $this->plosJournals($opts),
                 'plos:search' => $this->plosSearch($args, $opts),
                 'plos:feed' => $this->plosFeed($args, $opts),
@@ -96,7 +106,7 @@ final class NativeCliApplication
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 1.0.1 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 1.1.0 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -121,6 +131,12 @@ final class NativeCliApplication
             'job:summary <job-dir>' => 'Show job manifest and pipeline/crawl summaries.',
             'job:run <job.json>' => 'Run crawl job from JSON config.',
             'source:discover <url>' => 'Check fallback sources such as sitemap, feeds, robots, and well-known endpoints.',
+            'source:sitemap <sitemap>' => 'Read sitemap.xml or sitemap index and export crawlable URLs.',
+            'source:rss <feed-url>' => 'Read RSS/Atom feed and export normalized feed records/URLs.',
+            'source:csv <file.csv>' => 'Read crawl URLs from a CSV file with a configurable URL column.',
+            'source:json <file.json>' => 'Read crawl URLs from JSON using a dot path such as items.*.url.',
+            'source:api <endpoint>' => 'Fetch a JSON API endpoint and extract URLs using a dot path.',
+            'source:urls <source.json>' => 'Export URL list from a source connector JSON output.',
             'plos:journals' => 'List known PLOS journals, API names, homepages, and feed candidates.',
             'plos:search <query>' => 'Use the official PLOS Search API and return normalized article records.',
             'plos:feed <journal>' => 'Fetch a PLOS journal RSS/Atom feed and normalize article records.',
@@ -741,6 +757,101 @@ final class NativeCliApplication
     }
 
 
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function sourceSitemap(array $args, array $opts): int
+    {
+        $source = $args[0] ?? null;
+        if (!$source) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper source:sitemap <sitemap.xml|url> [--format=json|csv|txt] [--output=file]');
+        }
+        $data = (new SitemapReader($this->httpClient($opts)))->read(
+            $source,
+            $this->crawlOptions($opts),
+            (int) $this->opt($opts, 'rows', $this->opt($opts, 'max', 1000)),
+            (int) $this->opt($opts, 'max-sitemaps', 50)
+        );
+        return $this->outputSourceData($data, $opts, 'sitemap');
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function sourceRss(array $args, array $opts): int
+    {
+        $feedUrl = $args[0] ?? $this->optString($opts, 'feed-url');
+        if (!$feedUrl) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper source:rss <feed-url> [--format=json|csv|txt] [--output=file]');
+        }
+        $data = (new RssFeedReader($this->httpClient($opts)))->read($feedUrl, $this->crawlOptions($opts), (int) $this->opt($opts, 'rows', 100));
+        return $this->outputSourceData($data, $opts, 'rss');
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function sourceCsv(array $args, array $opts): int
+    {
+        $file = $args[0] ?? null;
+        if (!$file) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper source:csv <file.csv> [--url-column=url] [--format=json|csv|txt]');
+        }
+        $data = (new CsvUrlSourceReader())->read(
+            $file,
+            $this->optString($opts, 'url-column', 'url') ?? 'url',
+            (int) $this->opt($opts, 'rows', $this->opt($opts, 'max', 10000)),
+            $this->optString($opts, 'delimiter', ',') ?? ','
+        );
+        return $this->outputSourceData($data, $opts, 'csv-source');
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function sourceJson(array $args, array $opts): int
+    {
+        $file = $args[0] ?? null;
+        if (!$file) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper source:json <file.json> [--path=items.*.url] [--format=json|csv|txt]');
+        }
+        $data = (new JsonUrlSourceReader())->read(
+            $file,
+            $this->optString($opts, 'path'),
+            (int) $this->opt($opts, 'rows', $this->opt($opts, 'max', 10000))
+        );
+        return $this->outputSourceData($data, $opts, 'json-source');
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function sourceApi(array $args, array $opts): int
+    {
+        $endpoint = $args[0] ?? null;
+        if (!$endpoint) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper source:api <endpoint> [--path=data.*.url] [--header="Name: value"]');
+        }
+        $data = (new ApiSourceReader($this->httpClient($opts)))->read(
+            $endpoint,
+            $this->crawlOptions($opts),
+            $this->optString($opts, 'path'),
+            (int) $this->opt($opts, 'rows', $this->opt($opts, 'max', 10000)),
+            $this->headersFromCli($opts)
+        );
+        return $this->outputSourceData($data, $opts, 'api-source');
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function sourceUrls(array $args, array $opts): int
+    {
+        $input = $args[0] ?? null;
+        if (!$input || !is_file($input)) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper source:urls <source-output.json> [--output=urls.txt]');
+        }
+        $data = json_decode((string) file_get_contents($input), true);
+        if (!is_array($data)) {
+            throw new \RuntimeException('Invalid source connector JSON file.');
+        }
+        $urls = $this->urlsFromSourceData($data);
+        $output = $this->optString($opts, 'output') ?: $this->storagePath('source-urls-' . date('Ymd-His') . '.txt');
+        $this->writeTextLines($output, $urls);
+        $this->out('URLs: ' . count($urls));
+        $this->out('Output: ' . $output);
+        return 0;
+    }
+
     /** @param array<string,mixed> $opts */
     private function plosJournals(array $opts): int
     {
@@ -1052,6 +1163,71 @@ final class NativeCliApplication
         return preg_match('~^10\.\d{4,9}/\S+$~i', trim($value)) === 1;
     }
 
+
+
+    /** @param array<string,mixed> $data @param array<string,mixed> $opts */
+    private function outputSourceData(array $data, array $opts, string $prefix): int
+    {
+        $format = strtolower($this->optString($opts, 'format', 'json') ?? 'json');
+        $records = is_array($data['records'] ?? null) ? array_values(array_filter($data['records'], 'is_array')) : [];
+        $output = $this->optString($opts, 'output');
+
+        if ($format === 'txt' || $format === 'urls') {
+            $output ??= $this->storagePath($prefix . '-urls-' . date('Ymd-His') . '.txt');
+            $this->writeTextLines($output, $this->urlsFromSourceData($data));
+            $this->out('URLs: ' . count($this->urlsFromSourceData($data)));
+            $this->out('Output: ' . $output);
+        } elseif ($format === 'csv') {
+            $output ??= $this->storagePath($prefix . '-' . date('Ymd-His') . '.csv');
+            (new PipelineExporter())->exportCsv($records, $output);
+            $this->out('Records: ' . count($records));
+            $this->out('Output: ' . $output);
+        } else {
+            $output ??= $this->storagePath($prefix . '-' . date('Ymd-His') . '.json');
+            $this->writeJson($output, $data);
+            if ($this->bool($opts, 'json')) {
+                $this->outJson($data);
+            } else {
+                $this->out('Records: ' . count($records));
+                $this->out('Output: ' . $output);
+            }
+        }
+
+        if ($this->bool($opts, 'crawl')) {
+            $urlFile = $this->storagePath($prefix . '-crawl-urls-' . date('Ymd-His') . '.txt');
+            $this->writeTextLines($urlFile, $this->urlsFromSourceData($data));
+            $this->out('Starting crawl from source URLs: ' . $urlFile);
+            $crawlOpts = $opts;
+            unset($crawlOpts['crawl'], $crawlOpts['output'], $crawlOpts['format'], $crawlOpts['json']);
+            return $this->bulkCrawl([$urlFile], $crawlOpts);
+        }
+
+        return 0;
+    }
+
+    /** @param array<string,mixed> $data @return array<int,string> */
+    private function urlsFromSourceData(array $data): array
+    {
+        $records = is_array($data['records'] ?? null) ? $data['records'] : [];
+        $urls = [];
+        foreach ($records as $record) {
+            if (!is_array($record)) {
+                continue;
+            }
+            $url = (string) ($record['url'] ?? $record['loc'] ?? $record['link'] ?? '');
+            if ($url !== '' && filter_var($url, FILTER_VALIDATE_URL) !== false && preg_match('~^https?://~i', $url) === 1) {
+                $urls[] = $url;
+            }
+        }
+        return array_values(array_unique($urls));
+    }
+
+    /** @param array<int,string> $lines */
+    private function writeTextLines(string $path, array $lines): void
+    {
+        $this->ensureDir(dirname($path));
+        file_put_contents($path, implode(PHP_EOL, $lines) . ($lines === [] ? '' : PHP_EOL));
+    }
 
     /** @param array<string,mixed> $opts */
     private function httpClient(array $opts): HttpClient
@@ -1510,7 +1686,7 @@ final class NativeCliApplication
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '1.0.1',
+            'checkpoint_version' => '1.1.0',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),
