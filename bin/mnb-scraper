@@ -1,0 +1,27 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+$root = dirname(__DIR__);
+
+$composerAutoload = $root . '/vendor/autoload.php';
+if (is_file($composerAutoload)) {
+    require $composerAutoload;
+} else {
+    require $root . '/autoload.php';
+}
+
+if (!class_exists(Symfony\Component\Console\Application::class)) {
+    fwrite(STDERR, "MNB ScraperKit requires Symfony Console for this CLI build.\n");
+    fwrite(STDERR, "Run: composer install\n");
+    fwrite(STDERR, "Then: php bin/mnb-scraper list\n");
+    exit(1);
+}
+
+use Mnb\ScraperKit\Console\ScraperKitApplication;
+
+$configFile = $root . '/config/scraper.php';
+$config = is_file($configFile) ? require $configFile : [];
+
+exit(ScraperKitApplication::create($config, $root)->run());

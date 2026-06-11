@@ -1,0 +1,24 @@
+{
+  "name": "springer-journal-a-pipeline",
+  "start_url": "https://link.springer.com/journals/a/1",
+  "output_dir": "storage/jobs/springer-journal-a-pipeline",
+  "include_html": false,
+  "crawl": {
+    "max_pages": 20,
+    "max_depth": 1,
+    "delay_ms": 800,
+    "extract_preset": "springer-journals",
+    "common_data": true,
+    "common_data_profile": "journal",
+    "allow_path_patterns": ["/journals/*", "/journal/*"],
+    "skip_identity_provider_final_urls": true,
+    "same_final_host": false
+  },
+  "pipeline": {
+    "enabled": true,
+    "format": "both",
+    "required_fields": ["journal_name"],
+    "dedupe_keys": ["journal_url"],
+    "min_quality": 50
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "type": "crawl",
+  "url": "https://quotes.toscrape.com/",
+  "job_dir": "storage/jobs/simple-http-engine-test",
+  "options": {
+    "http_engine": "auto",
+    "max_pages": 10,
+    "max_depth": 1,
+    "common_profile": "all",
+    "pipeline": true,
+    "pipeline_format": "both"
+  }
+}

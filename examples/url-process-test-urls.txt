@@ -1,0 +1,4 @@
+https://example.com
+https://quotes.toscrape.com/
+https://books.toscrape.com/
+https://httpbin.org/html

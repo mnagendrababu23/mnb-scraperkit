@@ -1,0 +1,9 @@
+{
+  "type": "source-plos-api",
+  "description": "Example metadata workflow: use plos:search directly from CLI for current implementation.",
+  "commands": [
+    "php bin/mnb-scraper plos:journals",
+    "php bin/mnb-scraper plos:search \"*:*\" --journal=plosone --rows=25 --json",
+    "php bin/mnb-scraper plos:urls \"*:*\" --journal=plosone --type=article --rows=100 --output=storage/plosone-urls.txt"
+  ]
+}

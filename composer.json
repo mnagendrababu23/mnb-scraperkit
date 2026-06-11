@@ -1,0 +1,40 @@
+{
+  "name": "mnb/scraperkit",
+  "description": "MNB ScraperKit V1.0 - professional PHP crawling and data extraction framework with Symfony Console commands, safe HTTP crawling, resumable jobs, manifests, pipelines, exports, and reports.",
+  "type": "library",
+  "license": "MIT",
+  "version": "1.0.0",
+  "require": {
+    "php": ">=8.2",
+    "ext-dom": "*",
+    "ext-json": "*",
+    "ext-mbstring": "*",
+    "symfony/console": "^6.4 || ^7.0"
+  },
+  "suggest": {
+    "ext-curl": "Recommended for the cURL HTTP engine. The stream/file_get_contents engine works without cURL when allow_url_fopen is enabled.",
+    "ext-pdo": "Needed only for database storage features."
+  },
+  "autoload": {
+    "psr-4": {
+      "Mnb\\ScraperKit\\": "src/"
+    }
+  },
+  "bin": [
+    "bin/mnb-scraper"
+  ],
+  "scripts": {
+    "test": "php -d zend.assertions=1 -d assert.exception=1 tests/run-tests.php",
+    "scraper:list": "php bin/mnb-scraper list"
+  },
+  "keywords": [
+    "scraper",
+    "crawler",
+    "web-scraping",
+    "php",
+    "cli",
+    "symfony-console",
+    "pipeline",
+    "data-extraction"
+  ]
+}

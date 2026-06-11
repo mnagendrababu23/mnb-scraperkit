@@ -1,0 +1,14 @@
+{
+  "type": "source-connector",
+  "connector": "elsevier:search",
+  "query": "machine learning",
+  "options": {
+    "rows": 25,
+    "view": "STANDARD",
+    "format": "json",
+    "output": "storage/elsevier-machine-learning.json"
+  },
+  "environment": {
+    "api_key": "Set ELSEVIER_API_KEY in your environment before running."
+  }
+}
