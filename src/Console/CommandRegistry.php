@@ -121,6 +121,12 @@ final class CommandRegistry
             'retry:failed' => 'Create a retry URL list from failed crawl pages.',
             'export:records' => 'Export pipeline records to JSON, CSV, XML, or HTML.',
             'export:validation' => 'Export validation issues from pipeline output as JSON, CSV, or XML.',
+            'export:connector-list' => 'List configured export delivery connectors for local folders and webhook automation.',
+            'export:connector-show' => 'Show one export connector configuration.',
+            'export:connector-validate' => 'Validate export connector configuration.',
+            'export:connector-test' => 'Dry-run an export connector delivery with a generated sample artifact.',
+            'export:deliver' => 'Deliver selected export/report/dataset files through a configured connector.',
+            'export:manifest' => 'Build a checksum manifest for selected export artifacts.',
             'validate:records' => 'Validate records using required fields.',
             'job:summary' => 'Show job manifest, crawl summary, and pipeline summary.',
             'job:run' => 'Run one queued job by ID, or run a legacy JSON job configuration.',
@@ -144,6 +150,7 @@ final class CommandRegistry
         ];
     }
 
+    /** @return list<string> */
     /** @return list<string> */
     /** @return list<string> */
     public static function optionNames(): array
@@ -388,6 +395,7 @@ final class CommandRegistry
             'no-html',
             'once',
             'stop-on-error',
+            'send',
             'distributed-adapter',
             'adapter',
             'redis-url',
@@ -404,6 +412,10 @@ final class CommandRegistry
             'payload-file',
             'message',
             'theme',
+            'connector',
+            'dir',
+            'extension',
+            'allowed-extension',
         ];
     }
 
@@ -467,6 +479,7 @@ final class CommandRegistry
             'no-html',
             'once',
             'stop-on-error',
+            'send',
         ];
     }
 }

@@ -1,9 +1,9 @@
 {
     "name": "mnb/scraperkit",
-    "description": "MNB ScraperKit V3.5.0 - professional PHP crawling and data extraction framework with Symfony Console commands, safe crawling, source connectors, reports, profiles, queue workers, browser-assisted crawling, authorized browser sessions, database storage, monitoring, plugins, API/webhooks, dashboard UI, ML-ready intelligence, datasets, evaluation tools, and optional distributed Redis workers.",
+    "description": "MNB ScraperKit V3.6.0 - professional PHP crawling and data extraction framework with Symfony Console commands, safe crawling, source connectors, reports, profiles, queue workers, browser sessions, database storage, monitoring, plugins, API/webhooks, dashboard UI, ML-ready intelligence, datasets, distributed workers, and advanced export connectors.",
     "type": "library",
     "license": "MIT",
-    "version": "3.5.0",
+    "version": "3.6.0",
     "require": {
         "php": ">=8.2",
         "ext-dom": "*",
@@ -18,7 +18,7 @@
         "chrome/chromium": "Needed only when using browser-assisted crawling through Panther/Chrome.",
         "pdo_sqlite": "Optional SQLite driver for local database storage.",
         "pdo_mysql": "Optional MySQL/MariaDB driver for server database storage.",
-        "php-ai/php-ml": "Optional machine-learning toolkit for future model training/inference. V3.5.0 includes deterministic ML-ready features, dataset annotations, evaluation reports, rule-builder assisted profile creation, and training-ready exports without requiring this dependency.",
+        "php-ai/php-ml": "Optional machine-learning toolkit for future model training/inference. V3.6.0 includes deterministic ML-ready features, dataset annotations, evaluation reports, rule-builder assisted profile creation, training-ready exports, and export connector delivery manifests without requiring this dependency.",
         "ext-redis": "Optional Redis extension for distributed multi-worker queue mode. File-based distributed queue fallback works without Redis."
     },
     "autoload": {
@@ -160,6 +160,13 @@
         "job-leasing",
         "worker-heartbeats",
         "multi-worker",
-        "distributed-crawling"
+        "distributed-crawling",
+        "export-connectors",
+        "export-delivery",
+        "delivery-manifest",
+        "checksum-manifest",
+        "webhook-export",
+        "artifact-delivery",
+        "downstream-automation"
     ]
 }

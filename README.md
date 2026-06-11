@@ -1,8 +1,8 @@
-# MNB ScraperKit V3.5.0
+# MNB ScraperKit V3.6.0
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V3.5.0 is the Distributed Workers and Redis Queue Update. It adds an optional distributed queue layer, Redis adapter support, a file-based distributed queue fallback, job leases, worker heartbeats, distributed worker commands, and API/dashboard-ready queue status for multi-worker crawling deployments.
+V3.6.0 is the Advanced Export Connectors Update. It adds safe export delivery connectors, checksum manifests, local delivery folders, webhook dry-run payloads, connector validation, and API-ready connector metadata for moving crawl/report/dataset artifacts into downstream workflows.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,25 +16,25 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V3.5.0 update focus
+## V3.6.0 update focus
 
-V3.5.0 focuses on distributed worker execution. After ScraperKit added local queues, scheduling, browser workflows, datasets, evaluation, and a dashboard/API layer, this release adds a distributed queue abstraction for running crawl jobs across multiple worker processes or servers.
+V3.6.0 focuses on export delivery and downstream automation. After ScraperKit added reports, datasets, evaluation, API/webhooks, dashboard, distributed workers, and browser/session workflows, this release adds a connector layer for packaging and delivering generated artifacts.
 
-Redis support is optional. ScraperKit still works without Redis by using the file-based distributed queue adapter, which is useful for development, testing, and single-server deployments.
+Export connectors are configuration-only and safe by default. Local delivery works immediately. Webhook connectors generate a payload without sending unless `--send` is explicitly used.
 
-- Added distributed queue configuration and adapter contracts.
-- Added optional Redis queue adapter using PHP `ext-redis` when available.
-- Added file-based distributed queue fallback under `storage/distributed-queue/`.
-- Added job leasing, worker IDs, lease expiry, and heartbeat refresh support.
-- Added distributed commands: `distributed:doctor`, `distributed:status`, `distributed:enqueue`, `distributed:reserve`, `distributed:ack`, `distributed:fail`, `distributed:heartbeat`, and `distributed:purge`.
-- Added `worker:distributed` for distributed worker loops with `--max-jobs`, `--sleep`, `--stop-when-empty`, `--dry-run`, and adapter options.
-- Added API routes for distributed status and distributed doctor checks.
-- Added CMD/PowerShell helper scripts for distributed worker and doctor workflows.
-- Kept V3.4.0 browser sessions/authorized login workflows, V3.3.0 rule builder/auto-profile assistant, V3.2.0 evaluation/benchmarking/training quality, V3.1.0 dataset versioning/annotations, V3.0.0 ML-ready intelligence, V2.0.0 dashboard/admin UI, V1.9.0 API/webhooks, V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
+- Added export connector configuration: `config/export-connectors.example.json`.
+- Added safe local export delivery into `storage/export-deliveries/`.
+- Added webhook delivery payload generation for automation systems.
+- Added checksum export manifests with file size, extension, SHA-256, and modified time.
+- Added connector validation and dry-run test commands.
+- Added commands: `export:connector-list`, `export:connector-show`, `export:connector-validate`, `export:connector-test`, `export:deliver`, and `export:manifest`.
+- Added API routes for export connector discovery.
+- Kept V3.5.0 distributed workers/Redis queue, V3.4.0 browser sessions/authorized login workflows, V3.3.0 rule builder/auto-profile assistant, V3.2.0 evaluation/benchmarking/training quality, V3.1.0 dataset versioning/annotations, V3.0.0 ML-ready intelligence, V2.0.0 dashboard/admin UI, V1.9.0 API/webhooks, V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
 
 ## Highlights
 
 - **Professional PHP CLI framework** built as a Composer package with Symfony Console commands.
+- **Advanced export connectors** for local artifact delivery, webhook payload automation, checksum manifests, connector validation, and downstream workflow handoff.
 - **Distributed workers and optional Redis queue** with adapter auto-selection, file fallback, job leases, heartbeats, distributed worker loops, and multi-worker deployment support.
 - **Advanced browser sessions for authorized workflows** with allowed-domain session profiles, manual login assist, cookie/session artifacts, session tests, and `--session` crawl support.
 - **Rule builder and auto-profile assistant** for analyzing HTML, suggesting profile types, generating starter schemas, testing rules, scaffolding profiles, and finding rule gaps.
@@ -61,7 +61,7 @@ Redis support is optional. ScraperKit still works without Redis by using the fil
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V3.5.0 CLI/library release.
+This section lists the main functionality available in the current V3.6.0 CLI/library release.
 
 ### Package and CLI
 
@@ -100,6 +100,28 @@ Redis example:
 set MNB_SCRAPERKIT_REDIS_URL=redis://127.0.0.1:6379/0
 php bin/mnb-scraper distributed:enqueue --command=bulk:crawl --arg=urls.txt --distributed-adapter=redis
 php bin/mnb-scraper worker:distributed --distributed-adapter=redis --worker-group=seo-workers --max-jobs=100
+```
+
+### Advanced export connectors
+
+- `export:connector-list` lists configured export delivery connectors.
+- `export:connector-show <connector-id>` shows one connector definition.
+- `export:connector-validate` checks connector IDs, types, local target paths, and webhook endpoints.
+- `export:connector-test <connector-id>` creates a sample artifact and dry-runs the connector.
+- `export:manifest <file|dir>` builds a checksum manifest with size, extension, SHA-256, and modified time.
+- `export:deliver <connector-id> --file=records.json --file=report.html` delivers selected artifacts.
+- Local connectors copy artifacts into a delivery folder with `delivery-manifest.json`.
+- Webhook connectors create a JSON payload and only send when `--send` is explicitly used.
+- Connector configuration is stored in `config/export-connectors.json`; a safe example is provided in `config/export-connectors.example.json`.
+
+Example:
+
+```bash
+php bin/mnb-scraper export:connector-list
+php bin/mnb-scraper export:connector-validate
+php bin/mnb-scraper export:manifest storage/jobs/example --output=storage/jobs/example/export-manifest.json
+php bin/mnb-scraper export:deliver local_exports --dir=storage/jobs/example
+php bin/mnb-scraper export:connector-test webhook_dry_run
 ```
 
 ### Advanced browser sessions and authorized login workflows
@@ -255,7 +277,7 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 - Plugin enable/disable controls by editing the manifest `enabled` flag.
 - Plugin doctor command for validating all discovered plugins.
 - Plugin-contributed profiles available to `profile:list`, `profile:show`, `extract:rules`, and pipeline/profile workflows.
-- Safe-by-default design: V3.5.0 does not automatically execute arbitrary plugin PHP code.
+- Safe-by-default design: V3.6.0 does not automatically execute arbitrary plugin PHP code.
 
 ### Lightweight API and webhooks
 
@@ -427,6 +449,9 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 
 ### Export, reports, and bundles
 
+- Advanced export connector layer for local delivery folders and webhook automation payloads.
+- Export checksum manifests with SHA-256, file sizes, extensions, and modified timestamps.
+- Export connector validation, dry-run testing, and delivery result manifests.
 - Crawl result JSON export.
 - Pipeline record JSON export.
 - Pipeline record CSV export.
@@ -468,7 +493,7 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 ## Package direction
 
 - First public version: **1.0.0**
-- Current version: **3.5.0** — Rule builder and auto-profile assistant update
+- Current version: **3.6.0** — Advanced export connectors update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
@@ -1163,7 +1188,7 @@ ScraperKit focuses on practical export-ready outputs:
 - pipeline summaries
 - job manifest summaries
 
-PDF reports and dedicated browser-worker orchestration remain future upgrade areas. The current V3.5.0 release already includes CLI workflows, local and distributed queue/worker commands, optional Redis queue support, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
+PDF reports and richer role-based enterprise orchestration remain future upgrade areas. The current V3.6.0 release already includes CLI workflows, source connectors, exports/reports/bundles, export delivery connectors, local and distributed queue/worker commands, optional Redis queue support, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
 
 ## Windows CMD
 
@@ -1190,7 +1215,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V3.5.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V3.6.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 

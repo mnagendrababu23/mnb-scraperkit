@@ -1,0 +1,21 @@
+{
+  "export_connector_version": "3.6.0",
+  "connectors": [
+    {
+      "id": "local_exports",
+      "type": "local",
+      "enabled": true,
+      "description": "Copy selected export/report/dataset artifacts into a local delivery folder.",
+      "target_dir": "storage/export-deliveries/local_exports",
+      "allowed_extensions": ["json", "csv", "xml", "html", "txt", "jsonl", "zip"]
+    },
+    {
+      "id": "webhook_dry_run",
+      "type": "webhook",
+      "enabled": true,
+      "description": "Build a webhook payload for export delivery automation. It does not send unless --send is used.",
+      "endpoint": "https://example.com/webhooks/mnb-scraperkit/export",
+      "allowed_extensions": ["json", "csv", "xml", "html", "txt", "jsonl", "zip"]
+    }
+  ]
+}

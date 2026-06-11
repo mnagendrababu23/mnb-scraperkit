@@ -11,6 +11,7 @@ use Mnb\ScraperKit\Dataset\DatasetStore;
 use Mnb\ScraperKit\Distributed\DistributedQueueConfig;
 use Mnb\ScraperKit\Distributed\DistributedQueueManager;
 use Mnb\ScraperKit\Evaluation\DatasetEvaluator;
+use Mnb\ScraperKit\Export\ExportConnectorStore;
 use Mnb\ScraperKit\Monitoring\MonitoringSnapshot;
 use Mnb\ScraperKit\Plugin\PluginManager;
 use Mnb\ScraperKit\Profile\ProfileSchemaLoader;
@@ -26,7 +27,7 @@ use Mnb\ScraperKit\RuleBuilder\AutoProfileAssistant;
  */
 final class ApiRouter
 {
-    public const VERSION = '3.5.0';
+    public const VERSION = '3.6.0';
 
     public function __construct(
         private readonly string $rootDir,
@@ -56,6 +57,8 @@ final class ApiRouter
             ['method' => 'GET', 'path' => '/api/v1/datasets/{dataset_id}/evaluation', 'description' => 'Evaluate one dataset for quality, completeness, and training readiness.'],
             ['method' => 'GET', 'path' => '/api/v1/rule-builder/templates', 'description' => 'List auto-profile rule builder template names and assistant version.'],
             ['method' => 'GET', 'path' => '/api/v1/browser/sessions', 'description' => 'List authorized browser session profiles.'],
+            ['method' => 'GET', 'path' => '/api/v1/export-connectors', 'description' => 'List configured export delivery connectors.'],
+            ['method' => 'GET', 'path' => '/api/v1/export-connectors/{connector_id}', 'description' => 'Read one export delivery connector.'],
             ['method' => 'GET', 'path' => '/api/v1/browser/sessions/{name}', 'description' => 'Read one authorized browser session profile.'],
         ];
     }
@@ -195,6 +198,24 @@ final class ApiRouter
             ]);
         }
 
+
+
+        if ($method === 'GET' && $path === '/api/v1/export-connectors') {
+            $store = new ExportConnectorStore($this->rootDir);
+            return new ApiResponse(200, [
+                'ok' => true,
+                'export_connector_version' => self::VERSION,
+                'connectors' => $store->list(),
+            ]);
+        }
+
+        if ($method === 'GET' && preg_match('#^/api/v1/export-connectors/([^/]+)$#', $path, $m)) {
+            $store = new ExportConnectorStore($this->rootDir);
+            return new ApiResponse(200, [
+                'ok' => true,
+                'connector' => $store->show(rawurldecode($m[1])),
+            ]);
+        }
 
         if ($method === 'GET' && $path === '/api/v1/browser/sessions') {
             $store = new BrowserSessionStore($this->rootDir);

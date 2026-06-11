@@ -46,6 +46,9 @@ use Mnb\ScraperKit\Core\ProtectionPageDetector;
 use Mnb\ScraperKit\Discovery\FallbackSourceDiscovery;
 use Mnb\ScraperKit\Encoding\EncodingConverter;
 use Mnb\ScraperKit\Encoding\EncodingDetector;
+use Mnb\ScraperKit\Export\ExportConnectorStore;
+use Mnb\ScraperKit\Export\ExportDeliveryService;
+use Mnb\ScraperKit\Export\ExportManifestBuilder;
 use Mnb\ScraperKit\Extractor\CommonDataExtractor;
 use Mnb\ScraperKit\Extractor\RuleBasedExtractor;
 use Mnb\ScraperKit\Network\ExitPointManager;
@@ -223,6 +226,12 @@ final class NativeCliApplication
                 'retry:failed' => $this->retryFailed($args, $opts),
                 'export:records' => $this->exportRecords($args, $opts),
                 'export:validation' => $this->exportValidation($args, $opts),
+                'export:connector-list' => $this->exportConnectorList($args, $opts),
+                'export:connector-show' => $this->exportConnectorShow($args, $opts),
+                'export:connector-validate' => $this->exportConnectorValidate($args, $opts),
+                'export:connector-test' => $this->exportConnectorTest($args, $opts),
+                'export:deliver' => $this->exportDeliver($args, $opts),
+                'export:manifest' => $this->exportManifest($args, $opts),
                 'validate:records' => $this->validateRecords($args, $opts),
                 'job:summary' => $this->jobSummary($args, $opts),
                 'job:run' => $this->jobRun($args, $opts),
@@ -253,7 +262,7 @@ final class NativeCliApplication
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 3.5.0 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 3.6.0 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -1296,7 +1305,7 @@ final class NativeCliApplication
         $manifest = $context['manifest'];
         $datasetDir = (string) ($manifest['_dataset_dir'] ?? $this->rootDir . '/storage/datasets');
         $output = $this->optString($opts, 'output') ?: rtrim($datasetDir, '/\\') . '/annotations-export.' . ($format === 'csv' ? 'csv' : ($format === 'json' ? 'json' : 'jsonl'));
-        $this->exportRows($rows, $output, $format, ['annotation_export_version' => '3.5.0', 'rows_total' => count($rows)]);
+        $this->exportRows($rows, $output, $format, ['annotation_export_version' => '3.6.0', 'rows_total' => count($rows)]);
         $this->outJson(['ok' => true, 'rows_exported' => count($rows), 'format' => $format, 'output' => $output]);
         return 0;
     }
@@ -1432,7 +1441,7 @@ final class NativeCliApplication
         $output = $this->optString($opts, 'output') ?: $this->storagePath('webhooks/test-' . date('Ymd-His') . '.json');
         $payload = [
             'message' => 'MNB ScraperKit webhook test event',
-            'version' => '3.5.0',
+            'version' => '3.6.0',
             'generated_at' => date(DATE_ATOM),
         ];
         $dispatcher = new WebhookDispatcher($this->safetyGuard());
@@ -2194,6 +2203,149 @@ final class NativeCliApplication
         $this->out('Validation issues: ' . count($issues));
         $this->out('Output: ' . $output);
         return count($issues) > 0 ? 2 : 0;
+    }
+
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function exportConnectorList(array $args, array $opts): int
+    {
+        $store = new ExportConnectorStore($this->rootDir);
+        $connectors = $store->list($this->optString($opts, 'config'));
+        $data = [
+            'export_connector_version' => '3.6.0',
+            'connectors_total' => count($connectors),
+            'connectors' => $connectors,
+        ];
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($data);
+            return 0;
+        }
+        $this->out('Export connectors: ' . count($connectors));
+        foreach ($connectors as $connector) {
+            $this->out(sprintf('  %s  type=%s  enabled=%s  %s',
+                (string) ($connector['id'] ?? ''),
+                (string) ($connector['type'] ?? ''),
+                !empty($connector['enabled']) ? 'yes' : 'no',
+                (string) ($connector['description'] ?? '')
+            ));
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function exportConnectorShow(array $args, array $opts): int
+    {
+        $id = $args[0] ?? $this->optString($opts, 'connector');
+        if (!$id) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper export:connector-show <connector-id>');
+        }
+        $connector = (new ExportConnectorStore($this->rootDir))->show($id, $this->optString($opts, 'config'));
+        $this->outJson(['ok' => true, 'export_connector_version' => '3.6.0', 'connector' => $connector]);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function exportConnectorValidate(array $args, array $opts): int
+    {
+        $result = (new ExportConnectorStore($this->rootDir))->validate($this->optString($opts, 'config'));
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($result);
+        } else {
+            $this->out('Export connector config: ' . (!empty($result['ok']) ? 'OK' : 'Needs attention'));
+            $this->out('Connectors: ' . (string) ($result['connectors_total'] ?? 0));
+            foreach ((array) ($result['issues'] ?? []) as $issue) {
+                if (is_array($issue)) {
+                    $this->out('  - ' . (string) ($issue['connector'] ?? '') . ': ' . (string) ($issue['message'] ?? ''));
+                }
+            }
+        }
+        return !empty($result['ok']) ? 0 : 2;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function exportConnectorTest(array $args, array $opts): int
+    {
+        $id = $args[0] ?? $this->optString($opts, 'connector', 'local_exports');
+        $sample = $this->storagePath('export-connector-test/sample-export.json');
+        $this->writeJson($sample, [
+            'export_connector_test' => true,
+            'version' => '3.6.0',
+            'generated_at' => date(DATE_ATOM),
+            'message' => 'Sample export artifact for connector dry run.',
+        ]);
+        $connector = (new ExportConnectorStore($this->rootDir))->show((string) $id, $this->optString($opts, 'config'));
+        $result = (new ExportDeliveryService($this->rootDir, $this->safetyGuard()))->deliver($connector, [$sample], ['send' => false]);
+        $this->outJson(['ok' => true, 'dry_run' => true, 'result' => $result]);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function exportDeliver(array $args, array $opts): int
+    {
+        $id = $args[0] ?? $this->optString($opts, 'connector', 'local_exports');
+        $paths = $this->exportInputPaths($opts);
+        if ($paths === []) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper export:deliver <connector-id> --file=records.json [--file=report.html] [--dir=storage/jobs/job-id]');
+        }
+        $connector = (new ExportConnectorStore($this->rootDir))->show((string) $id, $this->optString($opts, 'config'));
+        $result = (new ExportDeliveryService($this->rootDir, $this->safetyGuard()))->deliver($connector, $paths, ['send' => $this->bool($opts, 'send')]);
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($result);
+        } else {
+            $this->out('Export delivery: ' . (string) ($result['delivery_id'] ?? ''));
+            $this->out('Connector: ' . (string) ($result['connector_id'] ?? '') . ' (' . (string) ($result['connector_type'] ?? '') . ')');
+            $this->out('Files: ' . (string) ($result['manifest']['files_total'] ?? 0));
+            if (isset($result['target_dir'])) {
+                $this->out('Target: ' . (string) $result['target_dir']);
+            }
+            if (isset($result['payload_file'])) {
+                $this->out('Payload: ' . (string) $result['payload_file']);
+            }
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function exportManifest(array $args, array $opts): int
+    {
+        $paths = array_merge($args, $this->exportInputPaths($opts));
+        if ($paths === []) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper export:manifest <file|dir> [--output=manifest.json]');
+        }
+        $allowed = $this->stringList($this->opt($opts, 'extension', $this->opt($opts, 'allowed-extension', [])));
+        $manifest = (new ExportManifestBuilder())->build($paths, $allowed);
+        $output = $this->optString($opts, 'output');
+        if ($output) {
+            $this->writeJson($output, $manifest);
+            $this->out('Output: ' . $output);
+        }
+        if ($this->bool($opts, 'json') || !$output) {
+            $this->outJson($manifest);
+        } else {
+            $this->out('Files: ' . (string) ($manifest['files_total'] ?? 0));
+            $this->out('Bytes: ' . (string) ($manifest['total_bytes'] ?? 0));
+        }
+        return 0;
+    }
+
+    /** @param array<string,mixed> $opts @return list<string> */
+    private function exportInputPaths(array $opts): array
+    {
+        $paths = [];
+        foreach (['file', 'dir', 'input'] as $key) {
+            foreach ($this->stringList($this->opt($opts, $key, [])) as $path) {
+                $paths[] = $this->resolveMaybeRelativePath($path);
+            }
+        }
+        return array_values(array_unique($paths));
+    }
+
+    private function resolveMaybeRelativePath(string $path): string
+    {
+        if (preg_match('#^([A-Za-z]:)?[\\/]#', $path)) {
+            return $path;
+        }
+        return $this->rootDir . '/' . ltrim($path, '/\\');
     }
 
     /** @param array<int,string> $args @param array<string,mixed> $opts */
@@ -3966,7 +4118,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $result = (new DatabaseMigrator($pdo, $config->driver()))->migrate();
         $this->outJson([
             'ok' => true,
-            'version' => '3.5.0',
+            'version' => '3.6.0',
             'driver' => $result['driver'],
             'statements_executed' => $result['statements'],
             'tables' => $result['tables'],
@@ -3982,7 +4134,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $pdo = (new DatabaseConnectionFactory())->connect($config);
         $this->outJson([
             'ok' => true,
-            'version' => '3.5.0',
+            'version' => '3.6.0',
             'driver' => $config->driver(),
             'pdo_driver' => (string) $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME),
             'dsn' => $this->safeDsn($config->dsn),
@@ -4543,7 +4695,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '3.5.0',
+            'checkpoint_version' => '3.6.0',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),

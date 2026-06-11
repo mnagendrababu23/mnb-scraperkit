@@ -46,7 +46,7 @@ final class ProfileRuleDoctor
         }
 
         return [
-            'doctor_version' => '3.5.0',
+            'doctor_version' => '3.6.0',
             'profile' => $schema->profile,
             'record_type' => $schema->recordType,
             'valid_schema' => $issues === [],

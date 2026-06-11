@@ -1,3 +1,3 @@
 @echo off
-REM MNB ScraperKit V3.5.0 - local queue/schedule monitoring summary
+REM MNB ScraperKit V3.6.0 - local queue/schedule monitoring summary
 php "%~dp0..\bin\mnb-scraper" monitor:summary
