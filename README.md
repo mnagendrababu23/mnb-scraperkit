@@ -1,8 +1,8 @@
-# MNB ScraperKit V3.1.0
+# MNB ScraperKit V3.2.0
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V3.1.0 is the Dataset Versioning and Annotation Update. It adds dataset snapshots, normalized dataset exports, dataset diffing, quality summaries, and annotation files for review workflows and future ML training data.
+V3.2.0 is the Evaluation, Benchmarking, and Training Data Quality Update. It adds measurable dataset quality reports, field completeness matrices, profile benchmarks, selector performance checks, annotation coverage tools, and training-ready JSONL/CSV exports.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,21 +16,23 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V3.1.0 update focus
+## V3.2.0 update focus
 
-V3.1.0 focuses on dataset lifecycle tools while keeping ScraperKit lightweight and dependency-free. The new dataset layer converts crawl, pipeline, source connector, intelligence, and URL-list outputs into versioned dataset folders that can be reviewed, exported, compared, annotated, and reused for future ML workflows.
+V3.2.0 focuses on making ScraperKit's dataset and ML-ready workflows measurable. After users create datasets and annotations, they can now evaluate field completeness, validation health, duplicate rate, selector/profile performance, annotation coverage, and training readiness before exporting data for review or ML workflows.
 
-- Added `src/Dataset/` with dataset builder, store, exporter, comparator, and annotation store.
-- Added dataset commands: `dataset:create`, `dataset:list`, `dataset:show`, `dataset:diff`, and `dataset:export`.
-- Added annotation commands: `annotation:init` and `annotation:add`.
-- Added normalized dataset outputs: `dataset-manifest.json`, `records.json`, `records.jsonl`, `quality-summary.json`, and `annotations.json`.
-- Added dataset diffing for added, removed, common, and changed records.
-- Added dataset API routes for listing and showing dataset snapshots.
-- Kept V3.0.0 ML-ready intelligence, V2.0.0 dashboard/admin UI, V1.9.0 API/webhooks, V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
+- Added `src/Evaluation/` with dataset evaluator, profile benchmark, selector performance evaluator, annotation quality helper, and evaluation exporter.
+- Added evaluation commands: `eval:dataset`, `eval:pipeline`, `eval:profile`, and `eval:selectors`.
+- Added benchmark commands: `benchmark:profile` and `benchmark:compare`.
+- Added annotation QA commands: `annotation:stats`, `annotation:coverage`, and `annotation:export`.
+- Upgraded `dataset:export` with `--training-ready` and `--training-type=classification|quality|validation` for JSON, CSV, and JSONL outputs.
+- Added field quality matrix reports with completeness percentage, missing percentage, missing examples, duplicate counts, low-quality examples, annotation coverage, and training-readiness score.
+- Added dataset evaluation API route: `/api/v1/datasets/{dataset_id}/evaluation`.
+- Kept V3.1.0 dataset versioning/annotations, V3.0.0 ML-ready intelligence, V2.0.0 dashboard/admin UI, V1.9.0 API/webhooks, V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
 
 ## Highlights
 
 - **Professional PHP CLI framework** built as a Composer package with Symfony Console commands.
+- **Evaluation, benchmarking, and training data quality layer** for field completeness, validation health, duplicate analysis, profile benchmarking, selector performance, annotation coverage, and training-ready exports.
 - **Dataset versioning and annotation layer** for dataset snapshots, quality summaries, JSON/CSV/JSONL exports, dataset diffs, and review labels.
 - **ML-ready intelligence layer** for feature extraction, page classification, quality prediction, URL priority scoring, and selector suggestions.
 - **Local dashboard and admin UI** for queue jobs, schedules, workers, profiles, plugins, API routes, and system health.
@@ -53,7 +55,7 @@ V3.1.0 focuses on dataset lifecycle tools while keeping ScraperKit lightweight a
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V3.1.0 CLI/library release.
+This section lists the main functionality available in the current V3.2.0 CLI/library release.
 
 ### Package and CLI
 
@@ -64,13 +66,26 @@ This section lists the main functionality available in the current V3.1.0 CLI/li
 - Built-in command list and per-command help screens.
 - CMD, PowerShell, cron, Windows Task Scheduler, and server automation friendly scripts/workflows.
 
+### Evaluation, benchmarking, and training data quality
+
+- `eval:dataset <dataset-id|manifest.json>` evaluates dataset completeness, duplicates, validation health, annotation coverage, and training readiness.
+- `eval:pipeline <pipeline.json>` evaluates pipeline output directly without first creating a dataset snapshot.
+- `eval:profile <profile> --dataset=DATASET_ID` evaluates a profile schema against dataset records.
+- `eval:selectors --profile=PROFILE --dataset=DATASET_ID` reports selector/field success, empty fields, and example failed records.
+- `benchmark:profile <profile> --dataset=DATASET_ID` measures profile field success and profile grade.
+- `benchmark:compare <old> <new>` compares quality, record count, duplicate rate, and training-readiness changes between two datasets.
+- `annotation:stats <dataset>` shows label counts, field counts, annotated record totals, and coverage percentage.
+- `annotation:coverage <dataset>` gives quick annotation coverage for review and training readiness.
+- `annotation:export <dataset> --format=jsonl|json|csv` exports annotation rows with labels, notes, source URL, text, fields, and quality score.
+- `dataset:export <dataset> --training-ready --format=jsonl` creates ML-friendly rows with `text`, `label`, `fields`, `quality_score`, and metadata.
+
 ### Dataset versioning and annotations
 
 - `dataset:create <input.json|urls.txt>` creates versioned dataset snapshots from crawl, pipeline, source, intelligence, or URL-list data.
 - `dataset:list` lists local dataset snapshots.
 - `dataset:show <dataset-id|manifest.json>` shows one dataset manifest and quality summary.
 - `dataset:diff <old> <new>` compares two dataset snapshots.
-- `dataset:export <dataset-id|manifest.json>` exports normalized records as JSON, CSV, or JSONL.
+- `dataset:export <dataset-id|manifest.json>` exports normalized records as JSON, CSV, or JSONL. Add `--training-ready` for ML-friendly JSONL/CSV/JSON exports.
 - `annotation:init <dataset-dir>` creates an annotation file for review labels.
 - `annotation:add <annotations.json>` adds labels, notes, field comments, and reviewer metadata.
 - Dataset folders include `dataset-manifest.json`, `records.json`, `records.jsonl`, `quality-summary.json`, and `annotations.json`.
@@ -162,7 +177,7 @@ This section lists the main functionality available in the current V3.1.0 CLI/li
 - Plugin enable/disable controls by editing the manifest `enabled` flag.
 - Plugin doctor command for validating all discovered plugins.
 - Plugin-contributed profiles available to `profile:list`, `profile:show`, `extract:rules`, and pipeline/profile workflows.
-- Safe-by-default design: V3.1.0 does not automatically execute arbitrary plugin PHP code.
+- Safe-by-default design: V3.2.0 does not automatically execute arbitrary plugin PHP code.
 
 ### Lightweight API and webhooks
 
@@ -375,7 +390,7 @@ This section lists the main functionality available in the current V3.1.0 CLI/li
 ## Package direction
 
 - First public version: **1.0.0**
-- Current version: **3.1.0** — Dataset versioning and annotation update
+- Current version: **3.2.0** — Evaluation, benchmarking, and training data quality update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
@@ -1070,7 +1085,7 @@ ScraperKit focuses on practical export-ready outputs:
 - pipeline summaries
 - job manifest summaries
 
-PDF reports, Redis/distributed queues, and dedicated browser-worker orchestration are future upgrade areas. The current V3.1.0 release already includes CLI workflows, queue/worker commands, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
+PDF reports, Redis/distributed queues, and dedicated browser-worker orchestration are future upgrade areas. The current V3.2.0 release already includes CLI workflows, queue/worker commands, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
 
 ## Windows CMD
 
@@ -1097,7 +1112,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V3.1.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V3.2.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 
@@ -1121,6 +1136,45 @@ Optional Composer script:
 
 ```bash
 composer test
+```
+
+## Evaluation and training data quality examples
+
+Evaluate one dataset:
+
+```bash
+php bin/mnb-scraper eval:dataset dataset_products --profile=ecommerce --format=html --output=storage/reports/products-evaluation.html
+```
+
+Evaluate pipeline output directly:
+
+```bash
+php bin/mnb-scraper eval:pipeline storage/jobs/job-001/pipeline/records.json --profile=ecommerce --json
+```
+
+Benchmark a profile against a dataset:
+
+```bash
+php bin/mnb-scraper benchmark:profile ecommerce --dataset=dataset_products --json
+```
+
+Measure selector/field success for a profile:
+
+```bash
+php bin/mnb-scraper eval:selectors --profile=ecommerce --dataset=dataset_products --output=storage/reports/selector-report.json
+```
+
+Check annotation coverage and export labels:
+
+```bash
+php bin/mnb-scraper annotation:stats dataset_products --json
+php bin/mnb-scraper annotation:export dataset_products --format=jsonl --output=storage/datasets/products/annotations.jsonl
+```
+
+Export training-ready data:
+
+```bash
+php bin/mnb-scraper dataset:export dataset_products --format=jsonl --training-ready --training-type=classification
 ```
 
 ## Dataset versioning examples

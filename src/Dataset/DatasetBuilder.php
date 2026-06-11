@@ -12,7 +12,7 @@ namespace Mnb\ScraperKit\Dataset;
  */
 final class DatasetBuilder
 {
-    public const VERSION = '3.1.0';
+    public const VERSION = '3.2.0';
 
     /** @return array<string,mixed> */
     public function createFromFile(string $inputFile, string $outputDir, ?string $datasetId = null, string $type = 'auto'): array

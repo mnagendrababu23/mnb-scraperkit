@@ -10,12 +10,12 @@ final class IntelligenceDoctor
     public function inspect(): array
     {
         return [
-            'intelligence_version' => '3.1.0',
+            'intelligence_version' => '3.2.0',
             'generated_at' => date(DATE_ATOM),
             'mode' => 'deterministic_ml_ready_baseline',
             'php_ml_available' => class_exists('Phpml\\Classification\\KNearestNeighbors') || class_exists('Phpml\\Classification\\SVC'),
             'optional_packages' => [
-                'php-ai/php-ml' => 'Optional trainer/inference dependency. MNB ScraperKit v3.1.0 works without it and exports ML-ready features.',
+                'php-ai/php-ml' => 'Optional trainer/inference dependency. MNB ScraperKit v3.2.0 works without it and exports ML-ready features.',
             ],
             'available_tools' => [
                 'feature_extraction',

@@ -7,6 +7,7 @@ namespace Mnb\ScraperKit\Api;
 use Mnb\ScraperKit\Console\CommandRegistry;
 use Mnb\ScraperKit\Dashboard\DashboardDataCollector;
 use Mnb\ScraperKit\Dataset\DatasetStore;
+use Mnb\ScraperKit\Evaluation\DatasetEvaluator;
 use Mnb\ScraperKit\Monitoring\MonitoringSnapshot;
 use Mnb\ScraperKit\Plugin\PluginManager;
 use Mnb\ScraperKit\Profile\ProfileSchemaLoader;
@@ -21,7 +22,7 @@ use Mnb\ScraperKit\Queue\LocalJobQueue;
  */
 final class ApiRouter
 {
-    public const VERSION = '3.1.0';
+    public const VERSION = '3.2.0';
 
     public function __construct(
         private readonly string $rootDir,
@@ -46,6 +47,7 @@ final class ApiRouter
             ['method' => 'GET', 'path' => '/api/v1/dashboard', 'description' => 'Read consolidated dashboard data for local admin screens.'],
             ['method' => 'GET', 'path' => '/api/v1/datasets', 'description' => 'List local dataset snapshots.'],
             ['method' => 'GET', 'path' => '/api/v1/datasets/{dataset_id}', 'description' => 'Read one dataset manifest.'],
+            ['method' => 'GET', 'path' => '/api/v1/datasets/{dataset_id}/evaluation', 'description' => 'Evaluate one dataset for quality, completeness, and training readiness.'],
         ];
     }
 
@@ -168,6 +170,18 @@ final class ApiRouter
             return new ApiResponse(200, [
                 'ok' => true,
                 'datasets' => (new DatasetStore($this->rootDir))->list(),
+            ]);
+        }
+
+        if ($method === 'GET' && preg_match('#^/api/v1/datasets/([^/]+)/evaluation$#', $path, $m)) {
+            $store = new DatasetStore($this->rootDir);
+            $id = rawurldecode($m[1]);
+            $manifest = $store->show($id);
+            $annotationsFile = rtrim((string) ($manifest['_dataset_dir'] ?? ''), '/\\') . '/' . (string) ($manifest['annotations_file'] ?? 'annotations.json');
+            $annotations = is_file($annotationsFile) ? json_decode((string) file_get_contents($annotationsFile), true) : null;
+            return new ApiResponse(200, [
+                'ok' => true,
+                'evaluation' => (new DatasetEvaluator())->evaluate($store->records($id), $manifest, is_array($annotations) ? $annotations : null),
             ]);
         }
 
