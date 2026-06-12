@@ -1,8 +1,8 @@
-# MNB ScraperKit V4.0.1
+# MNB ScraperKit V4.0.2
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V4.0.1 is the Hardening, Refactor, and Production Readiness Update. It keeps the V4 enterprise workspace foundation and focuses on trust: CI workflow, production-readiness diagnostics, command compatibility checks, deterministic benchmarks, better error guidance, integration/runtime checks, and the first CLI refactor boundary for future maintainability.
+V4.0.2 is the CLI Parser, Packaging, and CI Fix Update. It keeps the V4.0.1 hardening foundation and focuses on trust polish: CI-safe repo checks, final archive hygiene checks, clean export rules, boolean flag parsing before positional arguments, and working short output alias support.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,17 +16,17 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V4.0.1 update focus
+## V4.0.2 update focus
 
-V4.0.1 is a maintenance and production-readiness release. It does not add another big crawling feature. Instead, it makes the package easier to trust, test, and maintain before future enterprise growth.
+V4.0.2 is a maintenance and release-hygiene patch. It does not add another big crawling feature. Instead, it fixes command parsing and separates repo/CI checks from final archive/package checks.
 
 - Added `.github/workflows/ci.yml` for Composer validation, PHP linting, tests, production-readiness checks, and benchmark smoke tests across PHP 8.2, 8.3, and 8.4.
-- Added hardening commands: `hardening:doctor`, `ci:check`, `benchmark:run`, and `compat:commands`.
+- Added release-hygiene command: `release:check`, alongside `hardening:doctor`, `ci:check`, `benchmark:run`, and `compat:commands`.
 - Added production-readiness inspection for CI workflow presence, release hygiene, command contract checks, duplicate dispatch cases, storage cleanliness, and optional runtime availability.
 - Added public command/option compatibility contract checks so patch releases do not accidentally remove or rename CLI surface area.
 - Added deterministic local benchmarks for URL normalization, safety checks, JSON handling, and command registry metadata.
 - Improved CLI error messages with command context, help hints, diagnostics guidance, and suggestions for unknown commands.
-- Added the first CLI refactor boundary by moving V4.0.1 hardening commands into a dedicated trait under `src/Cli/Commands/`.
+- Kept the first CLI refactor boundary and hardened the native parser so value-less flags like `--json` and `--dry-run` no longer consume following positional arguments.
 - Fixed a duplicate native CLI dispatch entry for `job:pause` and added checks to catch future duplicates.
 - Added backward compatibility notes for patch, minor, and major release expectations.
 - Kept V4.0.0 enterprise workspaces/access control, V3.8.0 security/compliance, V3.7.0 project templates/preset packs, V3.6.0 advanced export connectors, V3.5.0 distributed workers/Redis queue, V3.4.0 browser sessions/authorized login workflows, V3.3.0 rule builder/auto-profile assistant, V3.2.0 evaluation/benchmarking/training quality, V3.1.0 dataset versioning/annotations, V3.0.0 ML-ready intelligence, V2.0.0 dashboard/admin UI, V1.9.0 API/webhooks, V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
@@ -65,7 +65,7 @@ V4.0.1 is a maintenance and production-readiness release. It does not add anothe
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V4.0.1 CLI/library release.
+This section lists the main functionality available in the current V4.0.2 CLI/library release.
 
 ### Package and CLI
 
@@ -79,25 +79,27 @@ This section lists the main functionality available in the current V4.0.1 CLI/li
 ### Production readiness and hardening
 
 - `hardening:doctor` runs production-readiness diagnostics for CI, release hygiene, command contracts, duplicate dispatch cases, optional runtimes, storage cleanliness, and backward compatibility posture.
-- `ci:check` runs the same checks in strict mode and is intended for GitHub Actions or pre-release validation.
+- `ci:check` runs strict repo/CI checks without failing just because Composer installed `vendor/` locally.
+- `release:check [archive-dir]` runs final package checks and fails if the archive includes `vendor/`, `.git/`, `composer.lock`, or generated `storage/` outputs.
 - `benchmark:run` runs deterministic local micro-benchmarks without network calls.
 - `compat:commands` prints or validates the public command and option compatibility contract.
-- `.github/workflows/ci.yml` validates Composer metadata, installs dependencies, lints PHP files, runs tests, runs `ci:check`, and performs a benchmark smoke test on PHP 8.2, 8.3, and 8.4.
+- `.github/workflows/ci.yml` validates Composer metadata, installs dependencies, lints PHP files, runs tests, runs `ci:check`, builds a `git archive`, runs `release:check` on that archive, and performs a benchmark smoke test on PHP 8.2, 8.3, and 8.4.
 - CLI errors now include command context, help guidance, and diagnostics hints. Unknown commands include best-effort suggestions.
-- V4.0.1 starts the CLI refactor by moving hardening commands into `src/Cli/Commands/HardeningCommandTrait.php`; future maintenance releases can continue splitting command groups.
+- V4.0.2 keeps the hardening trait boundary and fixes native CLI option parsing; future maintenance releases can continue splitting command groups.
 
 Examples:
 
 ```bash
 php bin/mnb-scraper hardening:doctor
 php bin/mnb-scraper ci:check --strict
+php bin/mnb-scraper release:check /path/to/extracted-release --strict
 php bin/mnb-scraper benchmark:run --iterations=1000
 php bin/mnb-scraper compat:commands --validate
 ```
 
 ### Backward compatibility policy
 
-- Patch releases such as V4.0.1 should not remove public commands, rename public options, or change default output behavior without a compatibility alias.
+- Patch releases such as V4.0.2 should not remove public commands, rename public options, or change default output behavior without a compatibility alias.
 - Minor releases may add new commands, options, profiles, connectors, and optional integrations while keeping older workflows usable.
 - Major releases may remove deprecated functionality only after migration guidance is added to README examples and command compatibility notes.
 
@@ -365,7 +367,7 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 - Plugin enable/disable controls by editing the manifest `enabled` flag.
 - Plugin doctor command for validating all discovered plugins.
 - Plugin-contributed profiles available to `profile:list`, `profile:show`, `extract:rules`, and pipeline/profile workflows.
-- Safe-by-default design: V4.0.1 does not automatically execute arbitrary plugin PHP code.
+- Safe-by-default design: V4.0.2 does not automatically execute arbitrary plugin PHP code.
 
 ### Lightweight API and webhooks
 
@@ -581,7 +583,7 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 ## Package direction
 
 - First public version: **1.0.0**
-- Current version: **4.0.1** — Advanced export connectors update
+- Current version: **4.0.2** — CLI Parser, Packaging, and CI Fix Update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
@@ -1276,7 +1278,7 @@ ScraperKit focuses on practical export-ready outputs:
 - pipeline summaries
 - job manifest summaries
 
-PDF reports and richer role-based enterprise orchestration remain future upgrade areas. The current V4.0.1 release already includes CLI workflows, source connectors, exports/reports/bundles, export delivery connectors, local and distributed queue/worker commands, optional Redis queue support, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
+PDF reports and richer role-based enterprise orchestration remain future upgrade areas. The current V4.0.2 release already includes CLI workflows, source connectors, exports/reports/bundles, export delivery connectors, local and distributed queue/worker commands, optional Redis queue support, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
 
 ## Windows CMD
 
@@ -1303,7 +1305,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V4.0.1 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V4.0.2 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 

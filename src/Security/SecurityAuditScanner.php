@@ -47,7 +47,7 @@ final class SecurityAuditScanner
 
         return [
             'ok' => $summary['critical'] === 0 && $summary['high'] === 0,
-            'security_audit_version' => '4.0.1',
+            'security_audit_version' => '4.0.2',
             'generated_at' => date(DATE_ATOM),
             'root_dir' => $this->rootDir,
             'score' => $score,
@@ -76,10 +76,12 @@ final class SecurityAuditScanner
     /** @param array<int,array<string,mixed>> $findings @param array<int,array<string,mixed>> $checks */
     private function checkReleaseHygiene(array &$findings, array &$checks): void
     {
-        $vendor = is_dir($this->rootDir . '/vendor');
-        $checks[] = ['id' => 'no_vendor_folder', 'ok' => !$vendor, 'message' => 'vendor/ should not be committed to a Composer package release.'];
-        if ($vendor) {
-            $findings[] = $this->finding('vendor_committed', 'medium', 'release', 'vendor folder is present', 'Composer dependencies should be installed by users, not shipped in the source package.', 'vendor', null, 'Remove vendor/ and keep dependencies in composer.json.');
+        $repoMode = is_dir($this->rootDir . '/.git');
+        $vendorPresent = is_dir($this->rootDir . '/vendor');
+        $vendorTracked = $repoMode ? $this->gitTracksPath('vendor') : $vendorPresent;
+        $checks[] = ['id' => 'no_vendor_folder', 'ok' => !$vendorTracked, 'message' => $repoMode ? 'vendor/ may exist locally after composer install, but must not be tracked by Git.' : 'vendor/ should not be shipped in a Composer package release.'];
+        if ($vendorTracked) {
+            $findings[] = $this->finding('vendor_committed', 'medium', 'release', 'vendor folder is present in the release surface', 'Composer dependencies should be installed by users, not shipped in the source package.', 'vendor', null, 'Remove vendor/ from Git/release archives and keep dependencies in composer.json.');
         }
 
         $markdownFiles = $this->globRelative('*.md');
@@ -89,26 +91,60 @@ final class SecurityAuditScanner
         }
 
         foreach (['.env', '.env.local', '.env.production', 'composer.lock'] as $file) {
-            if (is_file($this->rootDir . '/' . $file)) {
+            $presentInReleaseSurface = $repoMode ? $this->gitTracksPath($file) : is_file($this->rootDir . '/' . $file);
+            if ($presentInReleaseSurface) {
                 $severity = str_starts_with($file, '.env') ? 'high' : 'low';
-                $findings[] = $this->finding('release_file_' . str_replace('.', '_', $file), $severity, 'release', 'Local/release-sensitive file present', $file . ' is present in the package.', $file, null, 'Remove local-only files from the source package.');
+                $findings[] = $this->finding('release_file_' . str_replace('.', '_', $file), $severity, 'release', 'Local/release-sensitive file present in release surface', $file . ' is present in Git or the package archive.', $file, null, 'Remove local-only files from Git/release archives.');
             }
         }
 
-        $storageFiles = [];
-        $storageDir = $this->rootDir . '/storage';
-        if (is_dir($storageDir)) {
-            foreach ($this->files($storageDir) as $file) {
-                $rel = $this->relative($file->getPathname());
-                if (!str_ends_with($rel, '.gitkeep')) {
-                    $storageFiles[] = $rel;
+        if ($repoMode) {
+            $storageFiles = array_values(array_filter($this->gitTrackedPaths('storage'), static fn (string $path): bool => $path !== 'storage/.gitkeep'));
+        } else {
+            $storageFiles = [];
+            $storageDir = $this->rootDir . '/storage';
+            if (is_dir($storageDir)) {
+                foreach ($this->files($storageDir) as $file) {
+                    $rel = $this->relative($file->getPathname());
+                    if (!str_ends_with($rel, '.gitkeep')) {
+                        $storageFiles[] = $rel;
+                    }
                 }
             }
         }
-        $checks[] = ['id' => 'no_generated_storage_outputs', 'ok' => count($storageFiles) === 0, 'message' => 'Generated storage outputs should not be committed.', 'files' => $storageFiles];
+
+        $checks[] = ['id' => 'no_generated_storage_outputs', 'ok' => count($storageFiles) === 0, 'message' => $repoMode ? 'Generated storage outputs should not be tracked by Git.' : 'Generated storage outputs should not be included in release archives.', 'files' => $storageFiles];
         foreach (array_slice($storageFiles, 0, 20) as $file) {
-            $findings[] = $this->finding('generated_storage_output', 'medium', 'release', 'Generated storage file present', 'Generated crawl/session/queue output is included in the package.', $file, null, 'Remove generated files and keep only .gitkeep placeholders.');
+            $findings[] = $this->finding('generated_storage_output', 'medium', 'release', 'Generated storage file present in release surface', 'Generated crawl/session/queue output is included in Git or the package archive.', $file, null, 'Remove generated files and keep only .gitkeep placeholders.');
         }
+    }
+
+    private function gitTracksPath(string $path): bool
+    {
+        return $this->gitTrackedPaths($path) !== [];
+    }
+
+    /** @return list<string> */
+    private function gitTrackedPaths(string $path): array
+    {
+        if (!is_dir($this->rootDir . '/.git')) {
+            return [];
+        }
+
+        $command = 'git -C ' . escapeshellarg($this->rootDir) . ' ls-files -- ' . escapeshellarg($path) . ' 2>' . $this->nullDevice();
+        $output = [];
+        $exitCode = 0;
+        exec($command, $output, $exitCode);
+        if ($exitCode !== 0) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map('trim', $output), static fn (string $line): bool => $line !== ''));
+    }
+
+    private function nullDevice(): string
+    {
+        return strtoupper(substr(PHP_OS, 0, 3)) === 'WIN' ? 'NUL' : '/dev/null';
     }
 
     /** @param array<int,array<string,mixed>> $findings @param array<int,array<string,mixed>> $checks */

@@ -8,19 +8,52 @@ use Mnb\ScraperKit\Console\CommandRegistry;
 
 final class ProductionReadinessInspector
 {
-    public const VERSION = '4.0.1';
+    public const VERSION = '4.0.2';
 
     /** @return array<string,mixed> */
-    public function inspect(string $rootDir): array
+    public function inspect(string $rootDir, string $mode = 'repo'): array
     {
         $rootDir = rtrim($rootDir, '/\\');
+        $mode = strtolower(trim($mode));
+        if (!in_array($mode, ['repo', 'archive'], true)) {
+            $mode = 'repo';
+        }
         $checks = [];
-        $this->addCheck($checks, 'ci_workflow', 'CI workflow exists', is_file($rootDir . '/.github/workflows/ci.yml'), 'Add .github/workflows/ci.yml for lint, composer validate, tests, and package hygiene.');
+        $isGitCheckout = $this->isGitCheckout($rootDir);
+        if ($mode === 'repo') {
+            $this->addCheck(
+                $checks,
+                'ci_workflow',
+                'CI workflow exists in Git checkout',
+                !$isGitCheckout || is_file($rootDir . '/.github/workflows/ci.yml'),
+                'Add .github/workflows/ci.yml for lint, composer validate, tests, and package hygiene.'
+            );
+        }
         $this->addCheck($checks, 'composer_json', 'composer.json is valid JSON', $this->validJsonFile($rootDir . '/composer.json'), 'Fix composer.json syntax before release.');
         $this->addCheck($checks, 'readme_only_markdown', 'Only README.md exists as root/package markdown documentation', $this->onlyReadmeMarkdown($rootDir), 'Keep public package documentation centralized in README.md or move deep docs outside release package.');
-        $this->addCheck($checks, 'no_vendor_committed', 'vendor/ is not committed', !is_dir($rootDir . '/vendor'), 'Remove vendor/ from the release package and use Composer install.');
+
+        if ($mode === 'archive') {
+            $this->addCheck($checks, 'no_vendor_in_archive', 'Release archive does not include vendor/', !is_dir($rootDir . '/vendor'), 'Create releases with git archive or exclude vendor/ from the final package.');
+            $this->addCheck($checks, 'storage_clean', 'Release archive does not include generated storage outputs', $this->storageLooksClean($rootDir), 'Remove generated jobs, queues, datasets, sessions, and exports from the release package.');
+            $this->addCheck($checks, 'no_git_dir_in_archive', 'Release archive does not include .git/', !is_dir($rootDir . '/.git'), 'Use git archive or export-ignore rules so .git/ is never shipped.');
+            $this->addCheck($checks, 'no_composer_lock_in_archive', 'Library release archive does not include composer.lock', !is_file($rootDir . '/composer.lock'), 'Do not ship composer.lock for this reusable library package.');
+        } else {
+            $vendorOk = $isGitCheckout ? !$this->gitTracksPath($rootDir, 'vendor') : true;
+            $storageOk = $isGitCheckout ? !$this->gitTracksPath($rootDir, 'storage', true) : $this->storageLooksClean($rootDir);
+            $composerLockOk = $isGitCheckout ? !$this->gitTracksPath($rootDir, 'composer.lock') : !is_file($rootDir . '/composer.lock');
+            $this->addCheck($checks, 'vendor_not_tracked', 'vendor/ is not tracked by Git', $vendorOk, 'Remove vendor/ from Git tracking; Composer may still install it locally or in CI.');
+            $this->addCheck($checks, 'storage_outputs_not_tracked', 'Generated storage outputs are not tracked by Git', $storageOk, 'Keep generated storage outputs ignored; only storage/.gitkeep should be tracked.');
+            $this->addCheck($checks, 'composer_lock_not_tracked', 'composer.lock is not tracked for library packaging', $composerLockOk, 'Remove composer.lock from Git for this reusable library package.');
+            $this->addCheck(
+                $checks,
+                'gitattributes_exists',
+                '.gitattributes exists for clean export archives in Git checkout',
+                !$isGitCheckout || is_file($rootDir . '/.gitattributes'),
+                'Add .gitattributes with export-ignore rules for local-only paths.'
+            );
+        }
+
         $this->addCheck($checks, 'tests_exist', 'Test runner exists', is_file($rootDir . '/tests/run-tests.php'), 'Add tests/run-tests.php before publishing.');
-        $this->addCheck($checks, 'storage_clean', 'Generated storage outputs are not included', $this->storageLooksClean($rootDir), 'Remove generated jobs, queues, datasets, sessions, and exports from the release package.');
 
         $contract = (new PublicCommandContract())->validate();
         $this->addCheck($checks, 'command_contract', 'Public command/option contract validates', (bool) ($contract['ok'] ?? false), 'Fix duplicate options, missing command descriptions, or value-less option registration gaps.');
@@ -42,6 +75,8 @@ final class ProductionReadinessInspector
             'php_version' => PHP_VERSION,
             'project' => [
                 'root' => $rootDir,
+                'mode' => $mode,
+                'git_checkout' => $isGitCheckout,
                 'php_files' => $this->countFiles($rootDir, 'php'),
                 'largest_cli_file' => $largeCli,
             ],
@@ -99,6 +134,38 @@ final class ProductionReadinessInspector
         return $markdown === ['README.md'];
     }
 
+    private function gitTracksPath(string $rootDir, string $path, bool $allowStorageGitkeep = false): bool
+    {
+        if (!$this->isGitCheckout($rootDir)) {
+            return false;
+        }
+
+        $command = 'git -C ' . escapeshellarg($rootDir) . ' ls-files -- ' . escapeshellarg($path) . ' 2>' . $this->nullDevice();
+        $output = [];
+        $exitCode = 0;
+        exec($command, $output, $exitCode);
+        if ($exitCode !== 0 || $output === []) {
+            return false;
+        }
+
+        if ($allowStorageGitkeep) {
+            $tracked = array_values(array_filter($output, static fn (string $line): bool => trim($line) !== '' && trim($line) !== 'storage/.gitkeep'));
+            return $tracked !== [];
+        }
+
+        return true;
+    }
+
+    private function isGitCheckout(string $rootDir): bool
+    {
+        return is_dir($rootDir . '/.git') || is_file($rootDir . '/.git');
+    }
+
+    private function nullDevice(): string
+    {
+        return strtoupper(substr(PHP_OS, 0, 3)) === 'WIN' ? 'NUL' : '/dev/null';
+    }
+
     private function storageLooksClean(string $rootDir): bool
     {
         $storage = $rootDir . '/storage';
@@ -144,7 +211,7 @@ final class ProductionReadinessInspector
             'path' => 'src/Cli/NativeCliApplication.php',
             'bytes' => is_file($file) ? filesize($file) : 0,
             'lines' => is_file($file) ? count(file($file) ?: []) : 0,
-            'note' => 'v4.0.1 adds a hardening trait as the first refactor boundary; continue splitting command groups in later maintenance releases.',
+            'note' => 'v4.0.2 keeps the hardening trait boundary and adds parser/package hygiene checks; continue splitting command groups in later maintenance releases.',
         ];
     }
 

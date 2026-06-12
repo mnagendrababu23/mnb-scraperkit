@@ -1,9 +1,9 @@
 {
     "name": "mnb/scraperkit",
-    "description": "MNB ScraperKit V4.0.1 - enterprise-ready PHP crawling and data extraction framework with production-readiness checks, CI hardening, command compatibility validation, workspaces, dashboard/API, safe crawling, pipelines, distributed workers, browser sessions, datasets, ML-ready intelligence, security compliance, and export automation.",
+    "description": "MNB ScraperKit V4.0.2 - enterprise-ready PHP crawling and data extraction framework with CLI parser hardening, clean release packaging checks, CI-safe diagnostics, command compatibility validation, workspaces, dashboard/API, safe crawling, pipelines, distributed workers, browser sessions, datasets, ML-ready intelligence, security compliance, and export automation.",
     "type": "library",
     "license": "MIT",
-    "version": "4.0.1",
+    "version": "4.0.2",
     "require": {
         "php": ">=8.2",
         "ext-dom": "*",
@@ -18,7 +18,7 @@
         "chrome/chromium": "Needed only when using browser-assisted crawling through Panther/Chrome.",
         "pdo_sqlite": "Optional SQLite driver for local database storage.",
         "pdo_mysql": "Optional MySQL/MariaDB driver for server database storage.",
-        "php-ai/php-ml": "Optional machine-learning toolkit for future model training/inference. V4.0.1 includes deterministic ML-ready features, dataset annotations, evaluation reports, rule-builder assisted profile creation, training-ready exports, and export connector delivery manifests without requiring this dependency.",
+        "php-ai/php-ml": "Optional machine-learning toolkit for future model training/inference. V4.0.2 includes deterministic ML-ready features, dataset annotations, evaluation reports, rule-builder assisted profile creation, training-ready exports, and export connector delivery manifests without requiring this dependency.",
         "ext-redis": "Optional Redis extension for distributed multi-worker queue mode. File-based distributed queue fallback works without Redis.",
         "ext-openssl": "Recommended for secure HTTPS transport and checksum/signature workflows."
     },
@@ -34,6 +34,7 @@
         "test": "php -d zend.assertions=1 -d assert.exception=1 tests/run-tests.php",
         "scraper:list": "php bin/mnb-scraper list",
         "ci:check": "php bin/mnb-scraper ci:check --strict",
+        "release:check": "php bin/mnb-scraper release:check --strict",
         "benchmark": "php bin/mnb-scraper benchmark:run --iterations=1000"
     },
     "keywords": [

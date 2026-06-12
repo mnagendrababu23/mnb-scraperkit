@@ -6,7 +6,7 @@ namespace Mnb\ScraperKit\Dataset;
 
 final class DatasetStore
 {
-    public const VERSION = '4.0.1';
+    public const VERSION = '4.0.2';
 
     public function __construct(private readonly string $rootDir, private readonly ?string $datasetsDir = null)
     {

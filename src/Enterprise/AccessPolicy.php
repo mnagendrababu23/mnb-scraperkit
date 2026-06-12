@@ -9,7 +9,7 @@ namespace Mnb\ScraperKit\Enterprise;
  */
 final class AccessPolicy
 {
-    public const VERSION = '4.0.1';
+    public const VERSION = '4.0.2';
 
     /** @return array<string,array<int,string>> */
     public static function capabilities(): array
@@ -31,7 +31,7 @@ final class AccessPolicy
             'roles' => self::capabilities(),
             'notes' => [
                 'This role map is used for workspace metadata, dashboard/API visibility, and future multi-user enforcement.',
-                'ScraperKit does not store passwords in v4.0.1. Authentication should be handled by API tokens or the hosting layer.',
+                'ScraperKit does not store passwords in v4.0.2. Authentication should be handled by API tokens or the hosting layer.',
             ],
         ];
     }

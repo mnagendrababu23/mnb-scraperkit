@@ -6,6 +6,7 @@ namespace Mnb\ScraperKit\Cli;
 
 use Mnb\ScraperKit\Browser\BrowserCrawlService;
 use Mnb\ScraperKit\Cli\Commands\HardeningCommandTrait;
+use Mnb\ScraperKit\Console\CommandRegistry;
 use Mnb\ScraperKit\Hardening\CommandErrorRenderer;
 use Mnb\ScraperKit\Browser\BrowserFallbackDetector;
 use Mnb\ScraperKit\Browser\BrowserOptions;
@@ -134,6 +135,7 @@ final class NativeCliApplication
                 'list' => $this->listCommands(),
                 'hardening:doctor' => $this->hardeningDoctor($args, $opts),
                 'ci:check' => $this->ciCheck($args, $opts),
+                'release:check' => $this->releaseCheck($args, $opts),
                 'benchmark:run' => $this->benchmarkRun($args, $opts),
                 'compat:commands' => $this->compatCommands($args, $opts),
                 'crawl' => $this->crawl($args, $opts),
@@ -303,7 +305,7 @@ final class NativeCliApplication
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 4.0.1 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 4.0.2 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -314,7 +316,8 @@ final class NativeCliApplication
         $commands = [
             'crawl <url>' => 'Crawl one URL/site with rules, presets, common data, optional browser fallback, and optional pipeline.',
             'hardening:doctor' => 'Run production-readiness checks for CI, command contracts, release hygiene, optional runtimes, and compatibility posture.',
-            'ci:check' => 'Run strict release-readiness checks for CI and pre-release validation.',
+            'ci:check' => 'Run strict repo/CI checks without failing on locally installed vendor/ or ignored storage.',
+            'release:check' => 'Run strict final archive checks: no vendor, .git, composer.lock, or generated storage outputs.',
             'benchmark:run' => 'Run deterministic local micro-benchmarks without network calls.',
             'compat:commands' => 'Show or validate the public command/option compatibility contract.',
             'browser:test <url>' => 'Diagnose browser fallback need and optionally render one URL with the optional browser adapter.',
@@ -776,7 +779,7 @@ final class NativeCliApplication
     {
         $templates = array_map(static fn($template): array => $template->summary(), (new TemplateCatalog($this->rootDir))->templates());
         if ($this->bool($opts, 'json')) {
-            $this->outJson(['ok' => true, 'template_version' => '4.0.1', 'templates' => $templates]);
+            $this->outJson(['ok' => true, 'template_version' => '4.0.2', 'templates' => $templates]);
             return 0;
         }
         $this->out('Project templates:');
@@ -844,7 +847,7 @@ final class NativeCliApplication
     {
         $packs = array_map(static fn($pack): array => $pack->summary(), (new TemplateCatalog($this->rootDir))->presetPacks());
         if ($this->bool($opts, 'json')) {
-            $this->outJson(['ok' => true, 'preset_pack_version' => '4.0.1', 'preset_packs' => $packs]);
+            $this->outJson(['ok' => true, 'preset_pack_version' => '4.0.2', 'preset_packs' => $packs]);
             return 0;
         }
         $this->out('Preset packs:');
@@ -1607,7 +1610,7 @@ final class NativeCliApplication
         $manifest = $context['manifest'];
         $datasetDir = (string) ($manifest['_dataset_dir'] ?? $this->rootDir . '/storage/datasets');
         $output = $this->optString($opts, 'output') ?: rtrim($datasetDir, '/\\') . '/annotations-export.' . ($format === 'csv' ? 'csv' : ($format === 'json' ? 'json' : 'jsonl'));
-        $this->exportRows($rows, $output, $format, ['annotation_export_version' => '4.0.1', 'rows_total' => count($rows)]);
+        $this->exportRows($rows, $output, $format, ['annotation_export_version' => '4.0.2', 'rows_total' => count($rows)]);
         $this->outJson(['ok' => true, 'rows_exported' => count($rows), 'format' => $format, 'output' => $output]);
         return 0;
     }
@@ -1743,7 +1746,7 @@ final class NativeCliApplication
         $output = $this->optString($opts, 'output') ?: $this->storagePath('webhooks/test-' . date('Ymd-His') . '.json');
         $payload = [
             'message' => 'MNB ScraperKit webhook test event',
-            'version' => '4.0.1',
+            'version' => '4.0.2',
             'generated_at' => date(DATE_ATOM),
         ];
         $dispatcher = new WebhookDispatcher($this->safetyGuard());
@@ -2514,7 +2517,7 @@ final class NativeCliApplication
         $store = new ExportConnectorStore($this->rootDir);
         $connectors = $store->list($this->optString($opts, 'config'));
         $data = [
-            'export_connector_version' => '4.0.1',
+            'export_connector_version' => '4.0.2',
             'connectors_total' => count($connectors),
             'connectors' => $connectors,
         ];
@@ -2542,7 +2545,7 @@ final class NativeCliApplication
             throw new \InvalidArgumentException('Usage: php bin/mnb-scraper export:connector-show <connector-id>');
         }
         $connector = (new ExportConnectorStore($this->rootDir))->show($id, $this->optString($opts, 'config'));
-        $this->outJson(['ok' => true, 'export_connector_version' => '4.0.1', 'connector' => $connector]);
+        $this->outJson(['ok' => true, 'export_connector_version' => '4.0.2', 'connector' => $connector]);
         return 0;
     }
 
@@ -2571,7 +2574,7 @@ final class NativeCliApplication
         $sample = $this->storagePath('export-connector-test/sample-export.json');
         $this->writeJson($sample, [
             'export_connector_test' => true,
-            'version' => '4.0.1',
+            'version' => '4.0.2',
             'generated_at' => date(DATE_ATOM),
             'message' => 'Sample export artifact for connector dry run.',
         ]);
@@ -2658,7 +2661,7 @@ final class NativeCliApplication
         $audit = new AuditLog($this->rootDir);
         $data = [
             'ok' => true,
-            'enterprise_version' => '4.0.1',
+            'enterprise_version' => '4.0.2',
             'storage_dir' => $this->rootDir . '/storage/enterprise',
             'workspaces' => $workspaceStore->summary(),
             'users' => $userStore->summary(),
@@ -4224,8 +4227,18 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $command = (string) array_shift($argv);
         $args = [];
         $options = [];
+        $valueLess = array_flip(CommandRegistry::valueLessOptions());
+        $shortAliases = $this->shortOptionAliases();
+
         for ($i = 0; $i < count($argv); $i++) {
             $token = $argv[$i];
+            if ($token === '--') {
+                while (isset($argv[++$i])) {
+                    $args[] = $argv[$i];
+                }
+                break;
+            }
+
             if (str_starts_with($token, '--')) {
                 $token = substr($token, 2);
                 $value = true;
@@ -4233,20 +4246,40 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
                     [$key, $value] = explode('=', $token, 2);
                 } else {
                     $key = $token;
-                    if (isset($argv[$i + 1]) && !str_starts_with($argv[$i + 1], '-')) {
+                    $normalizedKey = str_replace('_', '-', trim((string) $key));
+                    if (!isset($valueLess[$normalizedKey]) && isset($argv[$i + 1]) && !str_starts_with($argv[$i + 1], '-')) {
                         $value = $argv[++$i];
                     }
                 }
                 $key = str_replace('_', '-', trim((string) $key));
                 $this->putOption($options, $key, $value);
             } elseif (str_starts_with($token, '-') && strlen($token) > 1) {
-                $key = substr($token, 1);
-                $this->putOption($options, $key, true);
+                $token = substr($token, 1);
+                $value = true;
+                if (str_contains($token, '=')) {
+                    [$key, $value] = explode('=', $token, 2);
+                } else {
+                    $key = $token;
+                    $key = $shortAliases[$key] ?? $key;
+                    if (!isset($valueLess[$key]) && isset($argv[$i + 1]) && !str_starts_with($argv[$i + 1], '-')) {
+                        $value = $argv[++$i];
+                    }
+                }
+                $key = $shortAliases[$key] ?? $key;
+                $this->putOption($options, str_replace('_', '-', trim((string) $key)), $value);
             } else {
                 $args[] = $token;
             }
         }
         return ['command' => $command, 'args' => $args, 'options' => $options];
+    }
+
+    /** @return array<string,string> */
+    private function shortOptionAliases(): array
+    {
+        return [
+            'o' => 'output',
+        ];
     }
 
     /** @param array<string,mixed> $options */
@@ -4582,7 +4615,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $result = (new DatabaseMigrator($pdo, $config->driver()))->migrate();
         $this->outJson([
             'ok' => true,
-            'version' => '4.0.1',
+            'version' => '4.0.2',
             'driver' => $result['driver'],
             'statements_executed' => $result['statements'],
             'tables' => $result['tables'],
@@ -4598,7 +4631,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $pdo = (new DatabaseConnectionFactory())->connect($config);
         $this->outJson([
             'ok' => true,
-            'version' => '4.0.1',
+            'version' => '4.0.2',
             'driver' => $config->driver(),
             'pdo_driver' => (string) $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME),
             'dsn' => $this->safeDsn($config->dsn),
@@ -5159,7 +5192,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '4.0.1',
+            'checkpoint_version' => '4.0.2',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),

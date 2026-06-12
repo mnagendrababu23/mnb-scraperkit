@@ -24,7 +24,7 @@ final class DatabaseConfig
             if ($sqlite === '') {
                 $sqlite = rtrim($rootDir, '/\\') . '/storage/database/mnb-scraperkit.sqlite';
             }
-            if (!str_starts_with($sqlite, '/') && !preg_match('/^[A-Za-z]:[\\\/]/', $sqlite)) {
+            if (!self::isAbsolutePath($sqlite)) {
                 $sqlite = rtrim($rootDir, '/\\') . '/' . ltrim($sqlite, '/\\');
             }
             $dsn = 'sqlite:' . $sqlite;
@@ -36,6 +36,12 @@ final class DatabaseConfig
             password: isset($data['db_pass']) ? (string) $data['db_pass'] : (isset($data['db-pass']) ? (string) $data['db-pass'] : null),
             options: []
         );
+    }
+
+    private static function isAbsolutePath(string $path): bool
+    {
+        $normalized = str_replace('\\', '/', $path);
+        return str_starts_with($normalized, '/') || preg_match('#^[A-Za-z]:/#', $normalized) === 1;
     }
 
     public function driver(): string

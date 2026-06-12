@@ -15,7 +15,8 @@ final class CommandRegistry
         return [
             'crawl' => 'Crawl one URL/site with safety rules, presets, common data, optional browser fallback, and optional professional pipeline.',
             'hardening:doctor' => 'Run production-readiness checks for CI, command contracts, release hygiene, optional runtimes, and compatibility posture.',
-            'ci:check' => 'Run strict release-readiness checks intended for CI and pre-release validation.',
+            'ci:check' => 'Run strict repo/CI checks without failing on locally installed vendor/ or ignored storage.',
+            'release:check' => 'Run strict final archive checks: no vendor, .git, composer.lock, or generated storage outputs.',
             'benchmark:run' => 'Run deterministic local micro-benchmarks for URL normalization, safety checks, JSON handling, and command metadata.',
             'compat:commands' => 'Show or validate the public command/option compatibility contract for backward-compatible releases.',
             'browser:test' => 'Diagnose browser fallback need and optionally render one URL with the optional browser adapter.',
@@ -462,6 +463,7 @@ final class CommandRegistry
             'retention-days',
             'action',
             'strict',
+            'mode',
             'iterations',
             'validate',
         ];
