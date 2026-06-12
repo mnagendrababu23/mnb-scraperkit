@@ -1,8 +1,8 @@
-# MNB ScraperKit v1.0.3
+# MNB ScraperKit v1.0.5
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-v1.0.3 improves the machine-learning crawl intelligence layer. It keeps the public v1.0.x feature set stable and adds deterministic ML crawl techniques for URL relevance learning, adaptive crawl planning, feedback collection, and ML-ready training exports without requiring heavy external ML dependencies.
+v1.0.5 improves common-data extraction validation. It keeps the public v1.0.x feature set stable while reducing false positives in human-name, address/location, and application/registration-number extraction on catalog/listing pages such as publisher journal indexes.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -354,6 +354,11 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 ```
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
+
+
+## v1.0.5 validation hotfix focus
+
+v1.0.5 improves the generic common-data extractor so broad catalog/index pages do not pollute structured fields. Journal and publication titles remain available as generic `names`, while `person_names` is now reserved for likely human names. Address/location extraction now avoids UI/legal text such as privacy statements and requires stronger address/location signals. Application and registration number extraction now requires real identifier structure and no longer treats word fragments such as `Applicandae` or `Applied` as numbers.
 
 ## v1.0.3 patch release focus
 
@@ -952,7 +957,7 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 ## Package direction
 
 - First public version: **1.0.3**
-- Current version: **1.0.3** — CLI Parser, Packaging, and CI Fix Update
+- Current version: **1.0.5** — Common data validation hotfix for human names, addresses/locations, and labeled identifiers
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage

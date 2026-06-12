@@ -53,6 +53,7 @@ use Mnb\ScraperKit\Retry\RetryPolicy;
 use Mnb\ScraperKit\Scheduler\LocalScheduleStore;
 use Mnb\ScraperKit\Monitoring\MonitoringSnapshot;
 use Mnb\ScraperKit\Extractor\RuleBasedExtractor;
+use Mnb\ScraperKit\Extractor\CommonDataExtractor;
 use Mnb\ScraperKit\Parser\HtmlParser;
 use Mnb\ScraperKit\Report\ProjectBundleExporter;
 use Mnb\ScraperKit\Report\RecordExportService;
@@ -1552,6 +1553,40 @@ HTML;
     assert(count((array) ($data['social_links'] ?? [])) >= 1, 'social link extraction failed');
     $keys = array_map(static fn (array $row): string => (string) ($row['key'] ?? ''), (array) ($data['repeated_components'] ?? []));
     assert(in_array('class:result-card', $keys, true), 'repeated class extraction failed');
+};
+
+
+$tests['v1.0.5 common data validation separates human names and removes catalog false positives'] = function (): void {
+    $extractor = new CommonDataExtractor(new HtmlParser(), new UrlNormalizer());
+    $ref = new ReflectionClass($extractor);
+    $human = $ref->getMethod('looksLikeHumanName');
+    $human->setAccessible(true);
+    $address = $ref->getMethod('isLikelyAddressLine');
+    $address->setAccessible(true);
+    $location = $ref->getMethod('isLikelyLocationLine');
+    $location->setAccessible(true);
+    $labeled = $ref->getMethod('extractLabeledNumbers');
+    $labeled->setAccessible(true);
+
+    assert($human->invoke($extractor, 'Ada Lovelace') === true, 'valid human name missing');
+    assert($human->invoke($extractor, 'L. Graziano') === true, 'initial human name missing');
+    assert($human->invoke($extractor, 'AAPPS Bulletin AAPS Open') === false, 'journal title leaked into person_names');
+    assert($human->invoke($extractor, 'Acta Applicandae Mathematicae') === false, 'journal title phrase leaked into person_names');
+    assert($human->invoke($extractor, 'Privacy Statement') === false, 'UI/legal text leaked into person_names');
+
+    assert($address->invoke($extractor, 'Alpine Botany') === false, 'catalog title leaked into addresses');
+    assert($address->invoke($extractor, 'Privacy statement') === false, 'privacy statement leaked into addresses');
+    assert($address->invoke($extractor, 'Your US state privacy rights') === false, 'privacy rights leaked into addresses');
+    assert($address->invoke($extractor, 'Registered office: 123 Science Road, Hyderabad, Telangana, India 500001') === true, 'real address missing');
+
+    assert($location->invoke($extractor, 'Privacy statement') === false, 'privacy statement leaked into locations');
+    assert($location->invoke($extractor, 'Your US state privacy rights') === false, 'privacy rights leaked into locations');
+    assert($location->invoke($extractor, 'Registered office: 123 Science Road, Hyderabad, Telangana, India 500001') === true, 'real location missing');
+
+    $applications = $labeled->invoke($extractor, 'Acta Applicandae Mathematicae Applied Clifford Algebras Application No: APP-2026-001', ['application', 'application no', 'application number', 'roll', 'hall ticket', 'admit card']);
+    $values = array_column($applications, 'value');
+    assert(in_array('APP-2026-001', $values, true), 'valid application number missing');
+    assert(!in_array('licandae', $values, true) && !in_array('lied', $values, true), 'word fragments leaked into application_numbers');
 };
 
 $tests['v1.0.3 dictionary patterns and mappings support extraction learning'] = function (): void {

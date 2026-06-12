@@ -127,7 +127,7 @@ final class CommonDataExtractor
             $result['fax_numbers'] = $this->extractContextPhones($lines, ['fax']);
         }
         if ($this->enabled($types, 'person_names')) {
-            $result['person_names'] = $this->extractNames($text);
+            $result['person_names'] = $this->extractPersonNames($text);
         }
         if ($this->enabled($types, 'editors')) {
             $result['editors'] = $this->extractContextPeople($lines, ['editor', 'editors', 'editor-in-chief', 'editorial board', 'guest editor']);
@@ -200,7 +200,7 @@ final class CommonDataExtractor
             $result['tender_numbers'] = $this->extractLabeledNumbers($text, ['tender', 'bid', 'rfp', 'rfq', 'eoi']);
         }
         if ($this->enabled($types, 'application_numbers')) {
-            $result['application_numbers'] = $this->extractLabeledNumbers($text, ['application', 'app', 'roll', 'hall ticket', 'admit card']);
+            $result['application_numbers'] = $this->extractLabeledNumbers($text, ['application', 'application no', 'application number', 'roll', 'hall ticket', 'admit card']);
         }
         if ($this->enabled($types, 'submission_links')) {
             $result['submission_links'] = $this->extractKeywordLinks($doc, $baseUrl, ['submit', 'submission', 'manuscript', 'apply', 'register', 'application']);
@@ -245,9 +245,11 @@ final class CommonDataExtractor
             $result['status_terms'] = $this->extractStatusTerms($lines);
         }
 
-        // Backward-compatible alias from V0.6.
+        // Backward-compatible broad name candidates from V0.6.
+        // Keep this separate from person_names: pages such as publisher A-Z indexes may contain
+        // journal/book/organization names that are useful as generic names but are not humans.
         if (isset($result['person_names']) && !isset($result['names'])) {
-            $result['names'] = $result['person_names'];
+            $result['names'] = $this->extractNameCandidates($text);
         }
 
         $result['model'] = $this->buildModel($result);
@@ -411,7 +413,7 @@ final class CommonDataExtractor
         $out = [];
         foreach ($lines as $line) {
             $line = $this->cleanText($line);
-            if ($line !== '' && mb_strlen($line) >= 4) {
+            if ($line !== '' && strlen($line) >= 4) {
                 $out[] = $line;
             }
         }
@@ -464,7 +466,7 @@ final class CommonDataExtractor
     {
         $items = [];
         foreach ($this->contextLines($lines, $keywords) as $line) {
-            $names = $this->extractNames($line, 8);
+            $names = $this->extractPersonNames($line, 8);
             $items[] = [
                 'line' => $line,
                 'names' => array_column($names, 'value'),
@@ -473,14 +475,21 @@ final class CommonDataExtractor
         return $items;
     }
 
-    /** @return array<int,array<string,mixed>> */
-    private function extractNames(string $text, int $limit = 80): array
+    /**
+     * Extract likely human names only.
+     *
+     * This intentionally uses conservative validation. Generic title/name candidates such as
+     * journal names are exposed through the backward-compatible `names` field, not here.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    private function extractPersonNames(string $text, int $limit = 80): array
     {
         $items = [];
         preg_match_all('/\b(?:Prof\.?|Dr\.?|Mr\.?|Ms\.?|Mrs\.?)?\s*((?:[A-Z][\p{L}\'’.-]{1,40}|[A-Z]\.)\s+(?:[A-Z][\p{L}\'’.-]{1,40}|[A-Z]\.)(?:\s+(?:[A-Z][\p{L}\'’.-]{1,40}|[A-Z]\.)){0,2})\b/u', $text, $matches);
         foreach ($matches[1] ?? [] as $name) {
             $name = $this->cleanText($name);
-            if ($name === '' || $this->looksLikeNonPersonName($name)) {
+            if ($name === '' || !$this->looksLikeHumanName($name)) {
                 continue;
             }
             $items[$name] = ['value' => $name];
@@ -491,15 +500,106 @@ final class CommonDataExtractor
         return array_values($items);
     }
 
+    /**
+     * Broad title/name candidates kept for backward compatibility and page index use-cases.
+     * These can include journal titles, product names, organizations, and other proper-name phrases.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    private function extractNameCandidates(string $text, int $limit = 80): array
+    {
+        $items = [];
+        preg_match_all('/\b((?:[A-Z][\p{L}\'’.-]{1,40}|[A-Z]\.)\s+(?:[A-Z][\p{L}\'’.-]{1,40}|[A-Z]\.)(?:\s+(?:[A-Z][\p{L}\'’.-]{1,40}|[A-Z]\.)){0,4})\b/u', $text, $matches);
+        foreach ($matches[1] ?? [] as $name) {
+            $name = $this->cleanText($name);
+            if ($name === '' || $this->looksLikeUiNoise($name)) {
+                continue;
+            }
+            $items[$name] = ['value' => $name];
+            if (count($items) >= $limit) {
+                break;
+            }
+        }
+        return array_values($items);
+    }
+
+    private function looksLikeHumanName(string $name): bool
+    {
+        if ($this->looksLikeUiNoise($name) || $this->looksLikeNonPersonName($name)) {
+            return false;
+        }
+        if (preg_match('~[0-9_@#:/\\\\]|&~u', $name)) {
+            return false;
+        }
+
+        $tokens = preg_split('/\s+/u', trim($name)) ?: [];
+        $tokens = array_values(array_filter($tokens, static fn (string $token): bool => $token !== ''));
+        $count = count($tokens);
+        if ($count < 2 || $count > 4) {
+            return false;
+        }
+
+        $longNameTokens = 0;
+        foreach ($tokens as $token) {
+            $clean = trim($token, " .'-’");
+            if ($clean === '') {
+                return false;
+            }
+            if (preg_match('/^[A-Z]\.$/u', $token)) {
+                continue;
+            }
+            if (strtoupper($clean) === $clean && strlen($clean) > 1) {
+                return false;
+            }
+            if (!preg_match('/^\p{Lu}[\p{L}\'’.-]{1,40}$/u', $token)) {
+                return false;
+            }
+            $longNameTokens++;
+        }
+
+        return $longNameTokens >= 1;
+    }
+
     private function looksLikeNonPersonName(string $name): bool
     {
-        $bad = ['Springer Nature', 'Open Access', 'Privacy Policy', 'Terms Conditions', 'Google Scholar', 'Article Processing', 'Call For', 'Editor In', 'Editorial Board', 'Home Page'];
-        foreach ($bad as $item) {
+        $badExact = [
+            'Springer Nature', 'Open Access', 'Privacy Policy', 'Privacy Statement', 'Terms Conditions',
+            'Google Scholar', 'Article Processing', 'Call For', 'Editor In', 'Editorial Board', 'Home Page',
+            'Journals A-Z', 'Books A-Z', 'Footer Navigation', 'Site Navigation', 'Search Journals',
+        ];
+        foreach ($badExact as $item) {
             if (strcasecmp($name, $item) === 0) {
                 return true;
             }
         }
-        return (bool) preg_match('/\b(?:Home|Journal|Research|Submission|Published|Access|Issue|Volume|Browse|Search|Login|Register|Cookie|Nature|Springer|Download)\b/i', $name);
+
+        $nonPersonTerms = [
+            'about', 'abstract', 'academic', 'acta', 'applicandae', 'applicatae', 'access', 'accessibility', 'accounting', 'advances', 'aerospace',
+            'agriculture', 'algorithm', 'analysis', 'applications', 'archive', 'article', 'artificial', 'astronomy',
+            'behavior', 'biochemistry', 'biology', 'biomedical', 'books', 'browse', 'bulletin', 'business', 'cancer',
+            'cardiology', 'cell', 'chemistry', 'child', 'clinical', 'collection', 'computational', 'computer', 'conference',
+            'cookie', 'data', 'dermatology', 'discover', 'download', 'education', 'engineering', 'ethics', 'footer',
+            'forum', 'global', 'health', 'homepage', 'imaging', 'information', 'intelligence', 'journal', 'journals',
+            'legal', 'letters', 'login', 'management', 'materials', 'mathematica', 'mathematical', 'mathematics',
+            'medicine', 'menu', 'molecular', 'nature', 'navigation', 'neuro', 'oncology', 'open', 'pharmacology',
+            'physics', 'policy', 'privacy', 'proceedings', 'published', 'publisher', 'reports', 'research', 'review',
+            'reviews', 'rights', 'science', 'sciences', 'scientific', 'search', 'series', 'services', 'signaling',
+            'society', 'springer', 'statement', 'studies', 'submission', 'sustainability', 'systems', 'technology',
+            'therapy', 'transactions', 'university', 'volume', 'worldwide',
+        ];
+
+        foreach ($nonPersonTerms as $term) {
+            if (preg_match('/\b' . preg_quote($term, '/') . '\b/i', $name)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function looksLikeUiNoise(string $value): bool
+    {
+        return (bool) preg_match('/\b(?:privacy|cookie|cookies|accessibility|terms|legal|faq|contact us|footer|navigation|skip to|manage cookies|rights|statement)\b/i', $value);
     }
 
     /** @param array<int,string> $lines @return array<int,string> */
@@ -521,19 +621,87 @@ final class CommonDataExtractor
         ], 80, 220);
     }
 
-    /** @param array<int,string> $lines @return array<int,string> */
+    /** @param array<int,string> $lines @return array<int|string> */
     private function extractAddresses(array $lines): array
     {
-        return $this->keywordLines($lines, [
-            'road', 'street', 'st.', 'avenue', 'lane', 'district', 'city', 'state', 'country', 'pin', 'zip', 'postal',
-            'address', 'near', 'building', 'floor', 'campus', 'post office', 'p.o.', 'telangana', 'andhra', 'india',
-        ], 80, 300);
+        $items = [];
+        foreach ($lines as $line) {
+            if (strlen($line) > 300 || !$this->isLikelyAddressLine($line)) {
+                continue;
+            }
+            $items[$line] = $line;
+            if (count($items) >= 80) {
+                break;
+            }
+        }
+        return array_values($items);
     }
 
     /** @param array<int,string> $lines @return array<int,string> */
     private function extractLocations(array $lines): array
     {
-        return $this->keywordLines($lines, ['location', 'venue', 'city', 'state', 'country', 'campus', 'office', 'headquarters', 'branch'], 60, 220);
+        $items = [];
+        foreach ($lines as $line) {
+            if (strlen($line) > 220 || !$this->isLikelyLocationLine($line)) {
+                continue;
+            }
+            $items[$line] = $line;
+            if (count($items) >= 60) {
+                break;
+            }
+        }
+        return array_values($items);
+    }
+
+    private function isLikelyAddressLine(string $line): bool
+    {
+        $line = $this->cleanText($line);
+        if ($line === '' || $this->looksLikeUiNoise($line) || $this->looksLikeCatalogTitle($line)) {
+            return false;
+        }
+
+        $strongAddressTerms = [
+            'road', 'rd', 'street', 'st', 'avenue', 'ave', 'lane', 'ln', 'district', 'zip', 'postal', 'pincode',
+            'pin code', 'address', 'building', 'floor', 'block', 'suite', 'campus', 'post office', 'p.o.', 'po box',
+        ];
+        $hasStrongTerm = $this->containsAnyKeyword($line, $strongAddressTerms);
+        $hasNumber = (bool) preg_match('/\b\d{1,6}(?:[-\/]\d{1,6})?\b/u', $line);
+        $hasPostal = (bool) preg_match('/\b\d{5}(?:-\d{4})?\b|\b\d{6}\b/u', $line);
+        $hasCommaPlace = substr_count($line, ',') >= 1 && $this->containsAnyKeyword($line, ['city', 'state', 'country', 'india', 'usa', 'united states', 'united kingdom', 'germany', 'france', 'china', 'japan', 'australia', 'canada', 'singapore']);
+
+        return $hasPostal || ($hasStrongTerm && ($hasNumber || $hasCommaPlace || $this->containsAnyKeyword($line, ['address', 'campus', 'post office', 'po box'])));
+    }
+
+    private function isLikelyLocationLine(string $line): bool
+    {
+        $line = $this->cleanText($line);
+        if ($line === '' || $this->looksLikeUiNoise($line) || $this->looksLikeCatalogTitle($line)) {
+            return false;
+        }
+
+        if ($this->containsAnyKeyword($line, ['venue', 'headquarters', 'branch office', 'registered office', 'campus'])) {
+            return true;
+        }
+
+        // Location lines normally have structure such as "Hyderabad, Telangana, India".
+        if (substr_count($line, ',') >= 1 && $this->containsAnyKeyword($line, ['india', 'usa', 'united states', 'united kingdom', 'germany', 'france', 'china', 'japan', 'australia', 'canada', 'singapore', 'netherlands', 'italy', 'spain', 'brazil', 'south korea'])) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function looksLikeCatalogTitle(string $line): bool
+    {
+        if (preg_match('/\b(?:journal|journals|book|books|bulletin|review|reports|transactions|advances|research|therapy|mathematics|physics|chemistry|biology|medicine|botany|privacy|rights|statement)\b/i', $line)) {
+            return true;
+        }
+        // Short title-case phrases such as "Alpine Botany" are names/titles, not addresses.
+        $words = preg_split('/\s+/u', trim($line)) ?: [];
+        if (count($words) <= 4 && !preg_match('/[,0-9]/u', $line)) {
+            return true;
+        }
+        return false;
     }
 
     /** @return array<int,string> */
@@ -660,8 +828,8 @@ final class CommonDataExtractor
     private function extractRegisterNumbers(string $text): array
     {
         $patterns = [
-            '/\b(?:registration|register|reg\.?|certificate|license|licence|cin|gstin|doi|orcid)\s*(?:no\.?|number|id)?\s*[:#-]?\s*([A-Z0-9][A-Z0-9.\/-]{4,50})\b/iu',
-            '/\b(?:NCT|ISRCTN|EUCTR)[\s:-]*[A-Z0-9\/-]{4,40}\b/iu',
+            '/\b(?:registration|register|reg\.?|certificate|license|licence|cin|gstin|doi|orcid)(?![\p{L}])\s*(?:no\.?|number|id)?\s*[:#-]?\s*([A-Z0-9][A-Z0-9.\/-]{4,50})\b/iu',
+            '/\b(?:NCT|ISRCTN|EUCTR)[\s:-]*([A-Z0-9\/-]{4,40})\b/iu',
         ];
         return $this->extractByPatterns($text, $patterns);
     }
@@ -670,7 +838,7 @@ final class CommonDataExtractor
     private function extractLabeledNumbers(string $text, array $labels): array
     {
         $label = implode('|', array_map(static fn (string $v): string => preg_quote($v, '/'), $labels));
-        return $this->extractByPatterns($text, ['/\b(?:' . $label . ')\s*(?:no\.?|number|id|ref)?\s*[:#-]?\s*([A-Z0-9][A-Z0-9.\/-]{3,60})\b/iu']);
+        return $this->extractByPatterns($text, ['/\b(?:' . $label . ')(?![\p{L}])\s*(?:no\.?|number|id|ref)?\s*[:#-]?\s*([A-Z0-9][A-Z0-9.\/-]{3,60})\b/iu']);
     }
 
     /** @param array<int,string> $patterns @return array<int,array<string,string>> */
@@ -682,13 +850,32 @@ final class CommonDataExtractor
             foreach ($matches[0] ?? [] as $i => $full) {
                 $value = $matches[1][$i] ?? $full;
                 $value = $this->cleanText($value);
-                if ($value === '') {
+                $context = $this->cleanText($full);
+                if ($value === '' || !$this->isValidLabeledIdentifier($value, $context)) {
                     continue;
                 }
-                $items[$value] = ['value' => $value, 'context' => $this->cleanText($full)];
+                $items[$value] = ['value' => $value, 'context' => $context];
             }
         }
         return array_values($items);
+    }
+
+    private function isValidLabeledIdentifier(string $value, string $context): bool
+    {
+        if (strlen($value) < 4 || strlen($value) > 80) {
+            return false;
+        }
+        if ($this->looksLikeUiNoise($value) || $this->looksLikeCatalogTitle($value)) {
+            return false;
+        }
+        // IDs/application/registration numbers should have numeric or formal identifier structure.
+        if (!preg_match('/\d/u', $value) && !preg_match('/[\/-]/u', $value)) {
+            return false;
+        }
+        if (preg_match('/^(?:form|forms|open|access|applied|applicable|applicandae|applicatae|regeneration|privacy|statement)$/iu', $value)) {
+            return false;
+        }
+        return true;
     }
 
     /** @return array<int,string> */
@@ -1095,21 +1282,33 @@ final class CommonDataExtractor
     {
         $items = [];
         foreach ($lines as $line) {
-            if (mb_strlen($line) > $maxLength) {
+            if (strlen($line) > $maxLength) {
                 continue;
             }
-            $lower = strtolower($line);
-            foreach ($keywords as $keyword) {
-                if (str_contains($lower, strtolower($keyword))) {
-                    $items[$line] = $line;
-                    break;
-                }
+            if ($this->containsAnyKeyword($line, $keywords)) {
+                $items[$line] = $line;
             }
             if (count($items) >= $limit) {
                 break;
             }
         }
         return array_values($items);
+    }
+
+    /** @param array<int,string> $keywords */
+    private function containsAnyKeyword(string $line, array $keywords): bool
+    {
+        foreach ($keywords as $keyword) {
+            $keyword = trim($keyword);
+            if ($keyword === '') {
+                continue;
+            }
+            $escaped = preg_quote($keyword, '/');
+            if (preg_match('/(?<![\p{L}\p{N}])' . $escaped . '(?![\p{L}\p{N}])/iu', $line)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** @param array<int,string> $items @return array<int,string> */
