@@ -106,6 +106,8 @@ use Mnb\ScraperKit\Support\UrlNormalizer;
 use Mnb\ScraperKit\Template\TemplateCatalog;
 use Mnb\ScraperKit\Template\TemplateInstaller;
 use Mnb\ScraperKit\Publisher\PublisherCatalog;
+use Mnb\ScraperKit\Publisher\PublisherContentGraph;
+use Mnb\ScraperKit\Publisher\PublisherArticleExtractor;
 use Mnb\ScraperKit\Publisher\ArticleMetadataNormalizer;
 
 final class NativeCliApplication
@@ -291,6 +293,9 @@ final class NativeCliApplication
                 'publisher:show' => $this->publisherShow($args, $opts),
                 'publisher:seeds' => $this->publisherSeeds($args, $opts),
                 'publisher:plan' => $this->publisherPlan($args, $opts),
+                'publisher:graph' => $this->publisherGraph($args, $opts),
+                'publisher:enterprise-plan' => $this->publisherEnterprisePlan($args, $opts),
+                'publisher:extract-article' => $this->publisherExtractArticle($args, $opts),
                 'publisher:schema' => $this->publisherSchema($args, $opts),
                 'publisher:normalize' => $this->publisherNormalize($args, $opts),
                 'plos:journals' => $this->plosJournals($opts),
@@ -313,7 +318,7 @@ final class NativeCliApplication
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 4.1.0 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 4.1.1 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -478,6 +483,9 @@ final class NativeCliApplication
             'publisher:show <publisher>' => 'Show one publisher crawl profile, safe modes, and seed URLs.',
             'publisher:seeds' => 'Export publisher seed URLs as JSON, CSV, or TXT.',
             'publisher:plan' => 'Generate safe metadata-only crawl job plans for publisher seeds.',
+            'publisher:graph <publisher>' => 'Show publisher navigation graph from indexes to articles/books/chapters.',
+            'publisher:enterprise-plan <publisher>' => 'Generate enterprise crawl workflow steps for journals, books, issues, and article metadata.',
+            'publisher:extract-article <html-file>' => 'Extract article/chapter metadata from saved publisher HTML.',
             'publisher:schema' => 'Show/export the normalized article metadata schema.',
             'publisher:normalize <records.json>' => 'Normalize source connector records into article metadata rows.',
             'plos:journals' => 'List known PLOS journals, API names, homepages, and feed candidates.',
@@ -793,7 +801,7 @@ final class NativeCliApplication
     {
         $templates = array_map(static fn($template): array => $template->summary(), (new TemplateCatalog($this->rootDir))->templates());
         if ($this->bool($opts, 'json')) {
-            $this->outJson(['ok' => true, 'template_version' => '4.1.0', 'templates' => $templates]);
+            $this->outJson(['ok' => true, 'template_version' => '4.1.1', 'templates' => $templates]);
             return 0;
         }
         $this->out('Project templates:');
@@ -861,7 +869,7 @@ final class NativeCliApplication
     {
         $packs = array_map(static fn($pack): array => $pack->summary(), (new TemplateCatalog($this->rootDir))->presetPacks());
         if ($this->bool($opts, 'json')) {
-            $this->outJson(['ok' => true, 'preset_pack_version' => '4.1.0', 'preset_packs' => $packs]);
+            $this->outJson(['ok' => true, 'preset_pack_version' => '4.1.1', 'preset_packs' => $packs]);
             return 0;
         }
         $this->out('Preset packs:');
@@ -1624,7 +1632,7 @@ final class NativeCliApplication
         $manifest = $context['manifest'];
         $datasetDir = (string) ($manifest['_dataset_dir'] ?? $this->rootDir . '/storage/datasets');
         $output = $this->optString($opts, 'output') ?: rtrim($datasetDir, '/\\') . '/annotations-export.' . ($format === 'csv' ? 'csv' : ($format === 'json' ? 'json' : 'jsonl'));
-        $this->exportRows($rows, $output, $format, ['annotation_export_version' => '4.1.0', 'rows_total' => count($rows)]);
+        $this->exportRows($rows, $output, $format, ['annotation_export_version' => '4.1.1', 'rows_total' => count($rows)]);
         $this->outJson(['ok' => true, 'rows_exported' => count($rows), 'format' => $format, 'output' => $output]);
         return 0;
     }
@@ -1760,7 +1768,7 @@ final class NativeCliApplication
         $output = $this->optString($opts, 'output') ?: $this->storagePath('webhooks/test-' . date('Ymd-His') . '.json');
         $payload = [
             'message' => 'MNB ScraperKit webhook test event',
-            'version' => '4.1.0',
+            'version' => '4.1.1',
             'generated_at' => date(DATE_ATOM),
         ];
         $dispatcher = new WebhookDispatcher($this->safetyGuard());
@@ -2531,7 +2539,7 @@ final class NativeCliApplication
         $store = new ExportConnectorStore($this->rootDir);
         $connectors = $store->list($this->optString($opts, 'config'));
         $data = [
-            'export_connector_version' => '4.1.0',
+            'export_connector_version' => '4.1.1',
             'connectors_total' => count($connectors),
             'connectors' => $connectors,
         ];
@@ -2559,7 +2567,7 @@ final class NativeCliApplication
             throw new \InvalidArgumentException('Usage: php bin/mnb-scraper export:connector-show <connector-id>');
         }
         $connector = (new ExportConnectorStore($this->rootDir))->show($id, $this->optString($opts, 'config'));
-        $this->outJson(['ok' => true, 'export_connector_version' => '4.1.0', 'connector' => $connector]);
+        $this->outJson(['ok' => true, 'export_connector_version' => '4.1.1', 'connector' => $connector]);
         return 0;
     }
 
@@ -2588,7 +2596,7 @@ final class NativeCliApplication
         $sample = $this->storagePath('export-connector-test/sample-export.json');
         $this->writeJson($sample, [
             'export_connector_test' => true,
-            'version' => '4.1.0',
+            'version' => '4.1.1',
             'generated_at' => date(DATE_ATOM),
             'message' => 'Sample export artifact for connector dry run.',
         ]);
@@ -2675,7 +2683,7 @@ final class NativeCliApplication
         $audit = new AuditLog($this->rootDir);
         $data = [
             'ok' => true,
-            'enterprise_version' => '4.1.0',
+            'enterprise_version' => '4.1.1',
             'storage_dir' => $this->rootDir . '/storage/enterprise',
             'workspaces' => $workspaceStore->summary(),
             'users' => $userStore->summary(),
@@ -3679,7 +3687,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $rows = $catalog->filter($this->optString($opts, 'risk'), $this->optString($opts, 'mode'));
         $data = [
             'ok' => true,
-            'publisher_catalog_version' => '4.1.0',
+            'publisher_catalog_version' => '4.1.1',
             'publishers_total' => count($rows),
             'policy' => (string) ($catalog->meta()['policy'] ?? ''),
             'publishers' => array_map(static function (array $row): array {
@@ -3718,7 +3726,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $publisher = $catalog->find((string) $id);
         $data = [
             'ok' => true,
-            'publisher_catalog_version' => '4.1.0',
+            'publisher_catalog_version' => '4.1.1',
             'publisher' => $publisher,
             'safe_defaults' => [
                 'metadata_only' => true,
@@ -3742,9 +3750,9 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         if ($format === 'txt') {
             $this->writeTextLines($output, array_values(array_unique(array_map(static fn (array $row): string => (string) $row['url'], $rows))));
         } else {
-            $this->exportRows($rows, $output, $format, ['publisher_seed_version' => '4.1.0', 'rows_total' => count($rows)]);
+            $this->exportRows($rows, $output, $format, ['publisher_seed_version' => '4.1.1', 'rows_total' => count($rows)]);
         }
-        $data = ['ok' => true, 'publisher_seed_version' => '4.1.0', 'seeds_total' => count($rows), 'format' => $format, 'output' => $output];
+        $data = ['ok' => true, 'publisher_seed_version' => '4.1.1', 'seeds_total' => count($rows), 'format' => $format, 'output' => $output];
         $this->bool($opts, 'json') ? $this->outJson($data) : $this->out('Publisher seeds exported: ' . $output);
         return 0;
     }
@@ -3761,7 +3769,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         );
         $data = [
             'ok' => true,
-            'publisher_plan_version' => '4.1.0',
+            'publisher_plan_version' => '4.1.1',
             'jobs_total' => count($jobs),
             'jobs' => $jobs,
             'policy' => (string) ($catalog->meta()['policy'] ?? ''),
@@ -3777,11 +3785,102 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         return 0;
     }
 
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function publisherGraph(array $args, array $opts): int
+    {
+        $id = $args[0] ?? $this->optString($opts, 'publisher') ?? $this->optString($opts, 'id');
+        if (!$id) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper publisher:graph <publisher-id|name> [--json]');
+        }
+        $publisher = (new PublisherCatalog($this->rootDir))->find((string) $id);
+        $graph = new PublisherContentGraph($publisher);
+        $data = [
+            'ok' => true,
+            'publisher_graph_version' => '4.1.1',
+            'publisher_id' => $publisher['id'] ?? $id,
+            'publisher' => $publisher['publisher'] ?? $id,
+            'example_paths' => $publisher['example_paths'] ?? [],
+            'graph' => $graph->graph(),
+            'levels' => $graph->levels(),
+            'extraction_targets' => $graph->extractionTargets(),
+            'policy' => [
+                'metadata_only' => true,
+                'respect_robots' => true,
+                'no_paywall_bypass' => true,
+                'no_captcha_bypass' => true,
+            ],
+        ];
+        $output = $this->optString($opts, 'output');
+        if ($output) {
+            $this->writeJson($output, $data);
+            $this->out('Publisher graph exported: ' . $output);
+        }
+        if ($this->bool($opts, 'json') || !$output) {
+            $this->outJson($data);
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function publisherEnterprisePlan(array $args, array $opts): int
+    {
+        $id = $args[0] ?? $this->optString($opts, 'publisher') ?? $this->optString($opts, 'id');
+        if (!$id) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper publisher:enterprise-plan <publisher-id|name> [--max-journals=10] [--max-books=10] [--max-issues=10] [--max-articles=25] [--output=file]');
+        }
+        $publisher = (new PublisherCatalog($this->rootDir))->find((string) $id);
+        $plan = (new PublisherContentGraph($publisher))->enterprisePlan(
+            (int) $this->opt($opts, 'max-journals', 10),
+            (int) $this->opt($opts, 'max-books', 10),
+            (int) $this->opt($opts, 'max-issues', 10),
+            (int) $this->opt($opts, 'max-articles', 25)
+        );
+        $data = ['ok' => true, 'publisher_enterprise_plan_version' => '4.1.1', 'plans_total' => count($plan), 'plans' => $plan];
+        $output = $this->optString($opts, 'output') ?: $this->storagePath('publisher-enterprise-plan-' . date('Ymd-His') . '.json');
+        $this->writeJson($output, $data);
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($data + ['output' => $output]);
+        } else {
+            $this->out('Publisher enterprise plan: ' . $output);
+            $this->out('Plans: ' . count($plan));
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function publisherExtractArticle(array $args, array $opts): int
+    {
+        $input = $args[0] ?? $this->optString($opts, 'input') ?? $this->optString($opts, 'file');
+        if (!$input || !is_file($input)) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper publisher:extract-article <saved-article.html> [--publisher=springer] [--url=https://...] [--output=file]');
+        }
+        $publisherId = $this->optString($opts, 'publisher') ?: 'springer';
+        $publisher = (new PublisherCatalog($this->rootDir))->find((string) $publisherId);
+        $record = (new PublisherArticleExtractor($publisher))->extractFromHtml((string) file_get_contents($input), $this->optString($opts, 'url'));
+        $data = [
+            'ok' => true,
+            'publisher_article_extract_version' => '4.1.1',
+            'publisher_id' => $publisher['id'] ?? $publisherId,
+            'source' => $input,
+            'record' => $record,
+        ];
+        $output = $this->optString($opts, 'output');
+        if ($output) {
+            $this->writeJson($output, $data);
+            $this->out('Article metadata extracted: ' . $output);
+        }
+        if ($this->bool($opts, 'json') || !$output) {
+            $this->outJson($data);
+        }
+        return 0;
+    }
+
     /** @param array<int,string> $args @param array<string,mixed> $opts */
     private function publisherSchema(array $args, array $opts): int
     {
         $rows = ArticleMetadataNormalizer::schemaFields();
-        $data = ['ok' => true, 'article_schema_version' => '4.1.0', 'fields_total' => count($rows), 'fields' => $rows];
+        $data = ['ok' => true, 'article_schema_version' => '4.1.1', 'fields_total' => count($rows), 'fields' => $rows];
         $output = $this->optString($opts, 'output');
         $format = strtolower($this->optString($opts, 'format', 'json') ?? 'json');
         if ($output) {
@@ -3819,13 +3918,13 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $format = strtolower($this->optString($opts, 'format', 'json') ?? 'json');
         $output = $this->optString($opts, 'output') ?: $this->storagePath('article-metadata-' . date('Ymd-His') . '.' . ($format === 'csv' ? 'csv' : ($format === 'jsonl' ? 'jsonl' : 'json')));
         $this->exportRows($rows, $output, $format, [
-            'article_metadata_version' => '4.1.0',
+            'article_metadata_version' => '4.1.1',
             'source' => $input,
             'records_total' => count($records),
             'normalized_total' => count($rows),
             'publisher' => $publisherName,
         ]);
-        $result = ['ok' => true, 'article_metadata_version' => '4.1.0', 'records_total' => count($records), 'normalized_total' => count($rows), 'output' => $output];
+        $result = ['ok' => true, 'article_metadata_version' => '4.1.1', 'records_total' => count($records), 'normalized_total' => count($rows), 'output' => $output];
         $this->bool($opts, 'json') ? $this->outJson($result) : $this->out('Article metadata normalized: ' . $output);
         return 0;
     }
@@ -4788,7 +4887,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $result = (new DatabaseMigrator($pdo, $config->driver()))->migrate();
         $this->outJson([
             'ok' => true,
-            'version' => '4.1.0',
+            'version' => '4.1.1',
             'driver' => $result['driver'],
             'statements_executed' => $result['statements'],
             'tables' => $result['tables'],
@@ -4804,7 +4903,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $pdo = (new DatabaseConnectionFactory())->connect($config);
         $this->outJson([
             'ok' => true,
-            'version' => '4.1.0',
+            'version' => '4.1.1',
             'driver' => $config->driver(),
             'pdo_driver' => (string) $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME),
             'dsn' => $this->safeDsn($config->dsn),
@@ -5365,7 +5464,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '4.1.0',
+            'checkpoint_version' => '4.1.1',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),

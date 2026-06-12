@@ -12,7 +12,7 @@ final class ScraperKitApplication
     /** @param array<string,mixed> $config */
     public static function create(array $config, string $rootDir): Application
     {
-        $application = new Application('MNB ScraperKit', '4.1.0');
+        $application = new Application('MNB ScraperKit', '4.1.1');
         $application->setCatchExceptions(true);
 
         foreach (CommandRegistry::commands() as $name => $description) {

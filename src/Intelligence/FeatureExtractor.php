@@ -36,7 +36,7 @@ final class FeatureExtractor
         $recordFeatures = array_map(fn (array $record): array => $this->recordFeatures($record), $records);
 
         return [
-            'intelligence_version' => '4.1.0',
+            'intelligence_version' => '4.1.1',
             'generated_at' => date(DATE_ATOM),
             'source' => $source,
             'summary' => [

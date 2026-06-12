@@ -1,9 +1,9 @@
 {
     "name": "mnb/scraperkit",
-    "description": "MNB ScraperKit V4.1.0 - enterprise-ready PHP crawling and data extraction framework with safe academic publisher metadata crawling, article DOI/ISSN normalization, source connectors, CLI/API/dashboard workflows, datasets, evaluation, security compliance, and export automation.",
+    "description": "MNB ScraperKit V4.1.1 - enterprise-ready PHP crawling and data extraction framework with safe academic publisher metadata crawling, article DOI/ISSN normalization, source connectors, CLI/API/dashboard workflows, datasets, evaluation, security compliance, and export automation.",
     "type": "library",
     "license": "MIT",
-    "version": "4.1.0",
+    "version": "4.1.1",
     "require": {
         "php": ">=8.2",
         "ext-dom": "*",
@@ -18,7 +18,7 @@
         "chrome/chromium": "Needed only when using browser-assisted crawling through Panther/Chrome.",
         "pdo_sqlite": "Optional SQLite driver for local database storage.",
         "pdo_mysql": "Optional MySQL/MariaDB driver for server database storage.",
-        "php-ai/php-ml": "Optional machine-learning toolkit for future model training/inference. V4.1.0 includes deterministic ML-ready features, dataset annotations, evaluation reports, rule-builder assisted profile creation, training-ready exports, and export connector delivery manifests without requiring this dependency.",
+        "php-ai/php-ml": "Optional machine-learning toolkit for future model training/inference. V4.1.1 includes deterministic ML-ready features, dataset annotations, evaluation reports, rule-builder assisted profile creation, training-ready exports, and export connector delivery manifests without requiring this dependency.",
         "ext-redis": "Optional Redis extension for distributed multi-worker queue mode. File-based distributed queue fallback works without Redis.",
         "ext-openssl": "Recommended for secure HTTPS transport and checksum/signature workflows."
     },

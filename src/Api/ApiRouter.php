@@ -25,6 +25,7 @@ use Mnb\ScraperKit\Enterprise\AuditLog;
 use Mnb\ScraperKit\Enterprise\UserStore;
 use Mnb\ScraperKit\Enterprise\WorkspaceStore;
 use Mnb\ScraperKit\Publisher\PublisherCatalog;
+use Mnb\ScraperKit\Publisher\PublisherContentGraph;
 use Mnb\ScraperKit\Publisher\ArticleMetadataNormalizer;
 
 /**
@@ -36,7 +37,7 @@ use Mnb\ScraperKit\Publisher\ArticleMetadataNormalizer;
  */
 final class ApiRouter
 {
-    public const VERSION = '4.1.0';
+    public const VERSION = '4.1.1';
 
     public function __construct(
         private readonly string $rootDir,
@@ -68,6 +69,7 @@ final class ApiRouter
             ['method' => 'GET', 'path' => '/api/v1/browser/sessions', 'description' => 'List authorized browser session profiles.'],
             ['method' => 'GET', 'path' => '/api/v1/publishers', 'description' => 'List safe academic publisher metadata crawl targets.'],
             ['method' => 'GET', 'path' => '/api/v1/publishers/schema', 'description' => 'Read normalized article metadata schema.'],
+            ['method' => 'GET', 'path' => '/api/v1/publishers/{publisher_id}/graph', 'description' => 'Read publisher navigation graph and extraction targets.'],
             ['method' => 'GET', 'path' => '/api/v1/publishers/{publisher_id}', 'description' => 'Read one publisher crawl profile.'],
             ['method' => 'GET', 'path' => '/api/v1/export-connectors', 'description' => 'List configured export delivery connectors.'],
             ['method' => 'GET', 'path' => '/api/v1/export-connectors/{connector_id}', 'description' => 'Read one export delivery connector.'],
@@ -238,6 +240,22 @@ final class ApiRouter
                 'ok' => true,
                 'article_schema_version' => self::VERSION,
                 'fields' => ArticleMetadataNormalizer::schemaFields(),
+            ]);
+        }
+
+
+        if ($method === 'GET' && preg_match('#^/api/v1/publishers/([^/]+)/graph$#', $path, $m)) {
+            $catalog = new PublisherCatalog($this->rootDir);
+            $publisher = $catalog->find(rawurldecode($m[1]));
+            $graph = new PublisherContentGraph($publisher);
+            return new ApiResponse(200, [
+                'ok' => true,
+                'publisher_graph_version' => self::VERSION,
+                'publisher' => $publisher['publisher'] ?? rawurldecode($m[1]),
+                'example_paths' => $publisher['example_paths'] ?? [],
+                'graph' => $graph->graph(),
+                'levels' => $graph->levels(),
+                'extraction_targets' => $graph->extractionTargets(),
             ]);
         }
 
