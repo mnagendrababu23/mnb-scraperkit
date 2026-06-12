@@ -3,7 +3,6 @@
     "description": "MNB ScraperKit V1.0.3 - enterprise-ready PHP crawling and data extraction framework with AI crawl intelligence, search discovery, authorized mail/webmail extraction connectors, publisher metadata workflows, extraction recipes, provenance, quality reports, datasets, queues, dashboards, and compliance tooling.",
     "type": "library",
     "license": "MIT",
-    "version": "1.0.3",
     "require": {
         "php": ">=8.2",
         "ext-dom": "*",
@@ -210,5 +209,9 @@
         "webmail-export",
         "email-to-seeds",
         "authorized-mail"
-    ]
+    ],
+    "support": {
+        "source": "https://github.com/mnagendrababu23/mnb-scraperkit",
+        "issues": "https://github.com/mnagendrababu23/mnb-scraperkit/issues"
+    }
 }

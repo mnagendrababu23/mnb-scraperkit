@@ -860,6 +860,33 @@ php bin/mnb-scraper bundle:create storage/jobs/job-id
 
 ## Installation
 
+
+### Current GitHub installation check
+
+The live GitHub repository is installable through Composer as a VCS package before Packagist publishing. Use this command sequence in a clean test folder:
+
+```bash
+mkdir test-mnb-scraperkit
+cd test-mnb-scraperkit
+composer init --no-interaction
+composer config repositories.mnb-scraperkit vcs https://github.com/mnagendrababu23/mnb-scraperkit.git
+composer require mnb/scraperkit:dev-main
+php vendor/bin/mnb-scraper list
+```
+
+For a tagged release such as `v1.0.3`, use:
+
+```bash
+composer config repositories.mnb-scraperkit vcs https://github.com/mnagendrababu23/mnb-scraperkit.git
+composer require mnb/scraperkit:^1.0
+```
+
+After the package is submitted to Packagist, users can install it directly without the VCS repository config:
+
+```bash
+composer require mnb/scraperkit
+```
+
 MNB ScraperKit is a Composer package. There are two common install paths:
 
 1. **Packagist install** — use this after `mnb/scraperkit` is published on Packagist.
