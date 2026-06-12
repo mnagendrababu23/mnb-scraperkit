@@ -87,6 +87,93 @@ On Windows CMD:
 vendor\bin\mnb-scraper.bat crawl "https://example.com" --max-pages=1 --depth=0 --format=json
 ```
 
+### Use in a PHP file
+
+After installing with Composer, create an `index.php` file in your project root.
+
+```php
+<?php
+
+declare(strict_types=1);
+
+require __DIR__ . '/vendor/autoload.php';
+
+use Mnb\ScraperKit\Core\CrawlOptions;
+use Mnb\ScraperKit\Core\Scraper;
+
+$scraper = new Scraper();
+
+$result = $scraper->crawl(
+    'https://example.com',
+    new CrawlOptions(
+        maxPages: 1,
+        maxDepth: 0,
+        delayMs: 500,
+    )
+);
+
+header('Content-Type: application/json');
+
+echo json_encode(
+    $result->toArray(false),
+    JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+);
+```
+
+Run it from the command line:
+
+```bash
+php index.php
+```
+
+Or place it in your local web root and open it through your browser, for example with XAMPP:
+
+```text
+http://localhost/test-mnb-scraperkit/index.php
+```
+
+#### PHP extraction rules example
+
+You can pass extraction rules as the third argument to `crawl()`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+require __DIR__ . '/vendor/autoload.php';
+
+use Mnb\ScraperKit\Core\CrawlOptions;
+use Mnb\ScraperKit\Core\Scraper;
+
+$rules = [
+    'title' => 'title',
+    'h1' => 'h1',
+    'meta_description' => 'meta[name="description"]::attr(content)',
+    'links' => 'a::attr(href)[]',
+];
+
+$result = (new Scraper())->crawl(
+    'https://example.com',
+    new CrawlOptions(maxPages: 1, maxDepth: 0),
+    $rules
+);
+
+header('Content-Type: application/json');
+
+echo json_encode(
+    $result->toArray(false),
+    JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+);
+```
+
+A copy-ready example is available at:
+
+```text
+examples/php/index-after-composer-install.php
+examples/php/custom-rules-after-composer-install.php
+```
+
 ### Install a specific version
 
 Install the latest stable `1.x` release:
