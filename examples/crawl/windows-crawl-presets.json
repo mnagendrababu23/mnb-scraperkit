@@ -1,5 +1,5 @@
 {
-  "preset_version": "1.0.2",
+  "preset_version": "1.0.3",
   "policy": "Use only for owned, allowed, or explicitly authorized websites. Respect robots and rate limits.",
   "presets": [
     {

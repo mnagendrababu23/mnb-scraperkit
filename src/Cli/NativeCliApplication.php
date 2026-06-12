@@ -99,6 +99,10 @@ use Mnb\ScraperKit\Search\SearchProviderRegistry;
 use Mnb\ScraperKit\Mail\MailProviderRegistry;
 use Mnb\ScraperKit\Mail\MailMessageExtractor;
 use Mnb\ScraperKit\Mail\MailSeedExporter;
+use Mnb\ScraperKit\Ml\AdaptiveCrawlPlanner;
+use Mnb\ScraperKit\Ml\CrawlFeedbackStore;
+use Mnb\ScraperKit\Ml\CrawlMlModel;
+use Mnb\ScraperKit\Ml\TrainingDataExporter;
 use Mnb\ScraperKit\Security\CompliancePolicy;
 use Mnb\ScraperKit\Security\ComplianceReportBuilder;
 use Mnb\ScraperKit\Security\SecretScanner;
@@ -169,6 +173,12 @@ final class NativeCliApplication
                 'mail:extract' => $this->mailExtract($args, $opts),
                 'mail:attachments' => $this->mailAttachments($args, $opts),
                 'mail:to-seeds' => $this->mailToSeeds($args, $opts),
+                'ml:strategies' => $this->mlStrategies($args, $opts),
+                'ml:train' => $this->mlTrain($args, $opts),
+                'ml:score' => $this->mlScore($args, $opts),
+                'ml:adaptive-plan' => $this->mlAdaptivePlan($args, $opts),
+                'ml:feedback' => $this->mlFeedback($args, $opts),
+                'ml:export-training' => $this->mlExportTraining($args, $opts),
                 'crawl' => $this->crawl($args, $opts),
                 'browser:test' => $this->browserTest($args, $opts),
                 'browser:session-create' => $this->browserSessionCreate($args, $opts),
@@ -354,7 +364,7 @@ final class NativeCliApplication
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 1.0.2 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 1.0.3 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -858,7 +868,7 @@ final class NativeCliApplication
     {
         $templates = array_map(static fn($template): array => $template->summary(), (new TemplateCatalog($this->rootDir))->templates());
         if ($this->bool($opts, 'json')) {
-            $this->outJson(['ok' => true, 'template_version' => '1.0.2', 'templates' => $templates]);
+            $this->outJson(['ok' => true, 'template_version' => '1.0.3', 'templates' => $templates]);
             return 0;
         }
         $this->out('Project templates:');
@@ -926,7 +936,7 @@ final class NativeCliApplication
     {
         $packs = array_map(static fn($pack): array => $pack->summary(), (new TemplateCatalog($this->rootDir))->presetPacks());
         if ($this->bool($opts, 'json')) {
-            $this->outJson(['ok' => true, 'preset_pack_version' => '1.0.2', 'preset_packs' => $packs]);
+            $this->outJson(['ok' => true, 'preset_pack_version' => '1.0.3', 'preset_packs' => $packs]);
             return 0;
         }
         $this->out('Preset packs:');
@@ -1689,7 +1699,7 @@ final class NativeCliApplication
         $manifest = $context['manifest'];
         $datasetDir = (string) ($manifest['_dataset_dir'] ?? $this->rootDir . '/storage/datasets');
         $output = $this->optString($opts, 'output') ?: rtrim($datasetDir, '/\\') . '/annotations-export.' . ($format === 'csv' ? 'csv' : ($format === 'json' ? 'json' : 'jsonl'));
-        $this->exportRows($rows, $output, $format, ['annotation_export_version' => '1.0.2', 'rows_total' => count($rows)]);
+        $this->exportRows($rows, $output, $format, ['annotation_export_version' => '1.0.3', 'rows_total' => count($rows)]);
         $this->outJson(['ok' => true, 'rows_exported' => count($rows), 'format' => $format, 'output' => $output]);
         return 0;
     }
@@ -1801,6 +1811,160 @@ final class NativeCliApplication
         return 0;
     }
 
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function mlStrategies(array $args, array $opts): int
+    {
+        $path = $this->rootDir . '/config/ml/crawl-strategies.json';
+        $data = is_file($path) ? json_decode((string) file_get_contents($path), true) : [];
+        if (!is_array($data)) {
+            $data = ['ml_crawl_strategy_version' => '1.0.3', 'strategies' => []];
+        }
+        $this->outJson($data);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function mlTrain(array $args, array $opts): int
+    {
+        $positiveFile = $this->optString($opts, 'positive') ?? $this->optString($opts, 'positives');
+        $negativeFile = $this->optString($opts, 'negative') ?? $this->optString($opts, 'negatives');
+        $feedbackFile = $this->optString($opts, 'feedback');
+        if (!$positiveFile && !$feedbackFile) {
+            throw new \InvalidArgumentException('Usage: ml:train --positive=positive-urls.txt --negative=negative-urls.txt [--output=storage/ml/model.json]');
+        }
+        $positive = $positiveFile && is_file($positiveFile) ? $this->readUrlsForIntelligence($positiveFile) : [];
+        $negative = $negativeFile && is_file((string) $negativeFile) ? $this->readUrlsForIntelligence((string) $negativeFile) : [];
+        if ($feedbackFile) {
+            $feedback = (new CrawlFeedbackStore($this->rootDir))->positivesNegatives((string) $feedbackFile);
+            $positive = array_merge($positive, $feedback['positive'] ?? []);
+            $negative = array_merge($negative, $feedback['negative'] ?? []);
+        }
+        if ($positive === [] || $negative === []) {
+            throw new \InvalidArgumentException('ML training needs at least one positive and one negative URL example.');
+        }
+        $model = (new CrawlMlModel())->train($positive, $negative, [
+            'min_token_length' => (int) ($this->optString($opts, 'min-length', '3') ?? '3'),
+            'score_threshold' => (float) ($this->optString($opts, 'threshold', '0.58') ?? '0.58'),
+        ]);
+        $output = $this->optString($opts, 'output') ?: $this->rootDir . '/storage/ml/crawl-model.json';
+        $this->writeJson($output, $model);
+        $this->outJson(['ok' => true, 'output' => $output, 'training_summary' => $model['training_summary'] ?? []]);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function mlScore(array $args, array $opts): int
+    {
+        $input = $args[0] ?? $this->optString($opts, 'input');
+        $modelPath = $this->optString($opts, 'model') ?? $this->optString($opts, 'model-file');
+        if (!$input || !is_file((string) $input) || !$modelPath || !is_file((string) $modelPath)) {
+            throw new \InvalidArgumentException('Usage: ml:score <urls.txt|results.json> --model=model.json [--output=scores.json]');
+        }
+        $model = json_decode((string) file_get_contents((string) $modelPath), true);
+        if (!is_array($model)) {
+            throw new \RuntimeException('Model file must be JSON: ' . $modelPath);
+        }
+        $data = (new CrawlMlModel())->scoreUrls($model, $this->readUrlsForIntelligence((string) $input));
+        $format = strtolower($this->optString($opts, 'format', 'json') ?? 'json');
+        $output = $this->optString($opts, 'output');
+        if ($output) {
+            if ($format === 'txt') {
+                $this->writeTextLines($output, array_values(array_map('strval', $data['urls'] ?? [])));
+            } else {
+                $this->writeJson($output, $data);
+            }
+            $this->outJson(['ok' => true, 'output' => $output, 'urls_total' => $data['urls_total'] ?? 0]);
+        } else {
+            $this->outJson($data);
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function mlAdaptivePlan(array $args, array $opts): int
+    {
+        $input = $args[0] ?? $this->optString($opts, 'input');
+        if (!$input || !is_file((string) $input)) {
+            throw new \InvalidArgumentException('Usage: ml:adaptive-plan <urls.txt|results.json> [--model=model.json] [--crawl-budget=25] [--output=plan.json]');
+        }
+        $modelPath = $this->optString($opts, 'model') ?? $this->optString($opts, 'model-file');
+        $model = null;
+        if ($modelPath) {
+            $modelData = json_decode((string) file_get_contents((string) $modelPath), true);
+            if (!is_array($modelData)) {
+                throw new \RuntimeException('Model file must be JSON: ' . $modelPath);
+            }
+            $model = $modelData;
+        }
+        $data = (new AdaptiveCrawlPlanner())->plan($this->readUrlsForIntelligence((string) $input), $model, [
+            'crawl_budget' => (int) ($this->optString($opts, 'crawl-budget', $this->optString($opts, 'max-pages', '25')) ?? '25'),
+            'explore_ratio' => (float) ($this->optString($opts, 'explore-ratio', '0.15') ?? '0.15'),
+            'score_threshold' => (float) ($this->optString($opts, 'threshold', '0.55') ?? '0.55'),
+            'profile' => $this->optString($opts, 'profile', 'auto') ?? 'auto',
+        ]);
+        $format = strtolower($this->optString($opts, 'format', 'json') ?? 'json');
+        $output = $this->optString($opts, 'output');
+        if ($output) {
+            if ($format === 'txt') {
+                $this->writeTextLines($output, array_values(array_map('strval', $data['selected_urls'] ?? [])));
+            } else {
+                $this->writeJson($output, $data);
+            }
+            $this->outJson(['ok' => true, 'output' => $output, 'selected_total' => $data['selected_total'] ?? 0]);
+        } else {
+            $this->outJson($data);
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function mlFeedback(array $args, array $opts): int
+    {
+        $url = $args[0] ?? $this->optString($opts, 'url');
+        if (!$url) {
+            throw new \InvalidArgumentException('Usage: ml:feedback <url> --label=relevant|irrelevant|review [--feedback=storage/ml/crawl-feedback.jsonl]');
+        }
+        $result = (new CrawlFeedbackStore($this->rootDir))->add([
+            'url' => (string) $url,
+            'label' => $this->optString($opts, 'label', 'relevant') ?? 'relevant',
+            'reason' => $this->optString($opts, 'reason') ?? $this->optString($opts, 'note') ?? '',
+            'source' => $this->optString($opts, 'source', 'manual') ?? 'manual',
+            'profile' => $this->optString($opts, 'profile', '') ?? '',
+        ], $this->optString($opts, 'feedback'));
+        $this->outJson($result);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function mlExportTraining(array $args, array $opts): int
+    {
+        $positiveFile = $this->optString($opts, 'positive') ?? $this->optString($opts, 'positives');
+        $negativeFile = $this->optString($opts, 'negative') ?? $this->optString($opts, 'negatives');
+        $feedbackFile = $this->optString($opts, 'feedback');
+        $positive = $positiveFile && is_file($positiveFile) ? $this->readUrlsForIntelligence($positiveFile) : [];
+        $negative = $negativeFile && is_file((string) $negativeFile) ? $this->readUrlsForIntelligence((string) $negativeFile) : [];
+        if ($feedbackFile) {
+            $feedback = (new CrawlFeedbackStore($this->rootDir))->positivesNegatives((string) $feedbackFile);
+            $positive = array_merge($positive, $feedback['positive'] ?? []);
+            $negative = array_merge($negative, $feedback['negative'] ?? []);
+        }
+        if ($positive === [] && $negative === []) {
+            throw new \InvalidArgumentException('Usage: ml:export-training --positive=positive.txt --negative=negative.txt [--format=jsonl]');
+        }
+        $exporter = new TrainingDataExporter();
+        $data = $exporter->build($positive, $negative);
+        $format = strtolower($this->optString($opts, 'format', 'jsonl') ?? 'jsonl');
+        $output = $this->optString($opts, 'output') ?: $this->rootDir . '/storage/ml/training-data.' . ($format === 'json' ? 'json' : 'jsonl');
+        if ($format === 'json') {
+            $this->writeJson($output, $data);
+        } else {
+            $exporter->writeJsonl($data, $output);
+        }
+        $this->outJson(['ok' => true, 'output' => $output, 'records_total' => $data['records_total'] ?? 0, 'format' => $format]);
+        return 0;
+    }
+
     /** @param array<int,string> $args @param array<string,mixed> $opts */
     private function webhookList(array $args, array $opts): int
     {
@@ -1825,7 +1989,7 @@ final class NativeCliApplication
         $output = $this->optString($opts, 'output') ?: $this->storagePath('webhooks/test-' . date('Ymd-His') . '.json');
         $payload = [
             'message' => 'MNB ScraperKit webhook test event',
-            'version' => '1.0.2',
+            'version' => '1.0.3',
             'generated_at' => date(DATE_ATOM),
         ];
         $dispatcher = new WebhookDispatcher($this->safetyGuard());
@@ -2134,7 +2298,7 @@ final class NativeCliApplication
         }
         $explanation = [
             'ok' => true,
-            'ai_explanation_version' => '1.0.2',
+            'ai_explanation_version' => '1.0.3',
             'url' => (string) ($data['url'] ?? ''),
             'summary' => sprintf(
                 'Flexibility is %s (%s/100), risk is %s, recommended mode is %s.',
@@ -2246,7 +2410,7 @@ final class NativeCliApplication
         $seeds = (new SearchDiscoveryEngine())->seedsFromFile((string) $input, $this->optString($opts, 'filter-domain') ?: $this->optString($opts, 'domain'));
         $format = strtolower($this->optString($opts, 'format', 'txt') ?? 'txt');
         $output = $this->optString($opts, 'output');
-        $data = ['ok' => true, 'search_seed_export_version' => '1.0.2', 'source' => $input, 'seeds_total' => count($seeds), 'seeds' => $seeds];
+        $data = ['ok' => true, 'search_seed_export_version' => '1.0.3', 'source' => $input, 'seeds_total' => count($seeds), 'seeds' => $seeds];
         if ($output) {
             $this->ensureDir(dirname($output));
             if ($format === 'json') {
@@ -2301,7 +2465,7 @@ final class NativeCliApplication
         if (!in_array($provider, ['local_json', 'eml_file'], true)) {
             $data = [
                 'ok' => false,
-                'mail_search_version' => '1.0.2',
+                'mail_search_version' => '1.0.3',
                 'provider' => $provider,
                 'status' => 'not_configured_or_external_connector_required',
                 'message' => 'Live Gmail/IMAP providers require authorized connector implementation and credentials outside this package. Use local_json for offline approved exports.',
@@ -2312,7 +2476,7 @@ final class NativeCliApplication
             $results = $extractor->search($messages, (string) $query, (int) $this->opt($opts, 'limit', 25));
             $data = [
                 'ok' => true,
-                'mail_search_version' => '1.0.2',
+                'mail_search_version' => '1.0.3',
                 'provider' => $provider,
                 'input' => $input,
                 'query' => (string) $query,
@@ -2395,7 +2559,7 @@ final class NativeCliApplication
         $seeds = (new MailSeedExporter())->seeds($json, $this->optString($opts, 'filter-domain') ?: $this->optString($opts, 'domain'));
         $data = [
             'ok' => true,
-            'mail_seed_export_version' => '1.0.2',
+            'mail_seed_export_version' => '1.0.3',
             'source' => $input,
             'seeds_total' => count($seeds),
             'seeds' => $seeds,
@@ -2423,7 +2587,7 @@ final class NativeCliApplication
     private function extractionTypes(array $opts): int
     {
         $data = [
-            'extraction_version' => '1.0.2',
+            'extraction_version' => '1.0.3',
             'types' => ExtractionOptions::TYPES,
             'examples' => [
                 'components' => 'tables, lists, headings, navigation links, breadcrumbs, social/download links, bio blocks, cards, repeated components',
@@ -2498,7 +2662,7 @@ final class NativeCliApplication
         $dictionary->save($dictionaryFile);
         $data = [
             'ok' => true,
-            'dictionary_version' => '1.0.2',
+            'dictionary_version' => '1.0.3',
             'dictionary_file' => $dictionaryFile,
             'new_total' => $learned['new_total'],
             'total' => $learned['total'],
@@ -2514,11 +2678,11 @@ final class NativeCliApplication
         $input = $args[0] ?? $this->optString($opts, 'input');
         $registry = new PatternRegistry($this->optString($opts, 'patterns') ?: $this->optString($opts, 'patterns-file'));
         if (!$input) {
-            $this->outJson(['pattern_version' => '1.0.2', 'patterns' => $registry->all()]);
+            $this->outJson(['pattern_version' => '1.0.3', 'patterns' => $registry->all()]);
             return 0;
         }
         $text = is_file($input) ? (string) file_get_contents($input) : (string) $input;
-        $data = ['pattern_version' => '1.0.2', 'source' => $input, 'matches' => $registry->match($text), 'patterns' => array_keys($registry->all())];
+        $data = ['pattern_version' => '1.0.3', 'source' => $input, 'matches' => $registry->match($text), 'patterns' => array_keys($registry->all())];
         $output = $this->optString($opts, 'output');
         if ($output) {
             $this->writeJson($output, $data);
@@ -2534,13 +2698,13 @@ final class NativeCliApplication
         $input = $args[0] ?? $this->optString($opts, 'input');
         $mapping = $this->optString($opts, 'mapping', 'article') ?? 'article';
         if (!$input) {
-            $this->outJson(['mapping_version' => '1.0.2', 'mappings' => $registry->all()]);
+            $this->outJson(['mapping_version' => '1.0.3', 'mappings' => $registry->all()]);
             return 0;
         }
         $data = json_decode((string) file_get_contents($input), true);
         $records = $this->recordsFromData(is_array($data) ? $data : null);
         $mapped = array_map(static fn (array $record): array => $registry->mapRecord($record, $mapping), $records);
-        $result = ['mapping_version' => '1.0.2', 'mapping' => $mapping, 'records_total' => count($records), 'records' => $mapped];
+        $result = ['mapping_version' => '1.0.3', 'mapping' => $mapping, 'records_total' => count($records), 'records' => $mapped];
         $output = $this->optString($opts, 'output');
         if ($output) {
             $this->writeJson($output, $result);
@@ -2556,7 +2720,7 @@ final class NativeCliApplication
     {
         $dir = $this->optString($opts, 'dir') ?: dirname(__DIR__, 2) . '/config/extraction/recipes';
         $data = [
-            'recipe_catalog_version' => '1.0.2',
+            'recipe_catalog_version' => '1.0.3',
             'recipes' => ExtractionRecipe::catalog($dir),
         ];
         $this->outJson($data);
@@ -3146,7 +3310,7 @@ final class NativeCliApplication
         $store = new ExportConnectorStore($this->rootDir);
         $connectors = $store->list($this->optString($opts, 'config'));
         $data = [
-            'export_connector_version' => '1.0.2',
+            'export_connector_version' => '1.0.3',
             'connectors_total' => count($connectors),
             'connectors' => $connectors,
         ];
@@ -3174,7 +3338,7 @@ final class NativeCliApplication
             throw new \InvalidArgumentException('Usage: php bin/mnb-scraper export:connector-show <connector-id>');
         }
         $connector = (new ExportConnectorStore($this->rootDir))->show($id, $this->optString($opts, 'config'));
-        $this->outJson(['ok' => true, 'export_connector_version' => '1.0.2', 'connector' => $connector]);
+        $this->outJson(['ok' => true, 'export_connector_version' => '1.0.3', 'connector' => $connector]);
         return 0;
     }
 
@@ -3203,7 +3367,7 @@ final class NativeCliApplication
         $sample = $this->storagePath('export-connector-test/sample-export.json');
         $this->writeJson($sample, [
             'export_connector_test' => true,
-            'version' => '1.0.2',
+            'version' => '1.0.3',
             'generated_at' => date(DATE_ATOM),
             'message' => 'Sample export artifact for connector dry run.',
         ]);
@@ -3290,7 +3454,7 @@ final class NativeCliApplication
         $audit = new AuditLog($this->rootDir);
         $data = [
             'ok' => true,
-            'enterprise_version' => '1.0.2',
+            'enterprise_version' => '1.0.3',
             'storage_dir' => $this->rootDir . '/storage/enterprise',
             'workspaces' => $workspaceStore->summary(),
             'users' => $userStore->summary(),
@@ -4294,7 +4458,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $rows = $catalog->filter($this->optString($opts, 'risk'), $this->optString($opts, 'mode'));
         $data = [
             'ok' => true,
-            'publisher_catalog_version' => '1.0.2',
+            'publisher_catalog_version' => '1.0.3',
             'publishers_total' => count($rows),
             'policy' => (string) ($catalog->meta()['policy'] ?? ''),
             'publishers' => array_map(static function (array $row): array {
@@ -4333,7 +4497,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $publisher = $catalog->find((string) $id);
         $data = [
             'ok' => true,
-            'publisher_catalog_version' => '1.0.2',
+            'publisher_catalog_version' => '1.0.3',
             'publisher' => $publisher,
             'safe_defaults' => [
                 'metadata_only' => true,
@@ -4357,9 +4521,9 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         if ($format === 'txt') {
             $this->writeTextLines($output, array_values(array_unique(array_map(static fn (array $row): string => (string) $row['url'], $rows))));
         } else {
-            $this->exportRows($rows, $output, $format, ['publisher_seed_version' => '1.0.2', 'rows_total' => count($rows)]);
+            $this->exportRows($rows, $output, $format, ['publisher_seed_version' => '1.0.3', 'rows_total' => count($rows)]);
         }
-        $data = ['ok' => true, 'publisher_seed_version' => '1.0.2', 'seeds_total' => count($rows), 'format' => $format, 'output' => $output];
+        $data = ['ok' => true, 'publisher_seed_version' => '1.0.3', 'seeds_total' => count($rows), 'format' => $format, 'output' => $output];
         $this->bool($opts, 'json') ? $this->outJson($data) : $this->out('Publisher seeds exported: ' . $output);
         return 0;
     }
@@ -4376,7 +4540,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         );
         $data = [
             'ok' => true,
-            'publisher_plan_version' => '1.0.2',
+            'publisher_plan_version' => '1.0.3',
             'jobs_total' => count($jobs),
             'jobs' => $jobs,
             'policy' => (string) ($catalog->meta()['policy'] ?? ''),
@@ -4404,7 +4568,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $graph = new PublisherContentGraph($publisher);
         $data = [
             'ok' => true,
-            'publisher_graph_version' => '1.0.2',
+            'publisher_graph_version' => '1.0.3',
             'publisher_id' => $publisher['id'] ?? $id,
             'publisher' => $publisher['publisher'] ?? $id,
             'example_paths' => $publisher['example_paths'] ?? [],
@@ -4443,7 +4607,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
             (int) $this->opt($opts, 'max-issues', 10),
             (int) $this->opt($opts, 'max-articles', 25)
         );
-        $data = ['ok' => true, 'publisher_enterprise_plan_version' => '1.0.2', 'plans_total' => count($plan), 'plans' => $plan];
+        $data = ['ok' => true, 'publisher_enterprise_plan_version' => '1.0.3', 'plans_total' => count($plan), 'plans' => $plan];
         $output = $this->optString($opts, 'output') ?: $this->storagePath('publisher-enterprise-plan-' . date('Ymd-His') . '.json');
         $this->writeJson($output, $data);
         if ($this->bool($opts, 'json')) {
@@ -4467,7 +4631,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $record = (new PublisherArticleExtractor($publisher))->extractFromHtml((string) file_get_contents($input), $this->optString($opts, 'url'));
         $data = [
             'ok' => true,
-            'publisher_article_extract_version' => '1.0.2',
+            'publisher_article_extract_version' => '1.0.3',
             'publisher_id' => $publisher['id'] ?? $publisherId,
             'source' => $input,
             'record' => $record,
@@ -4487,7 +4651,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
     private function publisherSchema(array $args, array $opts): int
     {
         $rows = ArticleMetadataNormalizer::schemaFields();
-        $data = ['ok' => true, 'article_schema_version' => '1.0.2', 'fields_total' => count($rows), 'fields' => $rows];
+        $data = ['ok' => true, 'article_schema_version' => '1.0.3', 'fields_total' => count($rows), 'fields' => $rows];
         $output = $this->optString($opts, 'output');
         $format = strtolower($this->optString($opts, 'format', 'json') ?? 'json');
         if ($output) {
@@ -4525,13 +4689,13 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $format = strtolower($this->optString($opts, 'format', 'json') ?? 'json');
         $output = $this->optString($opts, 'output') ?: $this->storagePath('article-metadata-' . date('Ymd-His') . '.' . ($format === 'csv' ? 'csv' : ($format === 'jsonl' ? 'jsonl' : 'json')));
         $this->exportRows($rows, $output, $format, [
-            'article_metadata_version' => '1.0.2',
+            'article_metadata_version' => '1.0.3',
             'source' => $input,
             'records_total' => count($records),
             'normalized_total' => count($rows),
             'publisher' => $publisherName,
         ]);
-        $result = ['ok' => true, 'article_metadata_version' => '1.0.2', 'records_total' => count($records), 'normalized_total' => count($rows), 'output' => $output];
+        $result = ['ok' => true, 'article_metadata_version' => '1.0.3', 'records_total' => count($records), 'normalized_total' => count($rows), 'output' => $output];
         $this->bool($opts, 'json') ? $this->outJson($result) : $this->out('Article metadata normalized: ' . $output);
         return 0;
     }
@@ -5494,7 +5658,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $result = (new DatabaseMigrator($pdo, $config->driver()))->migrate();
         $this->outJson([
             'ok' => true,
-            'version' => '1.0.2',
+            'version' => '1.0.3',
             'driver' => $result['driver'],
             'statements_executed' => $result['statements'],
             'tables' => $result['tables'],
@@ -5510,7 +5674,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $pdo = (new DatabaseConnectionFactory())->connect($config);
         $this->outJson([
             'ok' => true,
-            'version' => '1.0.2',
+            'version' => '1.0.3',
             'driver' => $config->driver(),
             'pdo_driver' => (string) $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME),
             'dsn' => $this->safeDsn($config->dsn),
@@ -6071,7 +6235,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '1.0.2',
+            'checkpoint_version' => '1.0.3',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),

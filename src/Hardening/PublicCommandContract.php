@@ -15,7 +15,7 @@ use Mnb\ScraperKit\Console\CommandRegistry;
  */
 final class PublicCommandContract
 {
-    public const VERSION = '1.0.2';
+    public const VERSION = '1.0.3';
 
     /** @return array<string,mixed> */
     public function snapshot(): array

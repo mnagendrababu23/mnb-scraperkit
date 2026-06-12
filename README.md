@@ -1,8 +1,8 @@
-# MNB ScraperKit v1.0.2
+# MNB ScraperKit v1.0.3
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-v1.0.2 is a small public patch release for MNB ScraperKit. It keeps the v1.0.0 feature set and improves first-run usability from source archives with a native CLI fallback, clearer onboarding notes, and extra smoke-test helpers.
+v1.0.3 improves the machine-learning crawl intelligence layer. It keeps the public v1.0.x feature set stable and adds deterministic ML crawl techniques for URL relevance learning, adaptive crawl planning, feedback collection, and ML-ready training exports without requiring heavy external ML dependencies.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,15 +16,18 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## v1.0.2 patch release focus
+## v1.0.3 patch release focus
 
-v1.0.2 keeps the v1.0.0 public feature set and improves the release-package experience for new users. The main change is that `bin/mnb-scraper` now falls back to the native CLI when Composer/Symfony dependencies are not installed, so source-zip users can still run command discovery, compatibility checks, release checks, and offline QA examples before running `composer install`.
+v1.0.3 adds practical ML crawl techniques while keeping the package dependency-light and safe by default. The ML layer is deterministic and local: it learns from positive/negative URL examples and human feedback, scores candidate URLs, and creates budgeted adaptive crawl plans with exploration and diversity controls.
 
-- Added native CLI fallback in `bin/mnb-scraper` when Symfony Console is unavailable.
-- Added `scripts/run-native-smoke.sh`, `scripts/run-native-smoke.cmd`, and `scripts/run-native-smoke.ps1`.
-- Added tests proving the public binary can run through the native fallback without `vendor/`.
-- Updated README onboarding notes for source-zip users and Composer users.
-- Kept existing safety posture: no webmail UI scraping, no password storage, no paywall/CAPTCHA bypass, and no direct search-result-page scraping.
+- Added `ml:strategies` for safe ML crawl strategy discovery.
+- Added `ml:train` for lightweight URL relevance model training from positive/negative examples or feedback.
+- Added `ml:score` for scoring candidate URLs before crawling.
+- Added `ml:adaptive-plan` for budgeted crawl plans using priority score, ML relevance, diversity, and exploration.
+- Added `ml:feedback` for manual relevance feedback loops.
+- Added `ml:export-training` for JSON/JSONL ML-ready URL feature datasets.
+- Added ML examples and Windows CMD/PowerShell helper scripts.
+- Kept existing safety posture: ML prioritizes crawl order only; it does not bypass robots, paywalls, CAPTCHAs, authentication, or access controls.
 
 ## Highlights
 
@@ -39,7 +42,7 @@ v1.0.2 keeps the v1.0.0 public feature set and improves the release-package expe
 - **Rule builder and auto-profile assistant** for analyzing HTML, suggesting profile types, generating starter schemas, testing rules, scaffolding profiles, and finding rule gaps.
 - **Evaluation, benchmarking, and training data quality layer** for field completeness, validation health, duplicate analysis, profile benchmarking, selector performance, annotation coverage, and training-ready exports.
 - **Dataset versioning and annotation layer** for dataset snapshots, quality summaries, JSON/CSV/JSONL exports, dataset diffs, and review labels.
-- **ML-ready intelligence layer** for feature extraction, page classification, quality prediction, URL priority scoring, and selector suggestions.
+- **ML-ready intelligence layer** for feature extraction, page classification, quality prediction, URL priority scoring, selector suggestions, relevance learning, feedback loops, and adaptive crawl planning.
 - **Local dashboard and admin UI** for queue jobs, schedules, workers, profiles, plugins, API routes, and system health.
 - **Plugin system** for config-only add-ons with reusable profile schemas, extractor rule files, source templates, export templates, command aliases, validation, install, enable/disable, and doctor checks.
 - **Advanced retry, scheduling, and monitoring** with safe retry plans, local schedules, due-job enqueueing, health summaries, and stale lock diagnostics.
@@ -60,7 +63,7 @@ v1.0.2 keeps the v1.0.0 public feature set and improves the release-package expe
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V1.0.2 CLI/library release.
+This section lists the main functionality available in the current V1.0.3 CLI/library release.
 
 ### Package and CLI
 
@@ -80,7 +83,7 @@ This section lists the main functionality available in the current V1.0.2 CLI/li
 - `compat:commands` prints or validates the public command and option compatibility contract.
 - `.github/workflows/ci.yml` validates Composer metadata, installs dependencies, lints PHP files, runs tests, runs `ci:check`, builds a `git archive`, runs `release:check` on that archive, and performs a benchmark smoke test on PHP 8.2, 8.3, and 8.4.
 - CLI errors now include command context, help guidance, and diagnostics hints. Unknown commands include best-effort suggestions.
-- V1.0.2 keeps the hardening trait boundary and fixes native CLI option parsing; future maintenance releases can continue splitting command groups.
+- V1.0.3 keeps the hardening trait boundary and fixes native CLI option parsing; future maintenance releases can continue splitting command groups.
 
 Examples:
 
@@ -94,13 +97,13 @@ php bin/mnb-scraper compat:commands --validate
 
 ### Backward compatibility policy
 
-- Patch releases such as V1.0.2 should not remove public commands, rename public options, or change default output behavior without a compatibility alias.
+- Patch releases such as V1.0.3 should not remove public commands, rename public options, or change default output behavior without a compatibility alias.
 - Minor releases may add new commands, options, profiles, connectors, and optional integrations while keeping older workflows usable.
 - Major releases may remove deprecated functionality only after migration guidance is added to README examples and command compatibility notes.
 
 ### Academic publisher metadata crawling
 
-V1.0.2 adds safe publisher metadata workflows for academic journal/article discovery. The default model is **metadata only**: prefer official APIs, public sitemaps, RSS/Atom feeds, DOI/Crossref-style metadata, and public article landing pages. Do not bypass paywalls, CAPTCHAs, authentication, or access controls.
+V1.0.3 adds safe publisher metadata workflows for academic journal/article discovery. The default model is **metadata only**: prefer official APIs, public sitemaps, RSS/Atom feeds, DOI/Crossref-style metadata, and public article landing pages. Do not bypass paywalls, CAPTCHAs, authentication, or access controls.
 
 Commands:
 
@@ -301,15 +304,21 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 - `annotation:add <annotations.json>` adds labels, notes, field comments, and reviewer metadata.
 - Dataset folders include `dataset-manifest.json`, `records.json`, `records.jsonl`, `quality-summary.json`, and `annotations.json`.
 
-### ML-ready intelligence
+### ML-ready intelligence and adaptive crawl techniques
 
 - `intelligence:doctor` shows available intelligence tools and optional PHP-ML availability.
 - `intelligence:analyze <input.json>` extracts ML-ready page, record, and URL features.
 - `intelligence:classify <input.json>` classifies crawled pages into useful workflow groups.
 - `intelligence:quality <input.json>` predicts page and record quality labels with explainable reasons.
 - `intelligence:priority <urls.txt|source.json>` ranks URLs so high-value crawl targets can run first.
-- `intelligence:selectors <html-file>` suggests profile-aware selectors for saved HTML.
-- Works without external ML dependencies. Optional PHP-ML integration can be added later using the exported feature JSON.
+- `intelligence:selectors <html-file>` suggests profile-aware selectors from saved HTML.
+- `ml:strategies` lists built-in ML crawl strategies such as metadata-first academic crawling, component discovery, and quality-focused recrawling.
+- `ml:train --positive=positive.txt --negative=negative.txt` trains a deterministic URL relevance model without external ML dependencies.
+- `ml:score <urls.txt> --model=model.json` scores candidate URLs before crawling.
+- `ml:adaptive-plan <urls.txt> --model=model.json` creates a crawl-budget-aware plan using URL priority, model relevance, diversity, and exploration ratio.
+- `ml:feedback <url> --label=relevant|irrelevant|review` stores manual review feedback for retraining.
+- `ml:export-training` exports JSON/JSONL feature rows that can later feed PHP-ML, Python, or external ML systems.
+- Works without external ML dependencies. Optional PHP-ML or other model integration can be added later using the exported feature JSON/JSONL.
 
 ### Dashboard and local admin UI
 
@@ -388,7 +397,7 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 - Plugin enable/disable controls by editing the manifest `enabled` flag.
 - Plugin doctor command for validating all discovered plugins.
 - Plugin-contributed profiles available to `profile:list`, `profile:show`, `extract:rules`, and pipeline/profile workflows.
-- Safe-by-default design: V1.0.2 does not automatically execute arbitrary plugin PHP code.
+- Safe-by-default design: V1.0.3 does not automatically execute arbitrary plugin PHP code.
 
 ### Lightweight API and webhooks
 
@@ -603,8 +612,8 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 
 ## Package direction
 
-- First public version: **1.0.2**
-- Current version: **1.0.2** — CLI Parser, Packaging, and CI Fix Update
+- First public version: **1.0.3**
+- Current version: **1.0.3** — CLI Parser, Packaging, and CI Fix Update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
@@ -730,7 +739,7 @@ Minimal plugin manifest shape:
 {
   "plugin_id": "vendor.project-addon",
   "name": "Project Add-on",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Reusable profile and extractor rules for one project.",
   "enabled": true,
   "profiles": ["profiles/project-profile.json"],
@@ -1374,7 +1383,7 @@ ScraperKit focuses on practical export-ready outputs:
 - pipeline summaries
 - job manifest summaries
 
-PDF reports and richer role-based enterprise orchestration remain future upgrade areas. The current V1.0.2 release already includes CLI workflows, source connectors, exports/reports/bundles, export delivery connectors, local and distributed queue/worker commands, optional Redis queue support, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
+PDF reports and richer role-based enterprise orchestration remain future upgrade areas. The current V1.0.3 release already includes CLI workflows, source connectors, exports/reports/bundles, export delivery connectors, local and distributed queue/worker commands, optional Redis queue support, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
 
 ## Windows CMD
 
@@ -1401,7 +1410,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V1.0.2 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V1.0.3 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 
@@ -1500,7 +1509,7 @@ php bin/mnb-scraper annotation:init storage/datasets/example_dataset
 php bin/mnb-scraper annotation:add storage/datasets/example_dataset/annotations.json --record-id=dsrec_123 --label=good --note="Ready for training"
 ```
 
-## ML-ready intelligence examples
+## ML-ready intelligence and adaptive crawl examples
 
 Analyze crawl or pipeline output and export features:
 
@@ -1530,6 +1539,48 @@ Suggest selectors from saved HTML:
 
 ```bash
 php bin/mnb-scraper intelligence:selectors page.html --profile=ecommerce --output=selectors.json
+```
+
+List safe ML crawl strategies:
+
+```bash
+php bin/mnb-scraper ml:strategies --json
+```
+
+Train a lightweight crawl relevance model from reviewed examples:
+
+```bash
+php bin/mnb-scraper ml:train   --positive=examples/ml/positive-urls.txt   --negative=examples/ml/negative-urls.txt   --output=storage/ml/crawl-model.json
+```
+
+Score candidate URLs before crawling:
+
+```bash
+php bin/mnb-scraper ml:score examples/ml/candidate-urls.txt   --model=storage/ml/crawl-model.json   --output=storage/ml/scores.json
+```
+
+Create an adaptive crawl plan with crawl budget and exploration control:
+
+```bash
+php bin/mnb-scraper ml:adaptive-plan examples/ml/candidate-urls.txt   --model=storage/ml/crawl-model.json   --crawl-budget=4   --explore-ratio=0.15   --profile=academic   --output=storage/ml/adaptive-plan.json
+```
+
+Store feedback after reviewing crawl results:
+
+```bash
+php bin/mnb-scraper ml:feedback https://link.springer.com/article/10.1007/s007770050003   --label=relevant   --reason="article metadata page"
+```
+
+Export ML-ready URL features as JSONL:
+
+```bash
+php bin/mnb-scraper ml:export-training   --positive=examples/ml/positive-urls.txt   --negative=examples/ml/negative-urls.txt   --format=jsonl   --output=storage/ml/training-data.jsonl
+```
+
+Run the Windows helper:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/run-ml-adaptive-plan.ps1 -CrawlBudget 10
 ```
 
 ## Project template examples
@@ -1774,7 +1825,7 @@ The publisher graph supports journal/book listing pages, book landing URLs, jour
 
 ## Extraction options and component intelligence
 
-v1.0.2 adds reusable extraction controls for enterprise page data extraction:
+v1.0.3 adds reusable extraction controls for enterprise page data extraction:
 
 - Word dictionary learning: `extract:dictionary` can add newly discovered words to a reusable JSON dictionary.
 - Data mappings: `extract:mappings` maps source fields to normalized target fields.

@@ -1,7 +1,7 @@
 {
   "profile": "academic",
   "record_type": "article",
-  "profile_version": "1.0.2",
+  "profile_version": "1.0.3",
   "required_fields": ["title", "url"],
   "optional_fields": ["subtitle", "doi", "normalized_doi", "authors", "authors_text", "journal", "publisher", "issn", "eissn", "volume", "issue", "page_range", "published_at", "published_date", "article_type", "abstract", "pdf_url", "html_url", "canonical_url", "license", "open_access"],
   "dedupe_keys": ["normalized_doi", "doi", "canonical_url", "url", "title"],

@@ -1,4 +1,4 @@
-# MNB ScraperKit V1.0.2 - run local queue worker loop
+# MNB ScraperKit V1.0.3 - run local queue worker loop
 param(
     [int]$Sleep = 5,
     [int]$MaxJobs = 10,

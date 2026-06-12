@@ -1,0 +1,6 @@
+https://link.springer.com/article/10.1007/s007770050003
+https://link.springer.com/journal/777/volumes-and-issues
+https://link.springer.com/static/js/app.js
+https://example.com/about
+https://example.com/download/report.pdf
+https://dl.acm.org/doi/10.1145/1234567

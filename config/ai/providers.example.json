@@ -1,5 +1,5 @@
 {
-  "ai_provider_version": "1.0.2",
+  "ai_provider_version": "1.0.3",
   "default_provider": "rule_based",
   "external_ai_disabled_by_default": true,
   "providers": {

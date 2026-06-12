@@ -1,0 +1,13 @@
+MNB ScraperKit ML crawl techniques
+
+1. Start with positive and negative URL examples.
+2. Train a lightweight deterministic relevance model.
+3. Score candidate URLs before crawling.
+4. Generate an adaptive crawl plan with a fixed crawl budget.
+5. Store crawl feedback after review and retrain.
+6. Use ML only for prioritization, not for bypassing robots, paywalls, CAPTCHAs, or authentication.
+
+Example:
+php bin/mnb-scraper ml:train --positive=examples/ml/positive-urls.txt --negative=examples/ml/negative-urls.txt --output=storage/ml/model.json
+php bin/mnb-scraper ml:score examples/ml/candidate-urls.txt --model=storage/ml/model.json --output=storage/ml/scores.json
+php bin/mnb-scraper ml:adaptive-plan examples/ml/candidate-urls.txt --model=storage/ml/model.json --crawl-budget=4 --output=storage/ml/plan.json

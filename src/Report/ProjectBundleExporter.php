@@ -21,7 +21,7 @@ final class ProjectBundleExporter
         }
         $writer->close();
         return [
-            'bundle_version' => '1.0.2',
+            'bundle_version' => '1.0.3',
             'created_at' => date(DATE_ATOM),
             'job_dir' => $jobDir,
             'output' => $outputZip,

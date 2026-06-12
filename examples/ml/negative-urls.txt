@@ -1,0 +1,5 @@
+https://link.springer.com/static/css/main.css
+https://example.com/privacy
+https://example.com/login
+https://example.com/assets/logo.png
+https://example.com/cart

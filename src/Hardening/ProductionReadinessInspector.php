@@ -8,7 +8,7 @@ use Mnb\ScraperKit\Console\CommandRegistry;
 
 final class ProductionReadinessInspector
 {
-    public const VERSION = '1.0.2';
+    public const VERSION = '1.0.3';
 
     /** @return array<string,mixed> */
     public function inspect(string $rootDir, string $mode = 'repo'): array
@@ -211,7 +211,7 @@ final class ProductionReadinessInspector
             'path' => 'src/Cli/NativeCliApplication.php',
             'bytes' => is_file($file) ? filesize($file) : 0,
             'lines' => is_file($file) ? count(file($file) ?: []) : 0,
-            'note' => 'v1.0.2 keeps the hardening trait boundary and adds parser/package hygiene checks; continue splitting command groups in later maintenance releases.',
+            'note' => 'v1.0.3 keeps the hardening trait boundary and adds parser/package hygiene checks; continue splitting command groups in later maintenance releases.',
         ];
     }
 

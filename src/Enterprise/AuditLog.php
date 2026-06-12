@@ -9,7 +9,7 @@ namespace Mnb\ScraperKit\Enterprise;
  */
 final class AuditLog
 {
-    public const VERSION = '1.0.2';
+    public const VERSION = '1.0.3';
 
     public function __construct(private readonly string $rootDir)
     {

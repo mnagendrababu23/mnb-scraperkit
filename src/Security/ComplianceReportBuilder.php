@@ -19,7 +19,7 @@ final class ComplianceReportBuilder
 
         return [
             'ok' => (bool) ($audit['ok'] ?? false),
-            'compliance_report_version' => '1.0.2',
+            'compliance_report_version' => '1.0.3',
             'generated_at' => date(DATE_ATOM),
             'policy_name' => (string) ($policy['name'] ?? 'MNB ScraperKit Responsible Crawling Policy'),
             'score' => (int) ($audit['score'] ?? 0),

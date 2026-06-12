@@ -1,0 +1,39 @@
+{
+  "ml_crawl_strategy_version": "1.0.3",
+  "policy": "ML crawl intelligence is for prioritization and review only. It must not be used to bypass robots, paywalls, CAPTCHAs, authentication, or access controls.",
+  "strategies": [
+    {
+      "id": "metadata-first-academic",
+      "name": "Metadata-first academic crawl",
+      "goal": "Prioritize article, DOI, journal, volume, issue, and chapter URLs while avoiding assets and unrelated pages.",
+      "recommended_profile": "academic",
+      "crawl_budget": 25,
+      "explore_ratio": 0.15,
+      "score_threshold": 0.58,
+      "delay_ms": 2500,
+      "features": ["looks_article", "is_document_url", "path_depth", "host", "doi_tokens"]
+    },
+    {
+      "id": "component-discovery",
+      "name": "Component discovery crawl",
+      "goal": "Sample diverse page templates to find tables, cards, navigation, download links, and repeated components.",
+      "recommended_profile": "seo",
+      "crawl_budget": 40,
+      "explore_ratio": 0.3,
+      "score_threshold": 0.5,
+      "delay_ms": 2000,
+      "features": ["path_diversity", "link_density", "non_asset_urls"]
+    },
+    {
+      "id": "quality-focused-recrawl",
+      "name": "Quality-focused recrawl",
+      "goal": "Use feedback and quality labels to retry promising low-quality pages and skip repeated failure patterns.",
+      "recommended_profile": "auto",
+      "crawl_budget": 20,
+      "explore_ratio": 0.1,
+      "score_threshold": 0.62,
+      "delay_ms": 3000,
+      "features": ["quality_score", "failure_type", "browser_required", "content_length"]
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-MNB ScraperKit v1.0.2 QA examples
+MNB ScraperKit v1.0.3 QA examples
 
 This folder contains offline-safe verification examples. They do not use live credentials or scrape search-result pages.
 

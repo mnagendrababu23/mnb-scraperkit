@@ -1,9 +1,9 @@
 {
     "name": "mnb/scraperkit",
-    "description": "MNB ScraperKit V1.0.2 - enterprise-ready PHP crawling and data extraction framework with AI crawl intelligence, search discovery, authorized mail/webmail extraction connectors, publisher metadata workflows, extraction recipes, provenance, quality reports, datasets, queues, dashboards, and compliance tooling.",
+    "description": "MNB ScraperKit V1.0.3 - enterprise-ready PHP crawling and data extraction framework with AI crawl intelligence, search discovery, authorized mail/webmail extraction connectors, publisher metadata workflows, extraction recipes, provenance, quality reports, datasets, queues, dashboards, and compliance tooling.",
     "type": "library",
     "license": "MIT",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "require": {
         "php": ">=8.2",
         "ext-dom": "*",
@@ -18,7 +18,7 @@
         "chrome/chromium": "Needed only when using browser-assisted crawling through Panther/Chrome.",
         "pdo_sqlite": "Optional SQLite driver for local database storage.",
         "pdo_mysql": "Optional MySQL/MariaDB driver for server database storage.",
-        "php-ai/php-ml": "Optional machine-learning toolkit for future model training/inference. V1.0.2 includes deterministic ML-ready features, dataset annotations, evaluation reports, rule-builder assisted profile creation, training-ready exports, and export connector delivery manifests without requiring this dependency.",
+        "php-ai/php-ml": "Optional machine-learning toolkit for future model training/inference. V1.0.3 includes deterministic ML-ready features, dataset annotations, evaluation reports, rule-builder assisted profile creation, training-ready exports, and export connector delivery manifests without requiring this dependency.",
         "ext-redis": "Optional Redis extension for distributed multi-worker queue mode. File-based distributed queue fallback works without Redis.",
         "ext-openssl": "Recommended for secure HTTPS transport and checksum/signature workflows."
     },

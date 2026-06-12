@@ -1,3 +1,3 @@
 @echo off
-REM MNB ScraperKit V1.0.2 - install a preset pack
+REM MNB ScraperKit V1.0.3 - install a preset pack
 php "%~dp0..\bin\mnb-scraper" preset:install commerce-gov-pack --output-dir=presets\commerce-gov

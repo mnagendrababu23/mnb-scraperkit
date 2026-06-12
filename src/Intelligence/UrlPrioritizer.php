@@ -17,7 +17,7 @@ final class UrlPrioritizer
         }
         usort($rows, static fn (array $a, array $b): int => ((float) $b['priority_score']) <=> ((float) $a['priority_score']));
         return [
-            'intelligence_version' => '1.0.2',
+            'intelligence_version' => '1.0.3',
             'generated_at' => date(DATE_ATOM),
             'urls_total' => count($rows),
             'rows' => $rows,

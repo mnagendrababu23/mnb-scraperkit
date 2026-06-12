@@ -1,5 +1,5 @@
 {
-  "pattern_version": "1.0.2",
+  "pattern_version": "1.0.3",
   "description": "Reusable extraction pattern registry for common enterprise page data.",
   "patterns": {
     "email": "[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}",

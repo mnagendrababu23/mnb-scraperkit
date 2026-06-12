@@ -98,11 +98,15 @@ use Mnb\ScraperKit\Search\SearchProviderRegistry;
 use Mnb\ScraperKit\Mail\MailProviderRegistry;
 use Mnb\ScraperKit\Mail\MailMessageExtractor;
 use Mnb\ScraperKit\Mail\MailSeedExporter;
+use Mnb\ScraperKit\Ml\AdaptiveCrawlPlanner;
+use Mnb\ScraperKit\Ml\CrawlFeedbackStore;
+use Mnb\ScraperKit\Ml\CrawlMlModel;
+use Mnb\ScraperKit\Ml\TrainingDataExporter;
 
 $tests = [];
 
 
-$tests['v1.0.2 enterprise stores create users workspaces memberships and audit events'] = function (): void {
+$tests['v1.0.3 enterprise stores create users workspaces memberships and audit events'] = function (): void {
     $root = sys_get_temp_dir() . '/mnb_enterprise_' . bin2hex(random_bytes(4));
     mkdir($root, 0775, true);
     $users = new UserStore($root);
@@ -161,27 +165,27 @@ $tests['API router exposes enterprise summary workspace users and audit routes']
     assert($audit->status === 200 && count((array) ($audit->body['events'] ?? [])) >= 2, 'enterprise API audit failed');
 };
 
-$tests['v1.0.2 command registry exposes enterprise commands without duplicate options'] = function (): void {
+$tests['v1.0.3 command registry exposes enterprise commands without duplicate options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['enterprise:doctor', 'enterprise:roles', 'workspace:create', 'workspace:list', 'workspace:show', 'workspace:assign-user', 'user:create', 'user:list', 'user:disable', 'audit:events'] as $command) {
-        assert(isset($commands[$command]), 'missing v1.0.2 enterprise command: ' . $command);
+        assert(isset($commands[$command]), 'missing v1.0.3 enterprise command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['workspace', 'workspace-id', 'owner', 'actor', 'role', 'display-name', 'retention-days', 'active-only', 'action'] as $option) {
-        assert(in_array($option, $options, true), 'missing v1.0.2 enterprise option: ' . $option);
+        assert(in_array($option, $options, true), 'missing v1.0.3 enterprise option: ' . $option);
     }
     assert(count($options) === count(array_unique($options)), 'Symfony option registry contains duplicate option names');
 };
 
 
-$tests['v1.0.2 command registry exposes distributed worker commands without duplicate options'] = function (): void {
+$tests['v1.0.3 command registry exposes distributed worker commands without duplicate options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['distributed:doctor', 'distributed:status', 'distributed:enqueue', 'distributed:reserve', 'distributed:ack', 'distributed:fail', 'distributed:heartbeat', 'distributed:purge', 'worker:distributed'] as $command) {
-        assert(isset($commands[$command]), 'missing v1.0.2 distributed command: ' . $command);
+        assert(isset($commands[$command]), 'missing v1.0.3 distributed command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['distributed-adapter', 'redis-url', 'namespace', 'queue-name', 'worker-group', 'visibility-timeout', 'lease-id', 'distributed-dir', 'payload-file', 'once'] as $option) {
-        assert(in_array($option, $options, true), 'missing v1.0.2 distributed option: ' . $option);
+        assert(in_array($option, $options, true), 'missing v1.0.3 distributed option: ' . $option);
     }
     assert(count($options) === count(array_unique($options)), 'Symfony option registry contains duplicate option names');
 };
@@ -231,14 +235,14 @@ $tests['API router exposes distributed queue status and doctor routes'] = functi
 };
 
 
-$tests['v1.0.2 dataset command registry exposes dataset and annotation commands'] = function (): void {
+$tests['v1.0.3 dataset command registry exposes dataset and annotation commands'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['dataset:create', 'dataset:list', 'dataset:show', 'dataset:diff', 'dataset:export', 'annotation:init', 'annotation:add'] as $command) {
-        assert(isset($commands[$command]), 'missing v1.0.2 dataset command: ' . $command);
+        assert(isset($commands[$command]), 'missing v1.0.3 dataset command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['datasets-dir', 'dataset-dir', 'dataset-id', 'record-id', 'label', 'note', 'old', 'new', 'annotations'] as $option) {
-        assert(in_array($option, $options, true), 'missing v1.0.2 dataset option: ' . $option);
+        assert(in_array($option, $options, true), 'missing v1.0.3 dataset option: ' . $option);
     }
 };
 
@@ -361,7 +365,7 @@ $tests['database config defaults to local SQLite and schema exposes storage tabl
     assert(count(DatabaseSchema::statements('mysql')) >= 6, 'MySQL schema statements missing');
 };
 
-$tests['database command registry exposes v1.0.2 database commands and options'] = function (): void {
+$tests['database command registry exposes v1.0.3 database commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['db:init', 'db:test', 'db:status', 'db:save-crawl', 'db:save-pipeline', 'db:export'] as $command) {
         assert(isset($commands[$command]), 'missing database command: ' . $command);
@@ -372,22 +376,22 @@ $tests['database command registry exposes v1.0.2 database commands and options']
     }
 };
 
-$tests['v1.0.2 command registry exposes retry scheduling and monitoring commands'] = function (): void {
+$tests['v1.0.3 command registry exposes retry scheduling and monitoring commands'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['retry:plan', 'queue:retry-safe', 'schedule:create', 'schedule:list', 'schedule:show', 'schedule:run-due', 'schedule:enable', 'schedule:disable', 'monitor:summary', 'monitor:stale-locks'] as $command) {
-        assert(isset($commands[$command]), 'missing v1.0.2 command: ' . $command);
+        assert(isset($commands[$command]), 'missing v1.0.3 command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['command', 'arg', 'schedule-id', 'every-minutes', 'every-hours', 'dry-run', 'failed-jobs', 'ttl-seconds'] as $option) {
-        assert(in_array($option, $options, true), 'missing v1.0.2 option: ' . $option);
+        assert(in_array($option, $options, true), 'missing v1.0.3 option: ' . $option);
     }
 };
 
 
-$tests['v1.0.2 plugin command registry exposes plugin commands and options'] = function (): void {
+$tests['v1.0.3 plugin command registry exposes plugin commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['plugin:list', 'plugin:show', 'plugin:validate', 'plugin:install', 'plugin:enable', 'plugin:disable', 'plugin:doctor'] as $command) {
-        assert(isset($commands[$command]), 'missing v1.0.2 plugin command: ' . $command);
+        assert(isset($commands[$command]), 'missing v1.0.3 plugin command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['plugin-dir', 'plugin-id', 'plugins-dir', 'all', 'force'] as $option) {
@@ -464,14 +468,14 @@ $tests['local schedule store creates due schedules and monitoring snapshot repor
 
 
 
-$tests['v1.0.2 API and webhook command registry exposes automation commands and options'] = function (): void {
+$tests['v1.0.3 API and webhook command registry exposes automation commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['api:routes', 'api:token', 'api:serve', 'webhook:list', 'webhook:test', 'webhook:send'] as $command) {
-        assert(isset($commands[$command]), 'missing v1.0.2 command: ' . $command);
+        assert(isset($commands[$command]), 'missing v1.0.3 command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['host', 'port', 'prefix', 'print-command', 'webhook-url', 'webhook-header', 'webhook-secret', 'config', 'payload'] as $option) {
-        assert(in_array($option, $options, true), 'missing v1.0.2 option: ' . $option);
+        assert(in_array($option, $options, true), 'missing v1.0.3 option: ' . $option);
     }
 };
 
@@ -530,7 +534,7 @@ $tests['native API and webhook commands run without network by default'] = funct
 };
 
 
-$tests['v1.0.2 dashboard command registry exposes dashboard commands and options'] = function (): void {
+$tests['v1.0.3 dashboard command registry exposes dashboard commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['dashboard:status', 'dashboard:build', 'dashboard:serve'] as $command) {
         assert(isset($commands[$command]), 'missing dashboard command: ' . $command);
@@ -549,7 +553,7 @@ $tests['dashboard collector and renderer expose local operations state'] = funct
     $scheduleStore = new LocalScheduleStore($root);
     $scheduleStore->create(['schedule_id' => 'dashboard-schedule', 'command' => 'crawl', 'args' => ['https://example.com'], 'interval_seconds' => 60]);
     $data = (new DashboardDataCollector($root))->collect();
-    assert(($data['dashboard_version'] ?? null) === '1.0.2', 'dashboard version mismatch');
+    assert(($data['dashboard_version'] ?? null) === '1.0.3', 'dashboard version mismatch');
     assert(($data['queue']['counts']['pending'] ?? 0) === 1, 'dashboard queue count mismatch');
     assert(($data['schedules']['total'] ?? 0) === 1, 'dashboard schedule count mismatch');
     $html = (new DashboardRenderer())->render($data);
@@ -564,7 +568,7 @@ $tests['API router exposes dashboard summary route'] = function (): void {
     $router = new ApiRouter($root, $token);
     $response = $router->handle('GET', '/api/v1/dashboard', ['Authorization' => 'Bearer ' . $token]);
     assert($response->status === 200, 'dashboard API route failed');
-    assert(($response->body['dashboard']['dashboard_version'] ?? null) === '1.0.2', 'dashboard API version mismatch');
+    assert(($response->body['dashboard']['dashboard_version'] ?? null) === '1.0.3', 'dashboard API version mismatch');
 };
 
 $tests['native dashboard commands run without starting server'] = function (): void {
@@ -674,7 +678,7 @@ $tests['failure classifier maps common crawl failures'] = function (): void {
     assert(FailureClassifier::fromSafetyMessage('URL safety check failed: private/reserved IP targets are blocked.') === 'private_ip_blocked');
 };
 
-$tests['rate limiter accepts v1.0.2 pacing options without sleeping unnecessarily'] = function (): void {
+$tests['rate limiter accepts v1.0.3 pacing options without sleeping unnecessarily'] = function (): void {
     $limiter = new RateLimiter();
     $options = CrawlOptions::fromArray([
         'delay_ms' => 0,
@@ -692,7 +696,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
     mkdir($dir, 0775, true);
     $checkpoint = $dir . '/checkpoint.json';
     file_put_contents($checkpoint, json_encode([
-        'checkpoint_version' => '1.0.2',
+        'checkpoint_version' => '1.0.3',
         'updated_at' => '2026-01-01T00:00:00+00:00',
         'queues' => [
             'pending' => ['https://example.com/pending'],
@@ -706,7 +710,7 @@ $tests['job manifest reads checkpoint queue metadata'] = function (): void {
 
     $manifestPath = JobManifest::write($dir, 'bulk-crawl', [], ['checkpoint' => $checkpoint], []);
     $manifest = JobManifest::read($manifestPath);
-    assert(($manifest['version'] ?? null) === '1.0.2');
+    assert(($manifest['version'] ?? null) === '1.0.3');
     assert(($manifest['resume']['counts']['pending'] ?? null) === 1);
     assert(($manifest['resume']['last_processed_url'] ?? null) === 'https://example.com/done');
 };
@@ -894,7 +898,7 @@ $tests['export and report upgrade creates XML, HTML summary and ZIP bundle'] = f
     mkdir($dir . '/logs', 0775, true);
 
     file_put_contents($dir . '/job-manifest.json', json_encode([
-        'version' => '1.0.2',
+        'version' => '1.0.3',
         'job_id' => 'test-job',
         'type' => 'crawl',
         'resume' => ['counts' => ['completed' => 1, 'failed' => 1]],
@@ -938,7 +942,7 @@ $tests['export and report upgrade creates XML, HTML summary and ZIP bundle'] = f
 };
 
 
-$tests['v1.0.2 intelligence features classify quality priority and selector suggestions'] = function (): void {
+$tests['v1.0.3 intelligence features classify quality priority and selector suggestions'] = function (): void {
     $dir = sys_get_temp_dir() . '/mnb_intel_' . bin2hex(random_bytes(4));
     mkdir($dir, 0775, true);
     $crawlFile = $dir . '/crawl.json';
@@ -981,7 +985,7 @@ $tests['v1.0.2 intelligence features classify quality priority and selector sugg
     assert(isset($suggestions['suggestions']['price']), 'selector suggestions missing price group');
 };
 
-$tests['v1.0.2 command registry exposes intelligence commands and options'] = function (): void {
+$tests['v1.0.3 command registry exposes intelligence commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['intelligence:doctor', 'intelligence:analyze', 'intelligence:classify', 'intelligence:quality', 'intelligence:priority', 'intelligence:selectors'] as $command) {
         assert(isset($commands[$command]), 'missing intelligence command: ' . $command);
@@ -993,18 +997,18 @@ $tests['v1.0.2 command registry exposes intelligence commands and options'] = fu
 };
 
 
-$tests['v1.0.2 evaluation command registry exposes benchmarking and training data commands'] = function (): void {
+$tests['v1.0.3 evaluation command registry exposes benchmarking and training data commands'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['eval:dataset', 'eval:pipeline', 'eval:profile', 'eval:selectors', 'benchmark:profile', 'benchmark:compare', 'annotation:stats', 'annotation:coverage', 'annotation:export'] as $command) {
-        assert(isset($commands[$command]), 'missing v1.0.2 evaluation command: ' . $command);
+        assert(isset($commands[$command]), 'missing v1.0.3 evaluation command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['training-ready', 'training-type', 'evaluation-file', 'annotations-file', 'dataset', 'compare-with'] as $option) {
-        assert(in_array($option, $options, true), 'missing v1.0.2 evaluation option: ' . $option);
+        assert(in_array($option, $options, true), 'missing v1.0.3 evaluation option: ' . $option);
     }
 };
 
-$tests['v1.0.2 dataset evaluator reports field matrix annotation coverage and readiness'] = function (): void {
+$tests['v1.0.3 dataset evaluator reports field matrix annotation coverage and readiness'] = function (): void {
     $records = [[
         'dataset_record_id' => 'r1',
         'record_type' => 'product',
@@ -1032,7 +1036,7 @@ $tests['v1.0.2 dataset evaluator reports field matrix annotation coverage and re
     assert(in_array('price', $fields, true), 'field quality matrix missing price');
 };
 
-$tests['v1.0.2 benchmark selector and annotation quality helpers work'] = function (): void {
+$tests['v1.0.3 benchmark selector and annotation quality helpers work'] = function (): void {
     $records = [[
         'dataset_record_id' => 'r1',
         'record_type' => 'article',
@@ -1056,7 +1060,7 @@ $tests['v1.0.2 benchmark selector and annotation quality helpers work'] = functi
     assert(($stats['coverage_percent'] ?? 0) === 100.0, 'annotation quality coverage mismatch');
 };
 
-$tests['native v1.0.2 evaluation commands run on dataset snapshots'] = function (): void {
+$tests['native v1.0.3 evaluation commands run on dataset snapshots'] = function (): void {
     $root = sys_get_temp_dir() . '/mnb_eval_cli_' . bin2hex(random_bytes(4));
     mkdir($root, 0775, true);
     $input = $root . '/records.json';
@@ -1082,7 +1086,7 @@ $tests['native v1.0.2 evaluation commands run on dataset snapshots'] = function 
 };
 
 
-$tests['v1.0.2 rule builder analyzes HTML and generates auto profile schema'] = function (): void {
+$tests['v1.0.3 rule builder analyzes HTML and generates auto profile schema'] = function (): void {
     if (!class_exists('DOMDocument')) {
         assert(true);
         return;
@@ -1098,7 +1102,7 @@ $tests['v1.0.2 rule builder analyzes HTML and generates auto profile schema'] = 
     assert(isset($schema['extraction_rules']['price']), 'generated price rule missing');
 };
 
-$tests['v1.0.2 rule builder tests rules and doctor reports profile quality'] = function (): void {
+$tests['v1.0.3 rule builder tests rules and doctor reports profile quality'] = function (): void {
     if (!class_exists('DOMDocument')) {
         assert(true);
         return;
@@ -1114,7 +1118,7 @@ $tests['v1.0.2 rule builder tests rules and doctor reports profile quality'] = f
     assert(($doctor['rules_total'] ?? 0) >= 3, 'doctor rule count too low');
 };
 
-$tests['native v1.0.2 rule builder commands run on saved HTML'] = function (): void {
+$tests['native v1.0.3 rule builder commands run on saved HTML'] = function (): void {
     if (!class_exists('DOMDocument')) {
         assert(true);
         return;
@@ -1139,7 +1143,7 @@ $tests['native v1.0.2 rule builder commands run on saved HTML'] = function (): v
     assert(is_file($root . '/config/profiles/cli-seo.json'), 'scaffolded profile missing');
 };
 
-$tests['v1.0.2 command registry exposes rule builder commands and options'] = function (): void {
+$tests['v1.0.3 command registry exposes rule builder commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['rule:analyze', 'rule:generate', 'rule:test', 'rule:doctor', 'profile:scaffold'] as $command) {
         assert(isset($commands[$command]), 'missing rule builder command: ' . $command);
@@ -1150,7 +1154,7 @@ $tests['v1.0.2 command registry exposes rule builder commands and options'] = fu
     }
 };
 
-$tests['v1.0.2 API exposes rule builder templates route'] = function (): void {
+$tests['v1.0.3 API exposes rule builder templates route'] = function (): void {
     $root = sys_get_temp_dir() . '/mnb_rule_api_' . bin2hex(random_bytes(4));
     mkdir($root, 0775, true);
     $token = ApiToken::generate('rule');
@@ -1162,7 +1166,7 @@ $tests['v1.0.2 API exposes rule builder templates route'] = function (): void {
 
 
 
-$tests['v1.0.2 browser session store creates allowed-domain profiles and blocks outside domains'] = function (): void {
+$tests['v1.0.3 browser session store creates allowed-domain profiles and blocks outside domains'] = function (): void {
     $root = sys_get_temp_dir() . '/mnb_browser_session_' . bin2hex(random_bytes(4));
     mkdir($root, 0775, true);
     $store = new BrowserSessionStore($root);
@@ -1190,7 +1194,7 @@ $tests['v1.0.2 browser session store creates allowed-domain profiles and blocks 
     assert(count($store->list()) === 1, 'session list count mismatch');
 };
 
-$tests['native v1.0.2 browser session commands create list show clear and login assist'] = function (): void {
+$tests['native v1.0.3 browser session commands create list show clear and login assist'] = function (): void {
     $root = sys_get_temp_dir() . '/mnb_browser_session_cli_' . bin2hex(random_bytes(4));
     mkdir($root, 0775, true);
     $app = new NativeCliApplication([], $root);
@@ -1208,7 +1212,7 @@ $tests['native v1.0.2 browser session commands create list show clear and login 
     assert(is_file($root . '/config/browser-profiles/client_portal.json') || is_file($root . '/config/browser-profiles/client-portal.json'), 'session profile should still exist after clear without --remove-profile');
 };
 
-$tests['v1.0.2 command registry exposes browser session commands and options'] = function (): void {
+$tests['v1.0.3 command registry exposes browser session commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['browser:session-create', 'browser:session-list', 'browser:session-show', 'browser:session-clear', 'browser:session-test', 'browser:login'] as $command) {
         assert(isset($commands[$command]), 'missing browser session command: ' . $command);
@@ -1222,7 +1226,7 @@ $tests['v1.0.2 command registry exposes browser session commands and options'] =
     }
 };
 
-$tests['v1.0.2 API exposes browser session routes'] = function (): void {
+$tests['v1.0.3 API exposes browser session routes'] = function (): void {
     $root = sys_get_temp_dir() . '/mnb_browser_session_api_' . bin2hex(random_bytes(4));
     mkdir($root, 0775, true);
     (new BrowserSessionStore($root))->create('client', ['example.com'], 'https://example.com/login');
@@ -1235,14 +1239,14 @@ $tests['v1.0.2 API exposes browser session routes'] = function (): void {
 };
 
 
-$tests['v1.0.2 export connector registry exposes commands and options'] = function (): void {
+$tests['v1.0.3 export connector registry exposes commands and options'] = function (): void {
     $commands = CommandRegistry::commands();
     foreach (['export:connector-list', 'export:connector-show', 'export:connector-validate', 'export:connector-test', 'export:deliver', 'export:manifest'] as $command) {
-        assert(isset($commands[$command]), 'missing v1.0.2 export connector command: ' . $command);
+        assert(isset($commands[$command]), 'missing v1.0.3 export connector command: ' . $command);
     }
     $options = CommandRegistry::optionNames();
     foreach (['connector', 'config', 'file', 'dir', 'input', 'extension', 'allowed-extension', 'send'] as $option) {
-        assert(in_array($option, $options, true), 'missing v1.0.2 export connector option: ' . $option);
+        assert(in_array($option, $options, true), 'missing v1.0.3 export connector option: ' . $option);
     }
     foreach (array_count_values($options) as $option => $count) {
         assert($count === 1, 'duplicate Symfony option registered: ' . $option);
@@ -1277,7 +1281,7 @@ $tests['export connector store validates and local delivery copies artifacts'] =
     assert(is_file((string) ($result['target_dir'] ?? '') . '/delivery-manifest.json'), 'delivery manifest missing');
 };
 
-$tests['native v1.0.2 export connector commands run'] = function (): void {
+$tests['native v1.0.3 export connector commands run'] = function (): void {
     $root = sys_get_temp_dir() . '/mnb_export_connector_cli_' . bin2hex(random_bytes(4));
     mkdir($root . '/config', 0775, true);
     $config = [
@@ -1305,7 +1309,7 @@ $tests['native v1.0.2 export connector commands run'] = function (): void {
     }
 };
 
-$tests['v1.0.2 API exposes export connector routes'] = function (): void {
+$tests['v1.0.3 API exposes export connector routes'] = function (): void {
     $root = sys_get_temp_dir() . '/mnb_export_connector_api_' . bin2hex(random_bytes(4));
     mkdir($root . '/config', 0775, true);
     file_put_contents($root . '/config/export-connectors.json', json_encode(['connectors' => [[
@@ -1323,7 +1327,7 @@ $tests['v1.0.2 API exposes export connector routes'] = function (): void {
 };
 
 
-$tests['v1.0.2 template catalog lists validates creates and installs presets'] = function (): void {
+$tests['v1.0.3 template catalog lists validates creates and installs presets'] = function (): void {
     $root = dirname(__DIR__);
     $catalog = new TemplateCatalog($root);
     $templates = $catalog->templates();
@@ -1344,7 +1348,7 @@ $tests['v1.0.2 template catalog lists validates creates and installs presets'] =
     assert(is_file($installed['output_dir'] . '/profiles/ecommerce.json'), 'preset profile copy missing');
 };
 
-$tests['native v1.0.2 template and preset commands run'] = function (): void {
+$tests['native v1.0.3 template and preset commands run'] = function (): void {
     $root = dirname(__DIR__);
     $tmp = sys_get_temp_dir() . '/mnb_template_cli_' . bin2hex(random_bytes(4));
     mkdir($tmp, 0775, true);
@@ -1366,7 +1370,7 @@ $tests['native v1.0.2 template and preset commands run'] = function (): void {
     assert(is_file($tmp . '/pack/mnb-preset-pack.json'), 'native preset pack missing');
 };
 
-$tests['v1.0.2 API exposes project template and preset pack routes'] = function (): void {
+$tests['v1.0.3 API exposes project template and preset pack routes'] = function (): void {
     $root = dirname(__DIR__);
     $token = ApiToken::generate('templates');
     $router = new ApiRouter($root, $token);
@@ -1380,7 +1384,7 @@ $tests['v1.0.2 API exposes project template and preset pack routes'] = function 
 
 
 
-$tests['v1.0.2 publisher catalog validates seeds plans and article metadata schema'] = function (): void {
+$tests['v1.0.3 publisher catalog validates seeds plans and article metadata schema'] = function (): void {
     $root = dirname(__DIR__);
     $catalog = new PublisherCatalog($root);
     $validation = $catalog->validate();
@@ -1397,7 +1401,7 @@ $tests['v1.0.2 publisher catalog validates seeds plans and article metadata sche
     assert(count($fields) >= 20, 'article schema should be detailed');
 };
 
-$tests['v1.0.2 article metadata normalizer cleans DOI ISSN and common source records'] = function (): void {
+$tests['v1.0.3 article metadata normalizer cleans DOI ISSN and common source records'] = function (): void {
     $normalizer = new ArticleMetadataNormalizer();
     assert($normalizer->normalizeDoi('https://doi.org/10.1234/ABC.Def ') === '10.1234/abc.def', 'DOI normalization failed');
     assert($normalizer->normalizeIssn('1234 567X') === '1234-567X', 'ISSN normalization failed');
@@ -1413,7 +1417,7 @@ $tests['v1.0.2 article metadata normalizer cleans DOI ISSN and common source rec
     assert(($row['url'] ?? null) === 'https://example.com/article', 'URL fallback failed');
 };
 
-$tests['native v1.0.2 publisher commands list show seeds plan schema and normalize records'] = function (): void {
+$tests['native v1.0.3 publisher commands list show seeds plan schema and normalize records'] = function (): void {
     $root = dirname(__DIR__);
     $tmp = sys_get_temp_dir() . '/mnb_publishers_' . bin2hex(random_bytes(4));
     mkdir($tmp, 0775, true);
@@ -1444,7 +1448,7 @@ $tests['native v1.0.2 publisher commands list show seeds plan schema and normali
 };
 
 
-$tests['v1.0.2 publisher graph models journals books issues articles and chapters'] = function (): void {
+$tests['v1.0.3 publisher graph models journals books issues articles and chapters'] = function (): void {
     $root = dirname(__DIR__);
     $catalog = new PublisherCatalog($root);
     $springer = $catalog->find('springer');
@@ -1460,7 +1464,7 @@ $tests['v1.0.2 publisher graph models journals books issues articles and chapter
     assert(str_contains((string) (($springer['example_paths']['article'] ?? '')), '/article/10.'), 'Springer article example path missing');
 };
 
-$tests['v1.0.2 publisher article extractor captures Springer-style article metadata'] = function (): void {
+$tests['v1.0.3 publisher article extractor captures Springer-style article metadata'] = function (): void {
     $root = dirname(__DIR__);
     $springer = (new PublisherCatalog($root))->find('springer');
     $html = <<<'HTML'
@@ -1491,7 +1495,7 @@ HTML;
     assert(count((array) ($record['author_details'] ?? [])) >= 1, 'author details extraction failed');
 };
 
-$tests['native v1.0.2 publisher graph enterprise plan and article extraction commands run'] = function (): void {
+$tests['native v1.0.3 publisher graph enterprise plan and article extraction commands run'] = function (): void {
     $tmp = sys_get_temp_dir() . '/mnb_publisher_graph_' . bin2hex(random_bytes(4));
     mkdir($tmp, 0775, true);
     $html = '<html><head><meta name="citation_title" content="Sample Article"><meta name="citation_doi" content="10.1007/example"></head><body><h1>Sample Article</h1><section id="Abs1">Sample abstract.</section></body></html>';
@@ -1510,7 +1514,7 @@ $tests['native v1.0.2 publisher graph enterprise plan and article extraction com
     assert(($data['record']['normalized_doi'] ?? '') === '10.1007/example', 'publisher extract command DOI mismatch');
 };
 
-$tests['v1.0.2 API exposes publisher catalog and article schema routes'] = function (): void {
+$tests['v1.0.3 API exposes publisher catalog and article schema routes'] = function (): void {
     $root = dirname(__DIR__);
     $token = ApiToken::generate('publishers');
     $router = new ApiRouter($root, $token);
@@ -1526,7 +1530,7 @@ $tests['v1.0.2 API exposes publisher catalog and article schema routes'] = funct
 
 
 
-$tests['v1.0.2 page component extractor handles common elements assets and repeated cards'] = function (): void {
+$tests['v1.0.3 page component extractor handles common elements assets and repeated cards'] = function (): void {
     $html = <<<'HTML'
 <!doctype html><html><body>
 <nav><a href="/home">Home</a><a href="/journals">Journals</a></nav>
@@ -1550,7 +1554,7 @@ HTML;
     assert(in_array('class:result-card', $keys, true), 'repeated class extraction failed');
 };
 
-$tests['v1.0.2 dictionary patterns and mappings support extraction learning'] = function (): void {
+$tests['v1.0.3 dictionary patterns and mappings support extraction learning'] = function (): void {
     $tmp = sys_get_temp_dir() . '/mnb_extract_' . bin2hex(random_bytes(4));
     mkdir($tmp, 0775, true);
     $dictionary = new WordDictionary($tmp . '/words.json');
@@ -1566,7 +1570,7 @@ $tests['v1.0.2 dictionary patterns and mappings support extraction learning'] = 
     assert(($mapped['doi'] ?? '') === '10.1000/a', 'mapping DOI failed');
 };
 
-$tests['native v1.0.2 extraction commands run on saved HTML'] = function (): void {
+$tests['native v1.0.3 extraction commands run on saved HTML'] = function (): void {
     $root = dirname(__DIR__);
     $tmp = sys_get_temp_dir() . '/mnb_extract_cli_' . bin2hex(random_bytes(4));
     mkdir($tmp, 0775, true);
@@ -1592,7 +1596,7 @@ $tests['native v1.0.2 extraction commands run on saved HTML'] = function (): voi
 };
 
 
-$tests['v1.0.2 extraction recipes add provenance and quality reports'] = function (): void {
+$tests['v1.0.3 extraction recipes add provenance and quality reports'] = function (): void {
     $root = dirname(__DIR__);
     $html = <<<'HTML'
 <!doctype html><html><head>
@@ -1618,7 +1622,7 @@ HTML;
     assert(($data['quality']['score'] ?? 0) >= 80, 'recipe quality score too low');
 };
 
-$tests['native v1.0.2 extraction recipe and quality commands run'] = function (): void {
+$tests['native v1.0.3 extraction recipe and quality commands run'] = function (): void {
     $root = dirname(__DIR__);
     $tmp = sys_get_temp_dir() . '/mnb_recipe_cli_' . bin2hex(random_bytes(4));
     mkdir($tmp, 0775, true);
@@ -1637,7 +1641,7 @@ $tests['native v1.0.2 extraction recipe and quality commands run'] = function ()
     assert(($qualityData['quality']['required_completeness_percent'] ?? 0) === 100, 'quality required completeness failed');
 };
 
-$tests['v1.0.2 API exposes extraction metadata routes'] = function (): void {
+$tests['v1.0.3 API exposes extraction metadata routes'] = function (): void {
     $root = dirname(__DIR__);
     $token = ApiToken::generate('extraction');
     $router = new ApiRouter($root, $token);
@@ -1651,7 +1655,7 @@ $tests['v1.0.2 API exposes extraction metadata routes'] = function (): void {
     assert($recipes->status === 200 && count((array) ($recipes->body['recipes'] ?? [])) >= 1, 'extraction recipes API failed');
 };
 
-$tests['v1.0.2 AI crawl analyzer reports flexibility recipes and safety'] = function (): void {
+$tests['v1.0.3 AI crawl analyzer reports flexibility recipes and safety'] = function (): void {
     $html = '<!doctype html><html><head><title>Journal 777</title><meta name="citation_title" content="Article A"><meta name="citation_doi" content="10.1007/example"></head><body><h1>Article A</h1><section class="abstract">Abstract text</section><nav><a href="/journal/777/volumes-and-issues">Issues</a></nav><div class="result-card"><a href="/article/10.1007/a">A</a></div><div class="result-card"><a href="/article/10.1007/b">B</a></div></body></html>';
     $report = (new SiteCrawlAnalyzer(dirname(__DIR__)))->analyze('https://link.springer.com/journal/777/volumes-and-issues', $html, ['goal' => 'article_metadata']);
     assert(($report['recommended_mode'] ?? '') === 'metadata_only', 'AI analyzer recommended mode mismatch');
@@ -1661,7 +1665,7 @@ $tests['v1.0.2 AI crawl analyzer reports flexibility recipes and safety'] = func
     assert(in_array('volume_issue', (array) ($report['detected_page_types'] ?? []), true), 'AI analyzer page type missing');
 };
 
-$tests['v1.0.2 search discovery classifies results and exports seeds'] = function (): void {
+$tests['v1.0.3 search discovery classifies results and exports seeds'] = function (): void {
     $tmp = sys_get_temp_dir() . '/mnb_search_' . bin2hex(random_bytes(4));
     mkdir($tmp, 0775, true);
     $resultsFile = $tmp . '/results.json';
@@ -1681,7 +1685,7 @@ $tests['v1.0.2 search discovery classifies results and exports seeds'] = functio
     assert(SearchProviderRegistry::providers()['offline']['configured'] === true, 'offline search provider should be configured');
 };
 
-$tests['native v1.0.2 AI and search discovery commands run without live APIs'] = function (): void {
+$tests['native v1.0.3 AI and search discovery commands run without live APIs'] = function (): void {
     $tmp = sys_get_temp_dir() . '/mnb_ai_search_cli_' . bin2hex(random_bytes(4));
     mkdir($tmp, 0775, true);
     $html = $tmp . '/article.html';
@@ -1709,7 +1713,7 @@ $tests['native v1.0.2 AI and search discovery commands run without live APIs'] =
     assert(is_file($tmp . '/seeds.txt'), 'seeds output missing');
 };
 
-$tests['v1.0.2 API exposes AI and search provider routes'] = function (): void {
+$tests['v1.0.3 API exposes AI and search provider routes'] = function (): void {
     $token = ApiToken::generate('ai-search');
     $router = new ApiRouter(dirname(__DIR__), $token);
     $ai = $router->handle('GET', '/api/v1/ai/providers', ['Authorization' => 'Bearer ' . $token]);
@@ -1718,7 +1722,7 @@ $tests['v1.0.2 API exposes AI and search provider routes'] = function (): void {
     assert($search->status === 200 && (($search->body['search']['default_provider'] ?? '') === 'offline'), 'search providers API failed');
 };
 
-$tests['v1.0.2 security audit and compliance report pass on clean package'] = function (): void {
+$tests['v1.0.3 security audit and compliance report pass on clean package'] = function (): void {
     $root = dirname(__DIR__);
     $audit = (new SecurityAuditScanner($root))->audit();
     assert(isset($audit['summary']) && ($audit['summary']['high'] ?? 0) === 0, 'expected no high findings on clean package');
@@ -1729,7 +1733,7 @@ $tests['v1.0.2 security audit and compliance report pass on clean package'] = fu
     assert(str_contains($html, 'MNB ScraperKit Compliance Report'), 'compliance HTML missing title');
 };
 
-$tests['v1.0.2 secrets scanner detects obvious local secret patterns'] = function (): void {
+$tests['v1.0.3 secrets scanner detects obvious local secret patterns'] = function (): void {
     $root = sys_get_temp_dir() . '/mnb_secret_scan_' . bin2hex(random_bytes(4));
     mkdir($root, 0775, true);
     file_put_contents($root . '/sample.txt', 'api_' . "key='" . 'abcdefghijklmnopqrstuvwxyz123456' . "'\n");
@@ -1737,7 +1741,7 @@ $tests['v1.0.2 secrets scanner detects obvious local secret patterns'] = functio
     assert(($scan['findings_total'] ?? 0) >= 1, 'secret scanner did not detect sample secret');
 };
 
-$tests['native v1.0.2 security and compliance commands run'] = function (): void {
+$tests['native v1.0.3 security and compliance commands run'] = function (): void {
     $root = dirname(__DIR__);
     $tmp = sys_get_temp_dir() . '/mnb_security_cli_' . bin2hex(random_bytes(4));
     mkdir($tmp, 0775, true);
@@ -1757,7 +1761,7 @@ $tests['native v1.0.2 security and compliance commands run'] = function (): void
     assert(is_file($tmp . '/compliance.html'), 'compliance HTML missing');
 };
 
-$tests['v1.0.2 API exposes security and compliance routes'] = function (): void {
+$tests['v1.0.3 API exposes security and compliance routes'] = function (): void {
     $root = dirname(__DIR__);
     $token = ApiToken::generate('security');
     $router = new ApiRouter($root, $token);
@@ -1768,7 +1772,7 @@ $tests['v1.0.2 API exposes security and compliance routes'] = function (): void 
 };
 
 
-$tests['v1.0.2 production readiness inspector passes repo package and detects command contract'] = function (): void {
+$tests['v1.0.3 production readiness inspector passes repo package and detects command contract'] = function (): void {
     $root = dirname(__DIR__);
     $report = (new ProductionReadinessInspector())->inspect($root, 'repo');
     $failedChecks = array_values(array_map(
@@ -1781,9 +1785,9 @@ $tests['v1.0.2 production readiness inspector passes repo package and detects co
     assert(isset($report['runtime_matrix']['browser']), 'runtime matrix missing browser status');
 };
 
-$tests['v1.0.2 benchmark runner returns deterministic local benchmark rows'] = function (): void {
+$tests['v1.0.3 benchmark runner returns deterministic local benchmark rows'] = function (): void {
     $report = (new BenchmarkRunner())->run(25);
-    assert(($report['benchmark_version'] ?? null) === '1.0.2', 'benchmark version mismatch');
+    assert(($report['benchmark_version'] ?? null) === '1.0.3', 'benchmark version mismatch');
     assert(count((array) ($report['benchmarks'] ?? [])) >= 4, 'benchmark rows missing');
     foreach ((array) ($report['benchmarks'] ?? []) as $row) {
         assert(($row['iterations'] ?? 0) >= 2, 'benchmark iteration count missing');
@@ -1791,7 +1795,7 @@ $tests['v1.0.2 benchmark runner returns deterministic local benchmark rows'] = f
     }
 };
 
-$tests['v1.0.2 public command contract has no duplicate options and includes hardening commands'] = function (): void {
+$tests['v1.0.3 public command contract has no duplicate options and includes hardening commands'] = function (): void {
     $contract = new PublicCommandContract();
     $validation = $contract->validate();
     assert(($validation['ok'] ?? false) === true, 'public command contract validation failed');
@@ -1801,7 +1805,7 @@ $tests['v1.0.2 public command contract has no duplicate options and includes har
     }
 };
 
-$tests['native v1.0.2 hardening benchmark release and compatibility commands run'] = function (): void {
+$tests['native v1.0.3 hardening benchmark release and compatibility commands run'] = function (): void {
     $root = dirname(__DIR__);
     $app = new NativeCliApplication([], $root);
     ob_start();
@@ -1828,7 +1832,7 @@ $tests['native v1.0.2 hardening benchmark release and compatibility commands run
     assert($unknown === 1, 'unknown command should fail with suggestions');
 };
 
-$tests['native v1.0.2 parser keeps value-less flags from consuming positional arguments and supports short output alias'] = function (): void {
+$tests['native v1.0.3 parser keeps value-less flags from consuming positional arguments and supports short output alias'] = function (): void {
     $app = new NativeCliApplication([], dirname(__DIR__));
     $method = new ReflectionMethod(NativeCliApplication::class, 'parse');
     $method->setAccessible(true);
@@ -1846,9 +1850,9 @@ $tests['native v1.0.2 parser keeps value-less flags from consuming positional ar
 };
 
 
-$tests['v1.0.2 mail provider registry exposes authorized connector policy'] = function (): void {
+$tests['v1.0.3 mail provider registry exposes authorized connector policy'] = function (): void {
     $summary = MailProviderRegistry::summary(dirname(__DIR__) . '/config/mail/providers.example.json');
-    assert(($summary['mail_connector_version'] ?? null) === '1.0.2', 'mail connector version mismatch');
+    assert(($summary['mail_connector_version'] ?? null) === '1.0.3', 'mail connector version mismatch');
     assert(($summary['policy']['authorization_required'] ?? false) === true, 'authorization policy missing');
     $ids = array_map(static fn(array $provider): string => (string) ($provider['id'] ?? ''), (array) ($summary['providers'] ?? []));
     foreach (['local_json', 'gmail_api', 'imap', 'webmail_export'] as $id) {
@@ -1856,7 +1860,7 @@ $tests['v1.0.2 mail provider registry exposes authorized connector policy'] = fu
     }
 };
 
-$tests['v1.0.2 mail extractor reads authorized export links pdfs text and attachments'] = function (): void {
+$tests['v1.0.3 mail extractor reads authorized export links pdfs text and attachments'] = function (): void {
     $input = dirname(__DIR__) . '/examples/mail/sample-authorized-mails.json';
     $extractor = new MailMessageExtractor();
     $messages = $extractor->loadMessages($input);
@@ -1872,7 +1876,7 @@ $tests['v1.0.2 mail extractor reads authorized export links pdfs text and attach
     assert(count($seeds) >= 1, 'mail seed export failed');
 };
 
-$tests['native v1.0.2 mail commands run on authorized local export'] = function (): void {
+$tests['native v1.0.3 mail commands run on authorized local export'] = function (): void {
     $root = sys_get_temp_dir() . '/mnb_mail_cli_' . bin2hex(random_bytes(4));
     mkdir($root, 0775, true);
     $input = dirname(__DIR__) . '/examples/mail/sample-authorized-mails.json';
@@ -1895,7 +1899,7 @@ $tests['native v1.0.2 mail commands run on authorized local export'] = function 
     assert(is_file($attachments . '/mail-attachments-manifest.json'), 'mail attachment manifest missing');
 };
 
-$tests['v1.0.2 API exposes mail provider route'] = function (): void {
+$tests['v1.0.3 API exposes mail provider route'] = function (): void {
     $router = new ApiRouter(dirname(__DIR__));
     $response = $router->handle('GET', '/api/v1/mail/providers');
     assert($response->status === 200, 'mail providers API status failed');
@@ -1903,14 +1907,14 @@ $tests['v1.0.2 API exposes mail provider route'] = function (): void {
 };
 
 
-$tests['v1.0.2 native command list covers every registered public command'] = function (): void {
+$tests['v1.0.3 native command list covers every registered public command'] = function (): void {
     $source = (string) file_get_contents(dirname(__DIR__) . '/src/Cli/NativeCliApplication.php');
     foreach (array_keys(CommandRegistry::commands()) as $command) {
         assert(str_contains($source, "'" . $command . "' =>") || str_contains($source, "'" . $command . " <") || str_contains($source, "'" . $command . " ["), 'registered command missing from native CLI metadata/dispatch: ' . $command);
     }
 };
 
-$tests['v1.0.2 added QA example JSON files parse and reference supported commands'] = function (): void {
+$tests['v1.0.3 added QA example JSON files parse and reference supported commands'] = function (): void {
     $root = dirname(__DIR__);
     $jsonFiles = [
         'examples/mail/sample-webmail-export.json',
@@ -1941,7 +1945,7 @@ $tests['v1.0.2 added QA example JSON files parse and reference supported command
     }
 };
 
-$tests['v1.0.2 mail extractor supports authorized EML imports and domain-filtered seeds'] = function (): void {
+$tests['v1.0.3 mail extractor supports authorized EML imports and domain-filtered seeds'] = function (): void {
     $input = dirname(__DIR__) . '/examples/mail/sample-authorized-message.eml';
     $extractor = new MailMessageExtractor();
     $messages = $extractor->loadMessages($input);
@@ -1957,7 +1961,7 @@ $tests['v1.0.2 mail extractor supports authorized EML imports and domain-filtere
     }
 };
 
-$tests['v1.0.2 mail attachment manifest can write authorized base64 files safely'] = function (): void {
+$tests['v1.0.3 mail attachment manifest can write authorized base64 files safely'] = function (): void {
     $input = dirname(__DIR__) . '/examples/mail/sample-webmail-export.json';
     $outputDir = sys_get_temp_dir() . '/mnb_mail_attach_write_' . bin2hex(random_bytes(4));
     $extractor = new MailMessageExtractor();
@@ -1969,7 +1973,7 @@ $tests['v1.0.2 mail attachment manifest can write authorized base64 files safely
     assert(str_contains((string) file_get_contents($saved), '%PDF-1.4'), 'written sample PDF content mismatch');
 };
 
-$tests['native v1.0.2 QA smoke plan commands run offline on bundled examples'] = function (): void {
+$tests['native v1.0.3 QA smoke plan commands run offline on bundled examples'] = function (): void {
     $root = dirname(__DIR__);
     $tmp = sys_get_temp_dir() . '/mnb_v100_smoke_' . bin2hex(random_bytes(4));
     mkdir($tmp . '/storage/qa', 0775, true);
@@ -2008,7 +2012,7 @@ $tests['native v1.0.2 QA smoke plan commands run offline on bundled examples'] =
     }
 };
 
-$tests['native v1.0.2 public binary falls back without Composer Symfony Console'] = function (): void {
+$tests['native v1.0.3 public binary falls back without Composer Symfony Console'] = function (): void {
     $root = dirname(__DIR__);
     $cmd = PHP_BINARY . ' ' . escapeshellarg($root . '/bin/mnb-scraper') . ' compat:commands --json';
     $output = [];
@@ -2017,11 +2021,11 @@ $tests['native v1.0.2 public binary falls back without Composer Symfony Console'
     assert($code === 0, 'public bin/mnb-scraper should run through native fallback when vendor/ is absent');
     $json = json_decode(implode("\n", $output), true);
     assert(is_array($json), 'native fallback compat output should be JSON');
-    assert(($json['contract_version'] ?? '') === '1.0.2', 'native fallback command contract should report current version');
+    assert(($json['contract_version'] ?? '') === '1.0.3', 'native fallback command contract should report current version');
     assert(($json['commands_total'] ?? 0) >= 190, 'native fallback should expose the full public command registry');
 };
 
-$tests['native v1.0.2 source zip smoke scripts are present'] = function (): void {
+$tests['native v1.0.3 source zip smoke scripts are present'] = function (): void {
     $root = dirname(__DIR__);
     foreach (['scripts/run-native-smoke.sh', 'scripts/run-native-smoke.ps1', 'scripts/run-native-smoke.cmd'] as $relative) {
         assert(is_file($root . '/' . $relative), 'missing native smoke helper: ' . $relative);
@@ -2029,7 +2033,7 @@ $tests['native v1.0.2 source zip smoke scripts are present'] = function (): void
 };
 
 
-$tests['native v1.0.2 Windows crawl helper scripts expose safer defaults'] = function (): void {
+$tests['native v1.0.3 Windows crawl helper scripts expose safer defaults'] = function (): void {
     $root = dirname(__DIR__);
     $scripts = [
         'scripts/run-crawl.ps1' => ['crawl', '--max-pages', '--depth', '--delay-ms', '--browser', '--output', 'DryRun'],
@@ -2051,7 +2055,7 @@ $tests['native v1.0.2 Windows crawl helper scripts expose safer defaults'] = fun
     }
 };
 
-$tests['native v1.0.2 Windows crawl examples parse and stay policy-safe'] = function (): void {
+$tests['native v1.0.3 Windows crawl examples parse and stay policy-safe'] = function (): void {
     $root = dirname(__DIR__);
     $urls = $root . '/examples/crawl/sample-urls.txt';
     assert(is_file($urls), 'sample crawl URL list missing');
@@ -2065,12 +2069,12 @@ $tests['native v1.0.2 Windows crawl examples parse and stay policy-safe'] = func
     assert(is_file($presetsPath), 'Windows crawl preset JSON missing');
     $presets = json_decode((string) file_get_contents($presetsPath), true);
     assert(is_array($presets), 'Windows crawl preset JSON invalid');
-    assert(($presets['preset_version'] ?? '') === '1.0.2', 'Windows crawl preset version mismatch');
+    assert(($presets['preset_version'] ?? '') === '1.0.3', 'Windows crawl preset version mismatch');
     assert(str_contains((string) ($presets['policy'] ?? ''), 'authorized'), 'Windows crawl policy should mention authorization');
     assert(count((array) ($presets['presets'] ?? [])) >= 3, 'Windows crawl presets should include multiple workflows');
 };
 
-$tests['native v1.0.2 parser accepts Windows helper crawl option combinations'] = function (): void {
+$tests['native v1.0.3 parser accepts Windows helper crawl option combinations'] = function (): void {
     $app = new NativeCliApplication([], dirname(__DIR__));
     $method = new ReflectionMethod(NativeCliApplication::class, 'parse');
     $method->setAccessible(true);
@@ -2085,6 +2089,107 @@ $tests['native v1.0.2 parser accepts Windows helper crawl option combinations'] 
     assert(($parsed['command'] ?? '') === 'url:process', 'url process helper command parse failed');
     assert(($parsed['options']['methods'] ?? '') === 'auto,curl,stream,cmd-curl,powershell', 'url process methods parse failed');
     assert(($parsed['options']['resume'] ?? null) === true, 'url process resume flag parse failed');
+};
+
+
+$tests['v1.0.3 ML crawl model trains scores and explains URL relevance'] = function (): void {
+    $modeler = new CrawlMlModel();
+    $model = $modeler->train(
+        [
+            'https://link.springer.com/article/10.1007/s007770050003',
+            'https://link.springer.com/journal/777/volumes-and-issues/51-3',
+            'https://dl.acm.org/doi/10.1145/1234567',
+        ],
+        [
+            'https://example.com/assets/logo.png',
+            'https://example.com/privacy',
+            'https://example.com/cart',
+        ]
+    );
+    assert(($model['ml_model_version'] ?? '') === '1.0.3', 'ML model version mismatch');
+    assert(($model['training_summary']['positive_examples'] ?? 0) === 3, 'positive training count mismatch');
+    assert(($model['training_summary']['negative_examples'] ?? 0) === 3, 'negative training count mismatch');
+
+    $scores = $modeler->scoreUrls($model, [
+        'https://link.springer.com/article/10.1007/s007770050003',
+        'https://example.com/assets/logo.png',
+    ]);
+    assert(($scores['urls_total'] ?? 0) === 2, 'ML score URL count mismatch');
+    assert(($scores['rows'][0]['ml_score'] ?? 0) >= ($scores['rows'][1]['ml_score'] ?? 0), 'article should score above asset');
+    $explain = $modeler->explain($model);
+    assert(isset($explain['strong_positive_tokens']), 'ML explanation missing positive tokens');
+};
+
+$tests['v1.0.3 adaptive crawl planner mixes ML relevance diversity and crawl budget'] = function (): void {
+    $model = (new CrawlMlModel())->train(
+        ['https://link.springer.com/article/10.1007/s007770050003', 'https://dl.acm.org/doi/10.1145/1234567'],
+        ['https://example.com/assets/logo.png', 'https://example.com/login']
+    );
+    $plan = (new AdaptiveCrawlPlanner())->plan([
+        'https://link.springer.com/article/10.1007/s007770050003',
+        'https://link.springer.com/static/js/app.js',
+        'https://example.com/about',
+        'https://dl.acm.org/doi/10.1145/1234567',
+    ], $model, ['crawl_budget' => 2, 'explore_ratio' => 0.0, 'profile' => 'academic']);
+    assert(($plan['adaptive_plan_version'] ?? '') === '1.0.3', 'adaptive plan version mismatch');
+    assert(($plan['selected_total'] ?? 0) === 2, 'adaptive plan should respect crawl budget');
+    assert(count((array) ($plan['selected_urls'] ?? [])) === 2, 'adaptive plan selected URLs mismatch');
+    assert(str_contains((string) ($plan['recommended_command'] ?? ''), 'bulk:crawl'), 'adaptive plan should include command hint');
+};
+
+$tests['v1.0.3 crawl feedback store appends summaries and exports trainable labels'] = function (): void {
+    $root = sys_get_temp_dir() . '/mnb_ml_feedback_' . bin2hex(random_bytes(4));
+    mkdir($root, 0775, true);
+    $store = new CrawlFeedbackStore($root);
+    $store->add(['url' => 'https://link.springer.com/article/10.1007/s007770050003', 'label' => 'relevant', 'reason' => 'article']);
+    $store->add(['url' => 'https://example.com/assets/logo.png', 'label' => 'irrelevant', 'reason' => 'asset']);
+    $summary = $store->summary();
+    assert(($summary['records_total'] ?? 0) === 2, 'feedback summary count mismatch');
+    assert(($summary['label_counts']['relevant'] ?? 0) === 1, 'feedback relevant count mismatch');
+    $pn = $store->positivesNegatives();
+    assert(count($pn['positive']) === 1 && count($pn['negative']) === 1, 'feedback positives/negatives mismatch');
+
+    $training = (new TrainingDataExporter())->build($pn['positive'], $pn['negative']);
+    assert(($training['records_total'] ?? 0) === 2, 'training exporter count mismatch');
+    assert(isset($training['rows'][0]['features']), 'training exporter missing features');
+};
+
+$tests['native v1.0.3 ML commands train score plan feedback and export offline'] = function (): void {
+    $root = dirname(__DIR__);
+    $tmp = sys_get_temp_dir() . '/mnb_ml_cli_' . bin2hex(random_bytes(4));
+    mkdir($tmp . '/examples/ml', 0775, true);
+    foreach (['positive-urls.txt', 'negative-urls.txt', 'candidate-urls.txt'] as $file) {
+        copy($root . '/examples/ml/' . $file, $tmp . '/examples/ml/' . $file);
+    }
+    $app = new NativeCliApplication([], $tmp);
+    ob_start();
+    $strategies = $app->run(['mnb-scraper', 'ml:strategies', '--json']);
+    $train = $app->run(['mnb-scraper', 'ml:train', '--positive=' . $tmp . '/examples/ml/positive-urls.txt', '--negative=' . $tmp . '/examples/ml/negative-urls.txt', '--output=' . $tmp . '/storage/ml/model.json']);
+    $score = $app->run(['mnb-scraper', 'ml:score', $tmp . '/examples/ml/candidate-urls.txt', '--model=' . $tmp . '/storage/ml/model.json', '--output=' . $tmp . '/storage/ml/scores.json']);
+    $plan = $app->run(['mnb-scraper', 'ml:adaptive-plan', $tmp . '/examples/ml/candidate-urls.txt', '--model=' . $tmp . '/storage/ml/model.json', '--crawl-budget=3', '--output=' . $tmp . '/storage/ml/plan.json']);
+    $feedback = $app->run(['mnb-scraper', 'ml:feedback', 'https://link.springer.com/article/10.1007/s007770050003', '--label=relevant', '--feedback=' . $tmp . '/storage/ml/feedback.jsonl']);
+    $export = $app->run(['mnb-scraper', 'ml:export-training', '--positive=' . $tmp . '/examples/ml/positive-urls.txt', '--negative=' . $tmp . '/examples/ml/negative-urls.txt', '--output=' . $tmp . '/storage/ml/training.jsonl']);
+    ob_end_clean();
+    foreach (['strategies' => $strategies, 'train' => $train, 'score' => $score, 'plan' => $plan, 'feedback' => $feedback, 'export' => $export] as $name => $code) {
+        assert($code === 0, 'native ML command failed: ' . $name);
+    }
+    foreach (['model.json', 'scores.json', 'plan.json', 'feedback.jsonl', 'training.jsonl'] as $file) {
+        assert(is_file($tmp . '/storage/ml/' . $file), 'native ML output missing: ' . $file);
+    }
+};
+
+$tests['v1.0.3 ML commands and API route are registered'] = function (): void {
+    $commands = CommandRegistry::commands();
+    foreach (['ml:strategies', 'ml:train', 'ml:score', 'ml:adaptive-plan', 'ml:feedback', 'ml:export-training'] as $command) {
+        assert(isset($commands[$command]), 'missing ML command registry entry: ' . $command);
+    }
+    foreach (['positive', 'negative', 'feedback', 'crawl-budget', 'explore-ratio', 'model-file'] as $option) {
+        assert(in_array($option, CommandRegistry::optionNames(), true), 'missing ML option registry entry: ' . $option);
+    }
+    $router = new ApiRouter(dirname(__DIR__), null);
+    $response = $router->handle('GET', '/api/v1/ml/strategies');
+    assert($response->status === 200, 'ML strategies API route failed');
+    assert(isset($response->body['ml']['strategies']), 'ML strategies API response missing strategies');
 };
 
 $passed = 0;

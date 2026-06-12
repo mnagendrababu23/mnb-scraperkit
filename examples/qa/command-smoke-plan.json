@@ -1,5 +1,5 @@
 {
-  "smoke_plan_version": "1.0.2",
+  "smoke_plan_version": "1.0.3",
   "purpose": "Offline-safe command smoke plan for QA and release verification.",
   "policy": {
     "network_required": false,

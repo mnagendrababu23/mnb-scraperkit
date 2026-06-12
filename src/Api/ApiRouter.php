@@ -44,7 +44,7 @@ use Mnb\ScraperKit\Mail\MailProviderRegistry;
  */
 final class ApiRouter
 {
-    public const VERSION = '1.0.2';
+    public const VERSION = '1.0.3';
 
     public function __construct(
         private readonly string $rootDir,
@@ -62,6 +62,7 @@ final class ApiRouter
             ['method' => 'GET', 'path' => '/api/v1/ai/providers', 'description' => 'List optional AI crawl-analysis providers and configuration status.'],
             ['method' => 'GET', 'path' => '/api/v1/search/providers', 'description' => 'List safe search discovery providers and configuration status.'],
             ['method' => 'GET', 'path' => '/api/v1/mail/providers', 'description' => 'List authorized mail/webmail connector slots and privacy policy.'],
+            ['method' => 'GET', 'path' => '/api/v1/ml/strategies', 'description' => 'List ML crawl strategies and safe adaptive crawling techniques.'],
             ['method' => 'GET', 'path' => '/api/v1/queue/status', 'description' => 'Local queue counts and lock totals.'],
             ['method' => 'GET', 'path' => '/api/v1/distributed/status', 'description' => 'Distributed queue counts, adapter, namespace, and worker group.'],
             ['method' => 'GET', 'path' => '/api/v1/distributed/doctor', 'description' => 'Distributed queue adapter and Redis capability check.'],
@@ -164,6 +165,12 @@ final class ApiRouter
 
         if ($method === 'GET' && $path === '/api/v1/mail/providers') {
             return new ApiResponse(200, ['ok' => true, 'mail' => MailProviderRegistry::summary($this->rootDir . '/config/mail/providers.example.json')]);
+        }
+
+        if ($method === 'GET' && $path === '/api/v1/ml/strategies') {
+            $pathToStrategies = $this->rootDir . '/config/ml/crawl-strategies.json';
+            $strategies = is_file($pathToStrategies) ? json_decode((string) file_get_contents($pathToStrategies), true) : [];
+            return new ApiResponse(200, ['ok' => true, 'ml' => is_array($strategies) ? $strategies : []]);
         }
 
         if ($method === 'GET' && $path === '/api/v1/queue/status') {

@@ -10,7 +10,7 @@ namespace Mnb\ScraperKit\Evaluation;
  */
 final class DatasetEvaluator
 {
-    public const VERSION = '1.0.2';
+    public const VERSION = '1.0.3';
 
     /**
      * @param array<int,array<string,mixed>> $records
