@@ -1,5 +1,5 @@
 {
-  "mapping_version": "4.3.1",
+  "mapping_version": "1.0.0",
   "description": "Reusable source-to-target field mappings with optional transforms used by extract:mappings and extract:recipe.",
   "mappings": {
     "article": {

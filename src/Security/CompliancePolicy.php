@@ -10,7 +10,7 @@ final class CompliancePolicy
     public static function defaults(): array
     {
         return [
-            'policy_version' => '4.3.1',
+            'policy_version' => '1.0.0',
             'name' => 'MNB ScraperKit Responsible Crawling Policy',
             'responsible_crawling' => [
                 'respect_robots_when_enabled' => true,

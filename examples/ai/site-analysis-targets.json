@@ -1,5 +1,5 @@
 {
-  "analysis_examples_version": "4.3.1",
+  "analysis_examples_version": "1.0.0",
   "targets": [
     {
       "name": "Springer journal volumes",

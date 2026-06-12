@@ -6,7 +6,7 @@ namespace Mnb\ScraperKit\Evaluation;
 
 final class SelectorPerformanceEvaluator
 {
-    public const VERSION = '4.3.1';
+    public const VERSION = '1.0.0';
 
     /** @param array<int,array<string,mixed>> $records @param array<string,mixed> $profileSchema @return array<string,mixed> */
     public function evaluate(array $records, array $profileSchema, string $profileName = ''): array

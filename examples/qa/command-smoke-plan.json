@@ -1,0 +1,59 @@
+{
+  "smoke_plan_version": "1.0.0",
+  "purpose": "Offline-safe command smoke plan for QA and release verification.",
+  "policy": {
+    "network_required": false,
+    "live_credentials_required": false,
+    "authorized_mail_exports_only": true,
+    "no_search_result_page_scraping": true
+  },
+  "commands": [
+    {
+      "name": "ai:providers",
+      "argv": ["ai:providers", "--json"],
+      "expect_exit": 0
+    },
+    {
+      "name": "search:discover",
+      "argv": ["search:discover", "Springer journal 777", "--input=examples/search/multi-provider-offline-results.json", "--filter-domain=link.springer.com", "--output=storage/qa/search-discovered.json"],
+      "expect_exit": 0,
+      "expected_output": "storage/qa/search-discovered.json"
+    },
+    {
+      "name": "search:to-seeds",
+      "argv": ["search:to-seeds", "storage/qa/search-discovered.json", "--filter-domain=link.springer.com", "--output=storage/qa/search-seeds.txt"],
+      "expect_exit": 0,
+      "expected_output": "storage/qa/search-seeds.txt"
+    },
+    {
+      "name": "mail:extract",
+      "argv": ["mail:extract", "examples/mail/sample-webmail-export.json", "--extract=links,pdfs,text,attachments", "--query=Springer", "--output=storage/qa/mail-extracted.json"],
+      "expect_exit": 0,
+      "expected_output": "storage/qa/mail-extracted.json"
+    },
+    {
+      "name": "mail:to-seeds",
+      "argv": ["mail:to-seeds", "storage/qa/mail-extracted.json", "--filter-domain=link.springer.com", "--output=storage/qa/mail-seeds.txt"],
+      "expect_exit": 0,
+      "expected_output": "storage/qa/mail-seeds.txt"
+    },
+    {
+      "name": "extract:components",
+      "argv": ["extract:components", "examples/extraction/qa-components.html", "--min-repeats=2", "--output=storage/qa/components.json"],
+      "expect_exit": 0,
+      "expected_output": "storage/qa/components.json"
+    },
+    {
+      "name": "extract:recipe",
+      "argv": ["extract:recipe", "examples/extraction/qa-components.html", "--recipe=config/extraction/recipes/generic-page.json", "--output=storage/qa/recipe.json"],
+      "expect_exit": 0,
+      "expected_output": "storage/qa/recipe.json"
+    },
+    {
+      "name": "extract:quality",
+      "argv": ["extract:quality", "storage/qa/recipe.json", "--required-field=title", "--output=storage/qa/quality.json"],
+      "expect_exit": 0,
+      "expected_output": "storage/qa/quality.json"
+    }
+  ]
+}

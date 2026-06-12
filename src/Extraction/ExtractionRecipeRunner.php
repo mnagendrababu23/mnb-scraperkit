@@ -79,7 +79,7 @@ final class ExtractionRecipeRunner
         ], $recipe->requiredFields());
 
         return [
-            'recipe_result_version' => '4.3.1',
+            'recipe_result_version' => '1.0.0',
             'recipe' => [
                 'id' => $recipe->id(),
                 'name' => $recipe->name(),
@@ -130,7 +130,7 @@ final class ExtractionRecipeRunner
         $components = (new PageComponentExtractor())->extract($html, $baseUrl, new ExtractionOptions(ExtractionOptions::normalizeTypes((string) ($recipe->options()['types'] ?? 'links,text,headings,components'))));
         $quality = (new ExtractionQualityReporter())->report(['record' => $record, '_provenance' => $provenance, 'components' => $components], $recipe->requiredFields());
         return [
-            'recipe_result_version' => '4.3.1',
+            'recipe_result_version' => '1.0.0',
             'recipe' => ['id' => $recipe->id(), 'name' => $recipe->name(), 'source_type' => (string) ($recipe->data()['source_type'] ?? 'page')],
             'base_url' => $baseUrl,
             'record' => $record,

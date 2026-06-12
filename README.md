@@ -1,8 +1,8 @@
-# MNB ScraperKit V4.3.1
+# MNB ScraperKit V1.0.0
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V4.3.1 adds Authorized Mail and Webmail Extraction Connectors on top of the V4.3.0 AI/search discovery release. It introduces privacy-first mail provider slots, local authorized mail export parsing, link/PDF/text/attachment extraction, mail-to-seed workflows, and API/CLI metadata for Gmail API, IMAP, and user-exported webmail integrations without storing passwords.
+V1.0.0 is the first public release of MNB ScraperKit. It includes crawler workflows, extraction recipes, publisher metadata crawling, AI crawl analysis, search discovery, and authorized mail/webmail extraction connectors without storing passwords.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,9 +16,9 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V4.3.1 update focus
+## V1.0.0 update focus
 
-V4.3.1 is an authorized mail/webmail extraction upgrade. It does not scrape webmail UIs, store mailbox passwords, or bypass account protections. Instead, it adds safe connector slots and offline import workflows so teams can extract useful crawl seeds and document links from approved mail exports or future OAuth/API connectors.
+V1.0.0 is an authorized mail/webmail extraction upgrade. It does not scrape webmail UIs, store mailbox passwords, or bypass account protections. Instead, it adds safe connector slots and offline import workflows so teams can extract useful crawl seeds and document links from approved mail exports or future OAuth/API connectors.
 
 - Added `mail:providers` for Gmail API, IMAP, webmail export, local JSON, and `.eml` connector status.
 - Added `mail:search` for searching approved local mail exports without live credentials.
@@ -29,7 +29,7 @@ V4.3.1 is an authorized mail/webmail extraction upgrade. It does not scrape webm
 - Added `config/mail/providers.example.json` and `examples/mail/sample-authorized-mails.json`.
 - Added `/api/v1/mail/providers` for local API/dashboard discovery.
 - Added tests for provider policy, local authorized extraction, native mail commands, seed export, and API route coverage.
-- Keeps V4.3.0 AI crawl analysis and search discovery safe by default: no direct search-result-page scraping and no external AI call unless configured.
+- Keeps AI crawl analysis and search discovery safe by default: no direct search-result-page scraping and no external AI call unless configured.
 
 ## Highlights
 
@@ -65,7 +65,7 @@ V4.3.1 is an authorized mail/webmail extraction upgrade. It does not scrape webm
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V4.3.1 CLI/library release.
+This section lists the main functionality available in the current V1.0.0 CLI/library release.
 
 ### Package and CLI
 
@@ -85,7 +85,7 @@ This section lists the main functionality available in the current V4.3.1 CLI/li
 - `compat:commands` prints or validates the public command and option compatibility contract.
 - `.github/workflows/ci.yml` validates Composer metadata, installs dependencies, lints PHP files, runs tests, runs `ci:check`, builds a `git archive`, runs `release:check` on that archive, and performs a benchmark smoke test on PHP 8.2, 8.3, and 8.4.
 - CLI errors now include command context, help guidance, and diagnostics hints. Unknown commands include best-effort suggestions.
-- V4.3.1 keeps the hardening trait boundary and fixes native CLI option parsing; future maintenance releases can continue splitting command groups.
+- V1.0.0 keeps the hardening trait boundary and fixes native CLI option parsing; future maintenance releases can continue splitting command groups.
 
 Examples:
 
@@ -99,13 +99,13 @@ php bin/mnb-scraper compat:commands --validate
 
 ### Backward compatibility policy
 
-- Patch releases such as V4.3.1 should not remove public commands, rename public options, or change default output behavior without a compatibility alias.
+- Patch releases such as V1.0.0 should not remove public commands, rename public options, or change default output behavior without a compatibility alias.
 - Minor releases may add new commands, options, profiles, connectors, and optional integrations while keeping older workflows usable.
 - Major releases may remove deprecated functionality only after migration guidance is added to README examples and command compatibility notes.
 
 ### Academic publisher metadata crawling
 
-V4.3.1 adds safe publisher metadata workflows for academic journal/article discovery. The default model is **metadata only**: prefer official APIs, public sitemaps, RSS/Atom feeds, DOI/Crossref-style metadata, and public article landing pages. Do not bypass paywalls, CAPTCHAs, authentication, or access controls.
+V1.0.0 adds safe publisher metadata workflows for academic journal/article discovery. The default model is **metadata only**: prefer official APIs, public sitemaps, RSS/Atom feeds, DOI/Crossref-style metadata, and public article landing pages. Do not bypass paywalls, CAPTCHAs, authentication, or access controls.
 
 Commands:
 
@@ -393,7 +393,7 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 - Plugin enable/disable controls by editing the manifest `enabled` flag.
 - Plugin doctor command for validating all discovered plugins.
 - Plugin-contributed profiles available to `profile:list`, `profile:show`, `extract:rules`, and pipeline/profile workflows.
-- Safe-by-default design: V4.3.1 does not automatically execute arbitrary plugin PHP code.
+- Safe-by-default design: V1.0.0 does not automatically execute arbitrary plugin PHP code.
 
 ### Lightweight API and webhooks
 
@@ -609,7 +609,7 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 ## Package direction
 
 - First public version: **1.0.0**
-- Current version: **4.3.1** — CLI Parser, Packaging, and CI Fix Update
+- Current version: **1.0.0** — CLI Parser, Packaging, and CI Fix Update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
@@ -1235,7 +1235,7 @@ php bin/mnb-scraper queue:retry JOB_ID
 php bin/mnb-scraper queue:retry-all
 ```
 
-The V1.4.0 queue foundation remains local and dependency-free. It is suitable for CMD, PowerShell, cron, Windows Task Scheduler, systemd, and Supervisor. Future versions can add database/Redis queue drivers without changing the crawl/pipeline core.
+The queue foundation remains local and dependency-free. It is suitable for CMD, PowerShell, cron, Windows Task Scheduler, systemd, and Supervisor. Future versions can add database/Redis queue drivers without changing the crawl/pipeline core.
 
 
 ## Job manifest and checkpoint
@@ -1304,7 +1304,7 @@ ScraperKit focuses on practical export-ready outputs:
 - pipeline summaries
 - job manifest summaries
 
-PDF reports and richer role-based enterprise orchestration remain future upgrade areas. The current V4.3.1 release already includes CLI workflows, source connectors, exports/reports/bundles, export delivery connectors, local and distributed queue/worker commands, optional Redis queue support, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
+PDF reports and richer role-based enterprise orchestration remain future upgrade areas. The current V1.0.0 release already includes CLI workflows, source connectors, exports/reports/bundles, export delivery connectors, local and distributed queue/worker commands, optional Redis queue support, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
 
 ## Windows CMD
 
@@ -1331,7 +1331,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V4.3.1 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V1.0.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 
@@ -1534,7 +1534,7 @@ php bin/mnb-scraper dashboard:serve
 
 Then send `Authorization: Bearer your-token-here` or use `?token=your-token-here` for local testing.
 
-### V4.3.1 Enterprise Publisher Graph Crawling
+### V1.0.0 Enterprise Publisher Graph Crawling
 
 MNB ScraperKit now models real academic publisher crawling as a metadata-first navigation graph:
 
@@ -1553,9 +1553,9 @@ php bin/mnb-scraper publisher:extract-article saved-springer-article.html --publ
 The publisher graph supports journal/book listing pages, book landing URLs, journal volume/issue tables of contents, article/chapter URLs, and detailed metadata fields such as title, article type, published date, authors, affiliation/contact metadata when public, abstract, DOI, keywords, and references. It remains metadata-only by default and does not include paywall, CAPTCHA, or access-control bypass.
 
 
-### V4.3.1 Extraction Options and Component Intelligence
+### V1.0.0 Extraction Options and Component Intelligence
 
-V4.3.1 adds reusable extraction controls for enterprise page data extraction:
+V1.0.0 adds reusable extraction controls for enterprise page data extraction:
 
 - Word dictionary learning: `extract:dictionary` can add newly discovered words to a reusable JSON dictionary.
 - Data mappings: `extract:mappings` maps source fields to normalized target fields.
@@ -1573,9 +1573,9 @@ php bin/mnb-scraper extract:patterns examples/extraction/sample-components.html 
 php bin/mnb-scraper extract:mappings records.json --mapping=article --output=storage/mapped-records.json
 ```
 
-### V4.3.1 Extraction Explainability, Recipes, and Quality Reports
+### V1.0.0 Extraction Explainability, Recipes, and Quality Reports
 
-V4.3.1 strengthens the broad extraction layer added in V4.2.0 by making extraction output reusable and explainable:
+The extraction layer is designed to make output reusable and explainable:
 
 - Reusable extraction recipes in `config/extraction/recipes/*.json`.
 - Field provenance for recipe and component outputs, including selector/method/status/confidence metadata.
