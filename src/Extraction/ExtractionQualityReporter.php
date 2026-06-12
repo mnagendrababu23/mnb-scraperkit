@@ -55,7 +55,7 @@ final class ExtractionQualityReporter
         }
         $score = max(0, min(100, $score - (count($missingRequired) * 12)));
         return [
-            'quality_version' => '4.2.1',
+            'quality_version' => '4.3.0',
             'generated_at' => date(DATE_ATOM),
             'score' => $score,
             'label' => $score >= 90 ? 'excellent' : ($score >= 75 ? 'good' : ($score >= 60 ? 'needs_review' : 'weak')),

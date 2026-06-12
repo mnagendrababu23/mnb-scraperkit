@@ -1,0 +1,17 @@
+{
+  "ai_provider_version": "4.3.0",
+  "default_provider": "rule_based",
+  "external_ai_disabled_by_default": true,
+  "providers": {
+    "openai": {
+      "enabled": false,
+      "env_api_key": "OPENAI_API_KEY",
+      "env_model": "OPENAI_MODEL",
+      "privacy_note": "Enable only after authorization review. Do not send private, paywalled, credentialed, or sensitive page content to external AI services without approval."
+    },
+    "local_ml": {
+      "enabled": true,
+      "notes": "Use deterministic features and local ML models when available."
+    }
+  }
+}

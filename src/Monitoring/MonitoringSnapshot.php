@@ -45,7 +45,7 @@ final class MonitoringSnapshot
         }
 
         return [
-            'monitor_version' => '4.2.1',
+            'monitor_version' => '4.3.0',
             'generated_at' => date(DATE_ATOM),
             'health' => $health,
             'queue_dir' => $queue->queueDir(),

@@ -9,7 +9,7 @@
     {"path": "README.txt", "type": "text", "content": "{{project_name}}\nAcademic metadata project. Use RSS/API/source connectors or seed URLs, then create datasets for review.\n"},
     {"path": "urls.txt", "type": "text", "content": "https://example.com/article\n"},
     {"path": "commands.txt", "type": "text", "content": "php bin/mnb-scraper bulk:crawl urls.txt --profile=academic --pipeline --job-dir=storage/{{project_name}}\nphp bin/mnb-scraper dataset:create storage/{{project_name}}/pipeline/records.json --id={{project_name}}\nphp bin/mnb-scraper annotation:init storage/datasets/{{project_name}}\n"},
-    {"path": "jobs/academic-metadata-job.json", "type": "json", "content": {"job_version": "4.2.1", "name": "{{project_name}}", "command": "bulk:crawl", "args": ["urls.txt"], "options": {"profile": "academic", "pipeline": true, "job-dir": "storage/{{project_name}}"}}}
+    {"path": "jobs/academic-metadata-job.json", "type": "json", "content": {"job_version": "4.3.0", "name": "{{project_name}}", "command": "bulk:crawl", "args": ["urls.txt"], "options": {"profile": "academic", "pipeline": true, "job-dir": "storage/{{project_name}}"}}}
   ],
   "next_commands": ["php bin/mnb-scraper job:run jobs/academic-metadata-job.json", "php bin/mnb-scraper dataset:create storage/{{project_name}}/pipeline/records.json --id={{project_name}}"]
 }

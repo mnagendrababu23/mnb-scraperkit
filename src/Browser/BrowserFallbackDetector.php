@@ -8,6 +8,47 @@ use Mnb\ScraperKit\Core\PageResult;
 
 final class BrowserFallbackDetector
 {
+    /**
+     * Lightweight HTML-only browser fallback analysis used by AI/site analysis flows.
+     *
+     * This keeps the older assessPage(PageResult, BrowserOptions) API intact while giving
+     * non-crawler callers a safe way to ask whether a saved/public HTML document looks
+     * like it needs browser rendering.
+     *
+     * @param array<string,mixed> $extracted
+     * @param array<string,mixed> $options
+     * @return array<string,mixed>
+     */
+    public function analyze(string $html, array $extracted = [], array $options = []): array
+    {
+        $text = trim((string) preg_replace('/\s+/', ' ', html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+        $browserOptions = BrowserOptions::fromArray($options + [
+            'mode' => 'auto',
+            'fallback_min_text' => $options['fallback_min_text'] ?? $options['fallback_min_text_length'] ?? 300,
+        ]);
+
+        $page = new PageResult(
+            url: (string) ($options['url'] ?? 'about:blank'),
+            statusCode: isset($options['status_code']) ? (int) $options['status_code'] : 200,
+            html: $html,
+            text: $text,
+            extracted: $extracted,
+            protection: is_array($options['protection'] ?? null) ? $options['protection'] : []
+        );
+
+        $assessment = $this->assessPage($page, $browserOptions);
+        $reasons = (array) ($assessment['reasons'] ?? []);
+
+        return [
+            'requires_browser' => $reasons !== [],
+            'should_use_browser' => (bool) ($assessment['should_use_browser'] ?? false),
+            'mode' => $assessment['mode'] ?? $browserOptions->mode,
+            'reasons' => array_values(array_unique(array_map('strval', $reasons))),
+            'text_length' => (int) ($assessment['text_length'] ?? strlen($text)),
+            'status_code' => $assessment['status_code'] ?? $page->statusCode,
+        ];
+    }
+
     /** @return array<string,mixed> */
     public function assessPage(PageResult $page, BrowserOptions $options): array
     {

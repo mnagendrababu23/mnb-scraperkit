@@ -1,8 +1,8 @@
-# MNB ScraperKit V4.2.1
+# MNB ScraperKit V4.3.0
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V4.2.1 is the Real Publisher Metadata Crawling Pack. It builds on the V4.0.2 stability release and adds safe academic-publisher metadata workflows, a 37-publisher catalog, article metadata normalization, publisher seed exports, metadata-only crawl plans, and API/CLI coverage for scholarly article data pipelines.
+V4.3.0 is the Real Publisher Metadata Crawling Pack. It builds on the V4.0.2 stability release and adds safe academic-publisher metadata workflows, a 37-publisher catalog, article metadata normalization, publisher seed exports, metadata-only crawl plans, and API/CLI coverage for scholarly article data pipelines.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,9 +16,9 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V4.2.1 update focus
+## V4.3.0 update focus
 
-V4.2.1 is a focused academic metadata upgrade. It does not try to bypass publisher protections or scrape paywalled full text. Instead, it adds safe, metadata-first crawling and normalization tools for journals, articles, DOI records, public TOC pages, sitemaps, feeds, and official APIs where available.
+V4.3.0 is a focused academic metadata upgrade. It does not try to bypass publisher protections or scrape paywalled full text. Instead, it adds safe, metadata-first crawling and normalization tools for journals, articles, DOI records, public TOC pages, sitemaps, feeds, and official APIs where available.
 
 - Added `config/publishers/academic-publishers.json` with 37 publisher crawl targets from Elsevier through Columbia University Press.
 - Added `publisher:list`, `publisher:show`, `publisher:seeds`, `publisher:plan`, `publisher:schema`, and `publisher:normalize`.
@@ -64,7 +64,7 @@ V4.2.1 is a focused academic metadata upgrade. It does not try to bypass publish
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V4.2.1 CLI/library release.
+This section lists the main functionality available in the current V4.3.0 CLI/library release.
 
 ### Package and CLI
 
@@ -84,7 +84,7 @@ This section lists the main functionality available in the current V4.2.1 CLI/li
 - `compat:commands` prints or validates the public command and option compatibility contract.
 - `.github/workflows/ci.yml` validates Composer metadata, installs dependencies, lints PHP files, runs tests, runs `ci:check`, builds a `git archive`, runs `release:check` on that archive, and performs a benchmark smoke test on PHP 8.2, 8.3, and 8.4.
 - CLI errors now include command context, help guidance, and diagnostics hints. Unknown commands include best-effort suggestions.
-- V4.2.1 keeps the hardening trait boundary and fixes native CLI option parsing; future maintenance releases can continue splitting command groups.
+- V4.3.0 keeps the hardening trait boundary and fixes native CLI option parsing; future maintenance releases can continue splitting command groups.
 
 Examples:
 
@@ -98,13 +98,13 @@ php bin/mnb-scraper compat:commands --validate
 
 ### Backward compatibility policy
 
-- Patch releases such as V4.2.1 should not remove public commands, rename public options, or change default output behavior without a compatibility alias.
+- Patch releases such as V4.3.0 should not remove public commands, rename public options, or change default output behavior without a compatibility alias.
 - Minor releases may add new commands, options, profiles, connectors, and optional integrations while keeping older workflows usable.
 - Major releases may remove deprecated functionality only after migration guidance is added to README examples and command compatibility notes.
 
 ### Academic publisher metadata crawling
 
-V4.2.1 adds safe publisher metadata workflows for academic journal/article discovery. The default model is **metadata only**: prefer official APIs, public sitemaps, RSS/Atom feeds, DOI/Crossref-style metadata, and public article landing pages. Do not bypass paywalls, CAPTCHAs, authentication, or access controls.
+V4.3.0 adds safe publisher metadata workflows for academic journal/article discovery. The default model is **metadata only**: prefer official APIs, public sitemaps, RSS/Atom feeds, DOI/Crossref-style metadata, and public article landing pages. Do not bypass paywalls, CAPTCHAs, authentication, or access controls.
 
 Commands:
 
@@ -392,7 +392,7 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 - Plugin enable/disable controls by editing the manifest `enabled` flag.
 - Plugin doctor command for validating all discovered plugins.
 - Plugin-contributed profiles available to `profile:list`, `profile:show`, `extract:rules`, and pipeline/profile workflows.
-- Safe-by-default design: V4.2.1 does not automatically execute arbitrary plugin PHP code.
+- Safe-by-default design: V4.3.0 does not automatically execute arbitrary plugin PHP code.
 
 ### Lightweight API and webhooks
 
@@ -608,7 +608,7 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 ## Package direction
 
 - First public version: **1.0.0**
-- Current version: **4.2.1** — CLI Parser, Packaging, and CI Fix Update
+- Current version: **4.3.0** — CLI Parser, Packaging, and CI Fix Update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
@@ -1303,7 +1303,7 @@ ScraperKit focuses on practical export-ready outputs:
 - pipeline summaries
 - job manifest summaries
 
-PDF reports and richer role-based enterprise orchestration remain future upgrade areas. The current V4.2.1 release already includes CLI workflows, source connectors, exports/reports/bundles, export delivery connectors, local and distributed queue/worker commands, optional Redis queue support, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
+PDF reports and richer role-based enterprise orchestration remain future upgrade areas. The current V4.3.0 release already includes CLI workflows, source connectors, exports/reports/bundles, export delivery connectors, local and distributed queue/worker commands, optional Redis queue support, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
 
 ## Windows CMD
 
@@ -1330,7 +1330,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V4.2.1 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V4.3.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 
@@ -1533,7 +1533,7 @@ php bin/mnb-scraper dashboard:serve
 
 Then send `Authorization: Bearer your-token-here` or use `?token=your-token-here` for local testing.
 
-### V4.2.1 Enterprise Publisher Graph Crawling
+### V4.3.0 Enterprise Publisher Graph Crawling
 
 MNB ScraperKit now models real academic publisher crawling as a metadata-first navigation graph:
 
@@ -1552,9 +1552,9 @@ php bin/mnb-scraper publisher:extract-article saved-springer-article.html --publ
 The publisher graph supports journal/book listing pages, book landing URLs, journal volume/issue tables of contents, article/chapter URLs, and detailed metadata fields such as title, article type, published date, authors, affiliation/contact metadata when public, abstract, DOI, keywords, and references. It remains metadata-only by default and does not include paywall, CAPTCHA, or access-control bypass.
 
 
-### V4.2.1 Extraction Options and Component Intelligence
+### V4.3.0 Extraction Options and Component Intelligence
 
-V4.2.1 adds reusable extraction controls for enterprise page data extraction:
+V4.3.0 adds reusable extraction controls for enterprise page data extraction:
 
 - Word dictionary learning: `extract:dictionary` can add newly discovered words to a reusable JSON dictionary.
 - Data mappings: `extract:mappings` maps source fields to normalized target fields.
@@ -1572,9 +1572,9 @@ php bin/mnb-scraper extract:patterns examples/extraction/sample-components.html 
 php bin/mnb-scraper extract:mappings records.json --mapping=article --output=storage/mapped-records.json
 ```
 
-### V4.2.1 Extraction Explainability, Recipes, and Quality Reports
+### V4.3.0 Extraction Explainability, Recipes, and Quality Reports
 
-V4.2.1 strengthens the broad extraction layer added in V4.2.0 by making extraction output reusable and explainable:
+V4.3.0 strengthens the broad extraction layer added in V4.2.0 by making extraction output reusable and explainable:
 
 - Reusable extraction recipes in `config/extraction/recipes/*.json`.
 - Field provenance for recipe and component outputs, including selector/method/status/confidence metadata.

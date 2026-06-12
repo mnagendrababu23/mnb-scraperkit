@@ -1,3 +1,3 @@
 @echo off
-REM MNB ScraperKit V4.2.1 - export training-ready dataset rows
+REM MNB ScraperKit V4.3.0 - export training-ready dataset rows
 php "%~dp0..\bin\mnb-scraper" dataset:export %* --training-ready

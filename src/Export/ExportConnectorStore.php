@@ -7,14 +7,14 @@ namespace Mnb\ScraperKit\Export;
 /**
  * Loads safe export-delivery connector definitions.
  *
- * Connectors are configuration-only in v4.2.1. The default local connector
+ * Connectors are configuration-only in v4.3.0. The default local connector
  * writes/copies export artifacts into storage/export-deliveries. Webhook
  * connectors produce a signed delivery payload and only send when explicitly
  * requested by the user.
  */
 final class ExportConnectorStore
 {
-    public const VERSION = '4.2.1';
+    public const VERSION = '4.3.0';
 
     public function __construct(private readonly string $rootDir)
     {

@@ -35,7 +35,7 @@ final class PageComponentExtractor
         $text = $this->cleanText($dom->textContent ?: '');
 
         $result = [
-            'extractor_version' => '4.2.1',
+            'extractor_version' => '4.3.0',
             'base_url' => $baseUrl,
             'options' => $options->toArray(),
         ];
@@ -395,7 +395,7 @@ final class PageComponentExtractor
     {
         $text = $this->cleanText(strip_tags($html));
         $result = [
-            'extractor_version' => '4.2.1',
+            'extractor_version' => '4.3.0',
             'base_url' => $baseUrl,
             'options' => $options->toArray(),
             'fallback' => 'regex_dom_extension_missing',

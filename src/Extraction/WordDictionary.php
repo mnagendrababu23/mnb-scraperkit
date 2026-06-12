@@ -75,7 +75,7 @@ final class WordDictionary
             mkdir($dir, 0775, true);
         }
         file_put_contents($path, json_encode([
-            'dictionary_version' => '4.2.1',
+            'dictionary_version' => '4.3.0',
             'updated_at' => date(DATE_ATOM),
             'words_total' => count($this->entries),
             'words' => $this->entries,

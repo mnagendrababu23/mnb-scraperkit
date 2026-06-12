@@ -31,6 +31,8 @@ use Mnb\ScraperKit\Extraction\ExtractionOptions;
 use Mnb\ScraperKit\Extraction\PatternRegistry;
 use Mnb\ScraperKit\Extraction\DataMappingRegistry;
 use Mnb\ScraperKit\Extraction\ExtractionRecipe;
+use Mnb\ScraperKit\Ai\AiProviderRegistry;
+use Mnb\ScraperKit\Search\SearchProviderRegistry;
 
 /**
  * Lightweight read-mostly JSON API router used by the optional api:serve command.
@@ -41,7 +43,7 @@ use Mnb\ScraperKit\Extraction\ExtractionRecipe;
  */
 final class ApiRouter
 {
-    public const VERSION = '4.2.1';
+    public const VERSION = '4.3.0';
 
     public function __construct(
         private readonly string $rootDir,
@@ -56,6 +58,8 @@ final class ApiRouter
             ['method' => 'GET', 'path' => '/api/v1/health', 'description' => 'Health check and version information.'],
             ['method' => 'GET', 'path' => '/api/v1/version', 'description' => 'ScraperKit API and library version.'],
             ['method' => 'GET', 'path' => '/api/v1/commands', 'description' => 'Registered CLI command metadata.'],
+            ['method' => 'GET', 'path' => '/api/v1/ai/providers', 'description' => 'List optional AI crawl-analysis providers and configuration status.'],
+            ['method' => 'GET', 'path' => '/api/v1/search/providers', 'description' => 'List safe search discovery providers and configuration status.'],
             ['method' => 'GET', 'path' => '/api/v1/queue/status', 'description' => 'Local queue counts and lock totals.'],
             ['method' => 'GET', 'path' => '/api/v1/distributed/status', 'description' => 'Distributed queue counts, adapter, namespace, and worker group.'],
             ['method' => 'GET', 'path' => '/api/v1/distributed/doctor', 'description' => 'Distributed queue adapter and Redis capability check.'],
@@ -146,6 +150,14 @@ final class ApiRouter
                 'ok' => true,
                 'commands' => CommandRegistry::commands(),
             ]);
+        }
+
+        if ($method === 'GET' && $path === '/api/v1/ai/providers') {
+            return new ApiResponse(200, ['ok' => true, 'ai' => AiProviderRegistry::summary()]);
+        }
+
+        if ($method === 'GET' && $path === '/api/v1/search/providers') {
+            return new ApiResponse(200, ['ok' => true, 'search' => SearchProviderRegistry::summary()]);
         }
 
         if ($method === 'GET' && $path === '/api/v1/queue/status') {
