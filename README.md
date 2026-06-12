@@ -860,119 +860,163 @@ php bin/mnb-scraper bundle:create storage/jobs/job-id
 
 ## Installation
 
+MNB ScraperKit can be installed in two ways:
 
-### Current GitHub installation check
+1. **GitHub VCS install** — use this now, before the package is published on Packagist.
+2. **Packagist install** — use this later, after `mnb/scraperkit` is submitted to Packagist.
 
-The live GitHub repository is installable through Composer as a VCS package before Packagist publishing. Use this command sequence in a clean test folder:
+Composer only searches Packagist by default. Until this repository is published on Packagist, users must add the GitHub repository as a Composer VCS source in their root project.
+
+### Recommended install now: GitHub VCS install
+
+Use this in a **new empty test folder**.
+
+#### Windows CMD
+
+```cmd
+mkdir test-mnb-scraperkit
+cd test-mnb-scraperkit
+
+composer init --name="mnb/test-mnb-scraperkit" --description="Test project for MNB ScraperKit" --type="project" --license="MIT" --require="php:>=8.2" --no-interaction
+composer config minimum-stability dev
+composer config prefer-stable true
+composer config repositories.mnb-scraperkit vcs https://github.com/mnagendrababu23/mnb-scraperkit.git
+composer require mnb/scraperkit:dev-main -W
+
+vendor\bin\mnb-scraper.bat list
+```
+
+#### Windows PowerShell
+
+```powershell
+mkdir test-mnb-scraperkit
+cd test-mnb-scraperkit
+
+composer init --name="mnb/test-mnb-scraperkit" --description="Test project for MNB ScraperKit" --type="project" --license="MIT" --require="php:>=8.2" --no-interaction
+composer config minimum-stability dev
+composer config prefer-stable true
+composer config repositories.mnb-scraperkit vcs https://github.com/mnagendrababu23/mnb-scraperkit.git
+composer require mnb/scraperkit:dev-main -W
+
+.\vendor\bin\mnb-scraper.bat list
+```
+
+#### Linux/macOS/Git Bash
 
 ```bash
 mkdir test-mnb-scraperkit
 cd test-mnb-scraperkit
-composer init --no-interaction
+
+composer init --name="mnb/test-mnb-scraperkit" --description="Test project for MNB ScraperKit" --type="project" --license="MIT" --require="php:>=8.2" --no-interaction
+composer config minimum-stability dev
+composer config prefer-stable true
 composer config repositories.mnb-scraperkit vcs https://github.com/mnagendrababu23/mnb-scraperkit.git
-composer require mnb/scraperkit:dev-main
+composer require mnb/scraperkit:dev-main -W
+
 php vendor/bin/mnb-scraper list
 ```
 
-For a tagged release such as `v1.0.3`, use:
+### Why `composer init --no-interaction` alone may fail
+
+Some Composer versions require at least one project field when running `composer init --no-interaction`. If this command fails:
+
+```bash
+composer init --no-interaction
+```
+
+use the full command instead:
+
+```bash
+composer init --name="mnb/test-mnb-scraperkit" --description="Test project for MNB ScraperKit" --type="project" --license="MIT" --require="php:>=8.2" --no-interaction
+```
+
+### Alternative: create composer.json manually
+
+If you want the most reliable copy-paste method, create this `composer.json` in a new folder. A ready example is included at `examples/install/composer-vcs-dev.example.json`.
+
+```json
+{
+  "name": "mnb/test-mnb-scraperkit",
+  "description": "Test project for MNB ScraperKit",
+  "type": "project",
+  "license": "MIT",
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "https://github.com/mnagendrababu23/mnb-scraperkit.git"
+    }
+  ],
+  "require": {
+    "php": ">=8.2",
+    "mnb/scraperkit": "dev-main"
+  }
+}
+```
+
+Then run:
+
+```bash
+composer update -W
+```
+
+On Windows CMD:
+
+```cmd
+vendor\bin\mnb-scraper.bat list
+```
+
+On PowerShell:
+
+```powershell
+.\vendor\bin\mnb-scraper.bat list
+```
+
+On Linux/macOS/Git Bash:
+
+```bash
+php vendor/bin/mnb-scraper list
+```
+
+### Install a tagged release from GitHub
+
+After you push a release tag such as `v1.0.3`, you can install the stable `1.x` line from GitHub:
 
 ```bash
 composer config repositories.mnb-scraperkit vcs https://github.com/mnagendrababu23/mnb-scraperkit.git
-composer require mnb/scraperkit:^1.0
+composer require mnb/scraperkit:^1.0 -W
 ```
 
-After the package is submitted to Packagist, users can install it directly without the VCS repository config:
+Or install an exact tag:
+
+```bash
+composer require mnb/scraperkit:1.0.3 -W
+```
+
+### Install from Packagist
+
+After `mnb/scraperkit` is published on Packagist, users can install it normally without the VCS repository config:
 
 ```bash
 composer require mnb/scraperkit
 ```
 
-MNB ScraperKit is a Composer package. There are two common install paths:
-
-1. **Packagist install** — use this after `mnb/scraperkit` is published on Packagist.
-2. **GitHub VCS install** — use this now for development/testing before Packagist publishing.
-
-### Option 1: Install from Packagist
-
-After the package is available on Packagist, install it normally:
-
-```bash
-composer require mnb/scraperkit
-```
-
-Then verify the binary:
+Then verify:
 
 ```bash
 php vendor/bin/mnb-scraper list
 ```
 
-On Windows PowerShell, use:
+On Windows:
 
-```powershell
-php vendor/bin/mnb-scraper list
-```
-
-If Composer says it cannot find `mnb/scraperkit`, the package is not published on Packagist yet. Use Option 2.
-
-### Option 2: Install directly from GitHub
-
-Use this method for development, testing, or private/internal installs before the Packagist package is live.
-
-Create a clean test project:
-
-```bash
-mkdir test-mnb-scraperkit
-cd test-mnb-scraperkit
-composer init --no-interaction
-```
-
-Add the GitHub repository as a Composer VCS source:
-
-```bash
-composer config repositories.mnb-scraperkit vcs https://github.com/mnagendrababu23/mnb-scraperkit.git
-```
-
-Install the latest development branch:
-
-```bash
-composer require mnb/scraperkit:dev-main
-```
-
-Verify the CLI:
-
-```bash
-php vendor/bin/mnb-scraper list
-```
-
-For Windows PowerShell:
-
-```powershell
-mkdir test-mnb-scraperkit
-cd test-mnb-scraperkit
-composer init --no-interaction
-composer config repositories.mnb-scraperkit vcs https://github.com/mnagendrababu23/mnb-scraperkit.git
-composer require mnb/scraperkit:dev-main
-php vendor/bin/mnb-scraper list
-```
-
-### Option 3: Install a tagged release from GitHub
-
-If a tag such as `v1.0.3` exists in GitHub, require the stable `1.x` line:
-
-```bash
-composer config repositories.mnb-scraperkit vcs https://github.com/mnagendrababu23/mnb-scraperkit.git
-composer require mnb/scraperkit:^1.0
-```
-
-Or install one exact tag version:
-
-```bash
-composer require mnb/scraperkit:1.0.3
+```cmd
+vendor\bin\mnb-scraper.bat list
 ```
 
 ### Development install from source
 
-Use this when you clone the repository and want to work on MNB ScraperKit itself:
+Use this when you want to work on MNB ScraperKit itself:
 
 ```bash
 git clone https://github.com/mnagendrababu23/mnb-scraperkit.git
@@ -1003,31 +1047,30 @@ This fallback is intended for onboarding, source-archive smoke tests, and offlin
 
 ### Troubleshooting Composer install
 
-If this command fails:
+#### Error: `Could not find a matching version of package mnb/scraperkit`
+
+This means Composer searched Packagist and did not find the package. Use the GitHub VCS install method above until the package is published on Packagist.
+
+#### Error: `File "./composer.json" cannot be found`
+
+This means the project has not been initialized yet. Run the full `composer init` command first, then run `composer config`.
+
+#### Error: `You have to run this command in interactive mode, or specify at least some data`
+
+Use this instead of plain `composer init --no-interaction`:
 
 ```bash
-composer require mnb/scraperkit
+composer init --name="mnb/test-mnb-scraperkit" --description="Test project for MNB ScraperKit" --type="project" --license="MIT" --require="php:>=8.2" --no-interaction
 ```
 
-with an error like:
+#### Error: `Could not open input file: vendor/bin/mnb-scraper`
 
-```text
-Could not find a matching version of package mnb/scraperkit
+The package was not installed, so the vendor binary was not created. Fix the Composer install first. On Windows after a successful install, prefer:
+
+```cmd
+vendor\bin\mnb-scraper.bat list
 ```
 
-it usually means the package is not published on Packagist yet. Use the GitHub VCS install method:
-
-```bash
-composer init --no-interaction
-composer config repositories.mnb-scraperkit vcs https://github.com/mnagendrababu23/mnb-scraperkit.git
-composer require mnb/scraperkit:dev-main
-```
-
-If Composer complains that no `composer.json` is present, initialize the project first:
-
-```bash
-composer init --no-interaction
-```
 
 ## Quick start
 

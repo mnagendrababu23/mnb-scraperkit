@@ -1,0 +1,18 @@
+{
+  "name": "mnb/test-mnb-scraperkit",
+  "description": "Test project for MNB ScraperKit GitHub VCS install before Packagist publishing.",
+  "type": "project",
+  "license": "MIT",
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "https://github.com/mnagendrababu23/mnb-scraperkit.git"
+    }
+  ],
+  "require": {
+    "php": ">=8.2",
+    "mnb/scraperkit": "dev-main"
+  }
+}
