@@ -267,6 +267,7 @@ final class NativeCliApplication
                 'extract:rules' => $this->extractRules($args, $opts),
                 'extract:types' => $this->extractionTypes($opts),
                 'extract:components' => $this->extractionComponents($args, $opts),
+                'extract:pagination' => $this->extractionPagination($args, $opts),
                 'extract:options' => $this->extractionOptions($args, $opts),
                 'extract:dictionary' => $this->extractionDictionary($args, $opts),
                 'extract:patterns' => $this->extractionPatterns($args, $opts),
@@ -547,7 +548,8 @@ final class NativeCliApplication
             'publisher:schema' => 'Show/export the normalized article metadata schema.',
             'publisher:normalize <records.json>' => 'Normalize source connector records into article metadata rows.',
             'extract:types' => 'List extraction output types such as links, text, HTML, images, PDFs, tables, cards, and patterns.',
-            'extract:components <html-file>' => 'Extract common page components: tables, lists, headings, nav, breadcrumbs, social/download links, bio, and repeated cards.',
+            'extract:components <html-file>' => 'Extract common page components: tables, lists, headings, nav, pagination, breadcrumbs, social/download links, bio, and repeated cards.',
+            'extract:pagination <html-file|url>' => 'Detect pagination controls: numbered, ellipsis, prev/next, A-Z, dropdowns, load-more, infinite-scroll, cursor/offset/API styles.',
             'extract:options <html-file>' => 'Run configurable extraction types from saved HTML with dictionary/pattern options.',
             'extract:dictionary <html-file>' => 'Learn new words into a reusable extraction word dictionary.',
             'extract:patterns <html-file>' => 'Run registered regex extraction patterns against saved HTML/text.',
@@ -2590,7 +2592,7 @@ final class NativeCliApplication
             'extraction_version' => '1.0.3',
             'types' => ExtractionOptions::TYPES,
             'examples' => [
-                'components' => 'tables, lists, headings, navigation links, breadcrumbs, social/download links, bio blocks, cards, repeated components',
+                'components' => 'tables, lists, headings, navigation links, pagination controls, breadcrumbs, social/download links, bio blocks, cards, repeated components',
                 'assets' => 'images, pdfs, download_links, no-images filter',
                 'html' => 'plain text, inner_html, outer_html, whole_html',
                 'learning' => 'dictionary, patterns, mappings',
@@ -2610,7 +2612,14 @@ final class NativeCliApplication
     /** @param array<int,string> $args @param array<string,mixed> $opts */
     private function extractionComponents(array $args, array $opts): int
     {
-        $opts['type'] = $this->optString($opts, 'type', 'components,tables,lists,headings,navigation_links,breadcrumbs,social_links,download_links,bio,cards');
+        $opts['type'] = $this->optString($opts, 'type', 'components,tables,lists,headings,navigation_links,pagination,breadcrumbs,social_links,download_links,bio,cards');
+        return $this->extractionOptions($args, $opts);
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function extractionPagination(array $args, array $opts): int
+    {
+        $opts['type'] = $this->optString($opts, 'type', 'pagination');
         return $this->extractionOptions($args, $opts);
     }
 

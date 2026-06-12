@@ -70,6 +70,9 @@ final class PageComponentExtractor
         if (in_array('navigation_links', $options->types, true) || in_array('components', $options->types, true)) {
             $result['navigation_links'] = $this->navigationLinks($xpath, $baseUrl);
         }
+        if (in_array('pagination', $options->types, true) || in_array('components', $options->types, true)) {
+            $result['pagination'] = (new PaginationDetector($this->normalizer))->detect($html, $baseUrl);
+        }
         if (in_array('breadcrumbs', $options->types, true) || in_array('components', $options->types, true)) {
             $result['breadcrumbs'] = $this->breadcrumbs($xpath, $baseUrl);
         }
@@ -451,6 +454,9 @@ final class PageComponentExtractor
             preg_match('~<nav[^>]*>(.*?)</nav>~is', $html, $nav);
             $result['navigation_links'] = isset($nav[1]) ? $this->linkRowsFromHtml($nav[1], $baseUrl) : [];
         }
+        if (in_array('pagination', $options->types, true) || in_array('components', $options->types, true)) {
+            $result['pagination'] = (new PaginationDetector($this->normalizer))->detect($html, $baseUrl);
+        }
         if (in_array('breadcrumbs', $options->types, true) || in_array('components', $options->types, true)) {
             preg_match('~<[^>]+class=["\'][^"\']*breadcrumb[^"\']*["\'][^>]*>(.*?)</[^>]+>~is', $html, $bc);
             $result['breadcrumbs'] = isset($bc[1]) ? array_map(static fn (string $v): array => ['text' => trim($v), 'url' => ''], $this->listItemsFromHtml($bc[1])) : [];
@@ -603,6 +609,7 @@ final class PageComponentExtractor
             'lists' => ['method' => 'xpath', 'selector' => '//ul|//ol'],
             'headings' => ['method' => 'xpath', 'selector' => '//h1..//h6'],
             'navigation_links' => ['method' => 'xpath', 'selector' => '//nav//a'],
+            'pagination' => ['method' => 'pagination_detector', 'selector' => 'pagination nav/links/forms/buttons/api signals'],
             'breadcrumbs' => ['method' => 'class_heuristic', 'selector' => '*[class*=breadcrumb]'],
             'social_links' => ['method' => 'domain_filter', 'selector' => 'social domains'],
             'download_links' => ['method' => 'extension_filter', 'selector' => 'download/document extensions'],

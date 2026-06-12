@@ -54,6 +54,7 @@ use Mnb\ScraperKit\Scheduler\LocalScheduleStore;
 use Mnb\ScraperKit\Monitoring\MonitoringSnapshot;
 use Mnb\ScraperKit\Extractor\RuleBasedExtractor;
 use Mnb\ScraperKit\Extractor\CommonDataExtractor;
+use Mnb\ScraperKit\Extraction\PaginationDetector;
 use Mnb\ScraperKit\Parser\HtmlParser;
 use Mnb\ScraperKit\Report\ProjectBundleExporter;
 use Mnb\ScraperKit\Report\RecordExportService;
@@ -1567,12 +1568,24 @@ $tests['v1.0.5 common data validation separates human names and removes catalog 
     $location->setAccessible(true);
     $labeled = $ref->getMethod('extractLabeledNumbers');
     $labeled->setAccessible(true);
+    $phone = $ref->getMethod('isValidPhoneCandidate');
+    $phone->setAccessible(true);
 
     assert($human->invoke($extractor, 'Ada Lovelace') === true, 'valid human name missing');
     assert($human->invoke($extractor, 'L. Graziano') === true, 'initial human name missing');
     assert($human->invoke($extractor, 'AAPPS Bulletin AAPS Open') === false, 'journal title leaked into person_names');
     assert($human->invoke($extractor, 'Acta Applicandae Mathematicae') === false, 'journal title phrase leaked into person_names');
     assert($human->invoke($extractor, 'Privacy Statement') === false, 'UI/legal text leaked into person_names');
+    assert($human->invoke($extractor, 'ATZagenda ATZautotechnology ATZelectronics') === false, 'ATZ catalog title leaked into person_names');
+    assert($human->invoke($extractor, 'Advanced Biotechnology Advanced Composites') === false, 'advanced journal title leaked into person_names');
+    assert($human->invoke($extractor, 'Aurikulomedizin Algebra Colloquium Algebra') === false, 'discipline title leaked into person_names');
+    assert($human->invoke($extractor, 'Animal Cognition Animal Diseases') === false, 'animal journal title leaked into person_names');
+    assert($human->invoke($extractor, 'Next Over') === false, 'pagination text leaked into person_names');
+
+    assert($phone->invoke($extractor, '1858-1865') === false, 'ISSN/year range leaked into phones');
+    assert($phone->invoke($extractor, '1867-1897') === false, 'year range leaked into phones');
+    assert($phone->invoke($extractor, '49.43.216.178') === false, 'IP address leaked into phones');
+    assert($phone->invoke($extractor, '+91 98765 43210') === true, 'valid international phone missing');
 
     assert($address->invoke($extractor, 'Alpine Botany') === false, 'catalog title leaked into addresses');
     assert($address->invoke($extractor, 'Privacy statement') === false, 'privacy statement leaked into addresses');
@@ -2236,6 +2249,60 @@ $tests['v1.0.4 logger works without a log file and does not reference bare STDER
     assert(is_string($source), 'logger source could not be read');
     assert(!str_contains($source, 'fwrite(STDERR'), 'logger must not reference bare STDERR constant');
     assert(str_contains($source, "defined('STDERR')"), 'logger should guard STDERR for web SAPI');
+};
+
+
+$tests['v1.0.6 pagination detector finds numbered ellipsis previous next forms load more and API styles'] = function (): void {
+    $html = <<<'HTML'
+<nav class="pagination" aria-label="pagination">
+  <a href="?page=1">1</a>
+  <a href="?page=2">2</a>
+  <span aria-current="page">3</span>
+  <span>...</span>
+  <a href="?page=200">200</a>
+  <a rel="next" href="?page=4">Next</a>
+</nav>
+<select name="per_page"><option>10</option><option>25</option></select>
+<select name="page"><option value="1">1</option><option value="2">2</option></select>
+<input name="page_number" placeholder="Go to page">
+<button>Load More</button>
+<a href="/api/users?cursor=abc123">Cursor Next</a>
+<a href="/api/users?offset=80&limit=20">Offset Page</a>
+<script>const nextToken = 'abc123'; const lastId = 100; window.addEventListener('scroll', function onscroll() {});</script>
+HTML;
+    $data = (new PaginationDetector())->detect($html, 'https://example.com/list');
+    assert(($data['has_pagination'] ?? false) === true, 'pagination should be detected');
+    $types = $data['detected_types'] ?? [];
+    foreach (['numbered_ellipsis', 'previous_next', 'dropdown_page_selector', 'page_size', 'go_to_page_input', 'load_more', 'infinite_scroll', 'api_cursor', 'api_offset', 'api_keyset', 'api_token'] as $type) {
+        assert(in_array($type, $types, true), 'missing pagination type: ' . $type);
+    }
+    assert(($data['summary']['next_url'] ?? '') === 'https://example.com/?page=4', 'next URL should be normalized');
+    assert(in_array(200, $data['summary']['page_numbers'] ?? [], true), 'page number 200 should be found');
+};
+
+$tests['v1.0.6 page component extractor exposes pagination type and native command'] = function (): void {
+    $html = '<nav class="c-pagination-listed"><a href="/journals/a/1">1</a><a href="/journals/a/2" rel="next">Next</a></nav><ol class="c-atoz-navigation"><li><span>A</span></li><li><a href="/journals/b/1">B</a></li><li><a href="/journals/c/1">C</a></li><li><a href="/journals/d/1">D</a></li><li><a href="/journals/e/1">E</a></li><li><a href="/journals/f/1">F</a></li></ol>';
+    $components = (new PageComponentExtractor())->extract($html, 'https://link.springer.com/journals/a/1', new ExtractionOptions(['pagination']));
+    assert(isset($components['pagination']), 'pagination output missing from component extractor');
+    assert(($components['pagination']['has_pagination'] ?? false) === true, 'component pagination should be detected');
+    assert(in_array('alphabetical', $components['pagination']['detected_types'] ?? [], true), 'alphabetical pagination should be detected');
+
+    $tmp = sys_get_temp_dir() . '/mnb_pagination_cli_' . bin2hex(random_bytes(4));
+    mkdir($tmp, 0775, true);
+    file_put_contents($tmp . '/sample.html', $html);
+    $app = new NativeCliApplication([], dirname(__DIR__));
+    ob_start();
+    $code = $app->run(['mnb-scraper', 'extract:pagination', $tmp . '/sample.html', '--base-url=https://link.springer.com/journals/a/1', '--output=' . $tmp . '/pagination.json']);
+    ob_end_clean();
+    assert($code === 0, 'extract:pagination command failed');
+    $json = json_decode((string) file_get_contents($tmp . '/pagination.json'), true);
+    assert(isset($json['pagination']['summary']), 'pagination command output missing summary');
+};
+
+$tests['v1.0.6 pagination type and command are registered'] = function (): void {
+    assert(in_array('pagination', ExtractionOptions::TYPES, true), 'pagination extraction type missing');
+    $commands = CommandRegistry::commands();
+    assert(isset($commands['extract:pagination']), 'extract:pagination command missing from registry');
 };
 
 $passed = 0;

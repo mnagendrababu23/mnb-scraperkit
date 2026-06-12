@@ -525,7 +525,8 @@ final class CommonDataExtractor
 
     private function looksLikeHumanName(string $name): bool
     {
-        if ($this->looksLikeUiNoise($name) || $this->looksLikeNonPersonName($name)) {
+        $name = $this->cleanText($name);
+        if ($name === '' || $this->looksLikeUiNoise($name) || $this->looksLikeNonPersonName($name)) {
             return false;
         }
         if (preg_match('~[0-9_@#:/\\\\]|&~u', $name)) {
@@ -539,13 +540,19 @@ final class CommonDataExtractor
             return false;
         }
 
+        $particles = ['bin', 'binti', 'da', 'de', 'del', 'der', 'di', 'dos', 'du', 'el', 'ibn', 'la', 'le', 'van', 'von', 'y'];
         $longNameTokens = 0;
+        $initialTokens = 0;
         foreach ($tokens as $token) {
             $clean = trim($token, " .'-’");
             if ($clean === '') {
                 return false;
             }
+            if (in_array(strtolower($clean), $particles, true)) {
+                continue;
+            }
             if (preg_match('/^[A-Z]\.$/u', $token)) {
+                $initialTokens++;
                 continue;
             }
             if (strtoupper($clean) === $clean && strlen($clean) > 1) {
@@ -557,7 +564,40 @@ final class CommonDataExtractor
             $longNameTokens++;
         }
 
-        return $longNameTokens >= 1;
+        if ($longNameTokens < 2 && $initialTokens === 0) {
+            return false;
+        }
+
+        return $this->hasHumanNameShape($tokens);
+    }
+
+    /** @param array<int,string> $tokens */
+    private function hasHumanNameShape(array $tokens): bool
+    {
+        $lower = array_map(static fn (string $token): string => strtolower(trim($token, " .'-’")), $tokens);
+        $joined = implode(' ', $lower);
+
+        // Reject phrases that look like adjacent catalog/list titles rather than one person.
+        if (preg_match('/\b(?:journal|journals|annals|annales|annali|acta|advanced|advances|international|technology|engineering|mathematics|physics|chemistry|biology|medicine|surgery|urology|law|review|reports|transactions|proceedings|bulletin|letters|series|next|previous|over)\b/u', $joined)) {
+            return false;
+        }
+
+        // Many catalog false positives are two or more long discipline/title words.
+        $longGenericCount = 0;
+        $genericSuffixes = ['ology', 'ics', 'tion', 'sion', 'ment', 'ence', 'ance', 'istry', 'graphy', 'metry', 'nomy', 'tomy', 'scopy'];
+        foreach ($lower as $token) {
+            foreach ($genericSuffixes as $suffix) {
+                if (strlen($token) >= 8 && str_ends_with($token, $suffix)) {
+                    $longGenericCount++;
+                    break;
+                }
+            }
+        }
+        if ($longGenericCount >= 2) {
+            return false;
+        }
+
+        return true;
     }
 
     private function looksLikeNonPersonName(string $name): bool
@@ -586,6 +626,15 @@ final class CommonDataExtractor
             'reviews', 'rights', 'science', 'sciences', 'scientific', 'search', 'series', 'services', 'signaling',
             'society', 'springer', 'statement', 'studies', 'submission', 'sustainability', 'systems', 'technology',
             'therapy', 'transactions', 'university', 'volume', 'worldwide',
+            'agenda', 'autotechnology', 'electronics', 'elektronik', 'extra', 'production', 'radiology', 'seminar',
+            'metallurgica', 'sinica', 'physica', 'hungarica', 'academiae', 'scientiarum', 'activitas', 'nervosa',
+            'superior', 'adaptive', 'biotechnology', 'composites', 'metamaterials', 'modeling', 'maritime',
+            'aequationes', 'spazio', 'aesthetic', 'plastic', 'afrika', 'matematika', 'ageing', 'anesthesiology',
+            'quality', 'aurikulomedizin', 'algebra', 'colloquium', 'logic', 'representation', 'theory', 'algorithmica',
+            'algorithms', 'analog', 'integrated', 'circuits', 'palliativmedizin', 'angiogenesis', 'animal',
+            'biotelemetry', 'cognition', 'diseases', 'microbiome', 'annalen', 'philosophie', 'kritik', 'geophysicae',
+            'poincaré', 'québec', 'pura', 'antimicrobials', 'combinatorics', 'diagnostic', 'paediatric', 'pathology',
+            'dyslexia', 'finance', 'psychiatry', 'geometry', 'hematology', 'intensive', 'care',
         ];
 
         foreach ($nonPersonTerms as $term) {
@@ -739,15 +788,11 @@ final class CommonDataExtractor
     /** @return array<int,string> */
     private function extractPhones(string $text): array
     {
-        preg_match_all('/(?<!\w)(?:\+?\d{1,3}[\s.-]?)?(?:\(?\d{2,5}\)?[\s.-]?)?\d{3,5}[\s.-]?\d{3,5}(?!\w)/u', $text, $matches);
+        preg_match_all('/(?<![\p{L}\d])(?:\+?\d{1,3}[\s.-]?)?(?:\(?\d{2,5}\)?[\s.-]?)?\d{3,5}[\s.-]?\d{3,5}(?![\p{L}\d])/u', $text, $matches);
         $items = [];
         foreach ($matches[0] ?? [] as $phone) {
             $phone = trim($phone);
-            $digits = preg_replace('/\D+/', '', $phone) ?? '';
-            if (strlen($digits) < 7 || strlen($digits) > 15) {
-                continue;
-            }
-            if (preg_match('/^\d{4}[-\/]\d{1,2}[-\/]\d{1,2}$/', $phone)) {
+            if (!$this->isValidPhoneCandidate($phone)) {
                 continue;
             }
             $items[$phone] = $phone;
@@ -756,6 +801,51 @@ final class CommonDataExtractor
             }
         }
         return array_values($items);
+    }
+
+    private function isValidPhoneCandidate(string $phone): bool
+    {
+        $phone = trim($phone);
+        if ($phone === '') {
+            return false;
+        }
+
+        $digits = preg_replace('/\D+/', '', $phone) ?? '';
+        $digitCount = strlen($digits);
+
+        if ($digitCount < 10 || $digitCount > 15) {
+            return false;
+        }
+
+        // Reject historical/year ranges and ISSN-like values, e.g. 1858-1865 or 1234-567X.
+        if (preg_match('/^(?:1[5-9]\d{2}|20\d{2})\s*[-–—]\s*(?:1[5-9]\d{2}|20\d{2})$/u', $phone)) {
+            return false;
+        }
+        if (preg_match('/^\d{4}[-–—]\d{3}[0-9Xx]$/u', $phone)) {
+            return false;
+        }
+
+        // Reject dates and dotted IP addresses accidentally collected as phone numbers.
+        if (preg_match('/^\d{4}[-\/]\d{1,2}[-\/]\d{1,2}$/u', $phone)) {
+            return false;
+        }
+        if (preg_match('/^\d{1,3}(?:\.\d{1,3}){3}$/u', $phone)) {
+            return false;
+        }
+
+        // Require phone-like formatting for unlabelled numbers: country code, parentheses,
+        // spaces, or separators. Long plain digit strings are often IDs; keep only sane lengths.
+        $hasPhoneFormatting = str_contains($phone, '+') || str_contains($phone, '(') || preg_match('/[\s.-]/u', $phone);
+        if (!$hasPhoneFormatting && !in_array($digitCount, [10, 11, 12], true)) {
+            return false;
+        }
+
+        // Reject repeated/suspicious numeric sequences.
+        if (preg_match('/^(\d)\1{9,}$/', $digits)) {
+            return false;
+        }
+
+        return true;
     }
 
     /** @param array<int,string> $lines @param array<int,string> $keywords @return array<int,string> */

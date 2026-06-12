@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Pagination detection sample</title>
+</head>
+<body>
+  <main>
+    <h1>Pagination detection sample</h1>
+
+    <nav class="pagination" aria-label="Search results pagination">
+      <a href="/search?page=1">First</a>
+      <a href="/search?page=4" rel="prev">Previous</a>
+      <a href="/search?page=1">1</a>
+      <span>...</span>
+      <a href="/search?page=4">4</a>
+      <span aria-current="page">5</span>
+      <a href="/search?page=6">6</a>
+      <span>...</span>
+      <a href="/search?page=200">200</a>
+      <a href="/search?page=6" rel="next">Next</a>
+      <a href="/search?page=200">Last</a>
+    </nav>
+
+    <nav class="atoz" aria-label="A-Z directory pagination">
+      <a href="/journals/a/1">A</a>
+      <a href="/journals/b/1">B</a>
+      <a href="/journals/c/1">C</a>
+      <a href="/journals/d/1">D</a>
+      <a href="/journals/e/1">E</a>
+      <a href="/journals/f/1">F</a>
+      <a href="/journals/z/1">Z</a>
+      <a href="/journals/0/1">#</a>
+    </nav>
+
+    <form action="/search" method="get">
+      <label>Page: <select name="page"><option>1</option><option>2</option><option>3</option></select></label>
+      <label>Rows per page: <select name="per_page"><option>10</option><option>25</option><option>50</option></select></label>
+      <label>Go to page: <input name="page_number" placeholder="Go to page"></label>
+      <button type="submit">Go</button>
+    </form>
+
+    <button class="load-more" data-next-cursor="abc123">Load More</button>
+    <a href="/api/users?cursor=abc123">Cursor API next</a>
+    <a href="/api/users?offset=80&limit=20">Offset API page</a>
+    <a href="/api/users?lastId=100">Keyset API page</a>
+    <a href="/api/users?nextToken=abc123">Token API page</a>
+
+    <script>
+      const nextToken = 'abc123';
+      const lastId = 100;
+      window.addEventListener('scroll', function onscroll() {
+        // infinite scroll signal
+      });
+    </script>
+  </main>
+</body>
+</html>

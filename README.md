@@ -2116,7 +2116,8 @@ v1.0.3 adds reusable extraction controls for enterprise page data extraction:
 - Word dictionary learning: `extract:dictionary` can add newly discovered words to a reusable JSON dictionary.
 - Data mappings: `extract:mappings` maps source fields to normalized target fields.
 - Registered patterns: `extract:patterns` runs configurable regex patterns for emails, phones, DOI, ISSN, ISBN, dates, prices, registration numbers, PDF URLs, and image URLs.
-- Common components: `extract:components` extracts tables, lists, headings, navigation links, breadcrumbs, social links, download links, bio blocks, cards, and repeated component groups.
+- Common components: `extract:components` extracts tables, lists, headings, navigation links, pagination controls, breadcrumbs, social links, download links, bio blocks, cards, and repeated component groups.
+- Pagination detection: `extract:pagination` finds numbered pagination, ellipsis/sliding windows, previous/next, first/last, A-Z indexes, dropdown page selectors, go-to-page inputs, infinite scroll signals, load-more buttons, cursor/offset/keyset/token API-style pagination, page-size controls, mobile compact controls, step/wizard flows, tabs, date-based controls, and timeline controls.
 - Extraction modes: links, plain text, inner HTML, outer HTML, whole HTML, only images, only PDFs, download files, no-image filtering, selectors, and repeated class/id/tag statistics.
 
 Examples:
@@ -2124,10 +2125,43 @@ Examples:
 ```bash
 php bin/mnb-scraper extract:types
 php bin/mnb-scraper extract:components examples/extraction/sample-components.html --json
-php bin/mnb-scraper extract:options examples/extraction/sample-components.html --type=links,text,components,patterns,dictionary --dictionary=storage/extraction/words.json --output=storage/extraction/result.json
+php bin/mnb-scraper extract:pagination https://link.springer.com/journals/a/1 --json
+php bin/mnb-scraper extract:pagination examples/extraction/sample-pagination.html --base-url=https://example.com/search --json
+php bin/mnb-scraper extract:options examples/extraction/sample-components.html --type=links,text,pagination,components,patterns,dictionary --dictionary=storage/extraction/words.json --output=storage/extraction/result.json
 php bin/mnb-scraper extract:patterns examples/extraction/sample-components.html --json
 php bin/mnb-scraper extract:mappings records.json --mapping=article --output=storage/mapped-records.json
 ```
+
+
+### Pagination extraction output
+
+Use `extract:pagination` when you want only page navigation controls from one URL or saved HTML file:
+
+```bash
+php bin/mnb-scraper extract:pagination https://link.springer.com/journals/a/1 --json
+php bin/mnb-scraper extract:pagination examples/extraction/sample-pagination.html --base-url=https://example.com/search --json
+```
+
+Typical output includes:
+
+```json
+{
+  "pagination": {
+    "has_pagination": true,
+    "primary_pattern": "alphabetical",
+    "detected_types": ["alphabetical", "previous_next", "numbered"],
+    "summary": {
+      "next_url": "https://link.springer.com/journals/a/2",
+      "page_numbers": [1, 2],
+      "pagination_links_total": 30
+    },
+    "patterns": [],
+    "links": []
+  }
+}
+```
+
+For Springer A-Z pages, the detector separates alphabet navigation such as `A B C ... Z`, page links such as `1 2 Next`, and API-style URL parameters if present. Infinite scroll and JavaScript-only pagination are reported as static signals; the detector does not execute hidden JavaScript or bypass access controls.
 
 ## Extraction explainability, recipes, and quality reports
 
