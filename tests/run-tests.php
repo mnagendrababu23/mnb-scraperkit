@@ -2192,6 +2192,17 @@ $tests['v1.0.3 ML commands and API route are registered'] = function (): void {
     assert(isset($response->body['ml']['strategies']), 'ML strategies API response missing strategies');
 };
 
+
+$tests['v1.0.4 logger works without a log file and does not reference bare STDERR'] = function (): void {
+    $logger = new \Mnb\ScraperKit\Support\Logger();
+    $logger->info('logger smoke test', ['web_sapi_safe' => true]);
+
+    $source = file_get_contents(dirname(__DIR__) . '/src/Support/Logger.php');
+    assert(is_string($source), 'logger source could not be read');
+    assert(!str_contains($source, 'fwrite(STDERR'), 'logger must not reference bare STDERR constant');
+    assert(str_contains($source, "defined('STDERR')"), 'logger should guard STDERR for web SAPI');
+};
+
 $passed = 0;
 foreach ($tests as $name => $test) {
     try {

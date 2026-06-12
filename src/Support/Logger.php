@@ -46,6 +46,12 @@ final class Logger
             return;
         }
 
-        fwrite(STDERR, $line);
+        $stderr = defined('STDERR') ? constant('STDERR') : null;
+        if (is_resource($stderr)) {
+            fwrite($stderr, $line);
+            return;
+        }
+
+        error_log(rtrim($line));
     }
 }
