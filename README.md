@@ -1,8 +1,8 @@
-# MNB ScraperKit V1.0.0
+# MNB ScraperKit v1.0.0
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V1.0.0 is the first public release of MNB ScraperKit. It includes crawler workflows, extraction recipes, publisher metadata crawling, AI crawl analysis, search discovery, and authorized mail/webmail extraction connectors without storing passwords.
+v1.0.0 is the first public release of MNB ScraperKit. It includes crawler workflows, extraction recipes, publisher metadata crawling, AI crawl analysis, search discovery, and authorized mail/webmail extraction connectors without storing passwords.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,9 +16,9 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V1.0.0 update focus
+## v1.0.0 first public release focus
 
-V1.0.0 is an authorized mail/webmail extraction upgrade. It does not scrape webmail UIs, store mailbox passwords, or bypass account protections. Instead, it adds safe connector slots and offline import workflows so teams can extract useful crawl seeds and document links from approved mail exports or future OAuth/API connectors.
+v1.0.0 is the first public release line for the full MNB ScraperKit feature set, including authorized mail/webmail extraction. It does not scrape webmail UIs, store mailbox passwords, or bypass account protections. Instead, it adds safe connector slots and offline import workflows so teams can extract useful crawl seeds and document links from approved mail exports or future OAuth/API connectors.
 
 - Added `mail:providers` for Gmail API, IMAP, webmail export, local JSON, and `.eml` connector status.
 - Added `mail:search` for searching approved local mail exports without live credentials.
@@ -1494,6 +1494,137 @@ Validate a template before sharing it with a team:
 php bin/mnb-scraper template:validate seo-audit
 ```
 
+
+## AI crawl intelligence and search discovery
+
+The AI/search layer helps decide **what can be crawled safely before launching a crawl**. It is designed as a planning and discovery layer, not as a bypass system.
+
+Core principles:
+
+- External AI is not called unless a provider is configured.
+- The default analyzer is deterministic/rule-based.
+- Search discovery uses provider connectors or offline examples, not direct scraping of search-result pages.
+- Outputs should be reviewed before running high-volume crawls.
+
+List AI providers:
+
+```bash
+php bin/mnb-scraper ai:providers --json
+```
+
+Analyze a site or saved target for crawl flexibility:
+
+```bash
+php bin/mnb-scraper ai:analyze-site https://link.springer.com/journal/777/volumes-and-issues --goal=article_metadata --provider=rule_based --output=storage/ai/springer-analysis.json
+```
+
+Explain the generated crawl plan:
+
+```bash
+php bin/mnb-scraper ai:explain-plan storage/ai/springer-analysis.json
+```
+
+List search providers:
+
+```bash
+php bin/mnb-scraper search:providers --json
+```
+
+Run offline/provider-backed discovery and convert results to seed URLs:
+
+```bash
+php bin/mnb-scraper search:web "Springer journal 777 article DOI" --provider=offline --output=storage/search/results.json
+php bin/mnb-scraper search:discover "Springer journal 777 article DOI" --input=examples/search/springer-search-results.json --filter-domain=link.springer.com --output=storage/search/discovered.json
+php bin/mnb-scraper search:to-seeds storage/search/discovered.json --filter-domain=link.springer.com --output=storage/search/seeds.txt
+```
+
+Recommended production flow:
+
+```text
+search/web discovery -> search result classification -> domain filtering -> AI crawl analysis -> seed review -> low-rate crawl -> extraction recipe -> quality report
+```
+
+## Authorized mail and webmail extraction
+
+The mail layer is authorization-first. It is intended for user-approved exports, Gmail API/OAuth connectors, IMAP connectors, or webmail exports. It does **not** automate hidden login, scrape webmail UIs, store mailbox passwords, or bypass account protections.
+
+Supported provider slots:
+
+```text
+local_json
+eml_file
+gmail_api
+imap
+webmail_export
+```
+
+List mail providers and safety policy:
+
+```bash
+php bin/mnb-scraper mail:providers --json
+```
+
+Search an approved local mail export:
+
+```bash
+php bin/mnb-scraper mail:search "Springer" --provider=local_json --input=examples/mail/sample-authorized-mails.json --json
+```
+
+Extract links, PDF URLs, text, HTML, and attachment metadata:
+
+```bash
+php bin/mnb-scraper mail:extract examples/mail/sample-authorized-mails.json --extract=links,pdfs,text,attachments --query=Springer --output=storage/mail/extracted.json
+```
+
+Build an attachment manifest or save approved base64 attachment content from a user export:
+
+```bash
+php bin/mnb-scraper mail:attachments examples/mail/sample-authorized-mails.json --output-dir=storage/mail/attachments --json
+```
+
+Convert extracted mail links into crawl seeds:
+
+```bash
+php bin/mnb-scraper mail:to-seeds storage/mail/extracted.json --filter-domain=link.springer.com --output=storage/mail/seeds.txt
+```
+
+Recommended production flow:
+
+```text
+authorized mailbox/export -> mail extraction -> domain filtering -> seed review -> AI crawl analysis -> extraction recipe -> dataset/export
+```
+
+## QA smoke examples
+
+The package includes offline-safe examples so users can verify major workflows without live credentials or crawling external websites.
+
+Useful files:
+
+```text
+examples/qa/command-smoke-plan.json
+examples/qa/qa-workflow-notes.txt
+examples/search/multi-provider-offline-results.json
+examples/ai/site-analysis-targets.json
+examples/mail/sample-authorized-mails.json
+examples/mail/sample-authorized-message.eml
+examples/mail/sample-webmail-export.json
+examples/extraction/qa-components.html
+```
+
+Run the QA smoke helper:
+
+```bash
+scripts/run-qa-smoke.cmd
+```
+
+PowerShell:
+
+```powershell
+./scripts/run-qa-smoke.ps1
+```
+
+The smoke plan covers search discovery, AI analysis, mail extraction, extraction options, recipes, quality reports, and seed generation using local example data only.
+
 ## License
 
 MIT License. See `LICENSE`.
@@ -1534,7 +1665,7 @@ php bin/mnb-scraper dashboard:serve
 
 Then send `Authorization: Bearer your-token-here` or use `?token=your-token-here` for local testing.
 
-### V1.0.0 Enterprise Publisher Graph Crawling
+## Enterprise publisher graph crawling
 
 MNB ScraperKit now models real academic publisher crawling as a metadata-first navigation graph:
 
@@ -1553,9 +1684,9 @@ php bin/mnb-scraper publisher:extract-article saved-springer-article.html --publ
 The publisher graph supports journal/book listing pages, book landing URLs, journal volume/issue tables of contents, article/chapter URLs, and detailed metadata fields such as title, article type, published date, authors, affiliation/contact metadata when public, abstract, DOI, keywords, and references. It remains metadata-only by default and does not include paywall, CAPTCHA, or access-control bypass.
 
 
-### V1.0.0 Extraction Options and Component Intelligence
+## Extraction options and component intelligence
 
-V1.0.0 adds reusable extraction controls for enterprise page data extraction:
+v1.0.0 adds reusable extraction controls for enterprise page data extraction:
 
 - Word dictionary learning: `extract:dictionary` can add newly discovered words to a reusable JSON dictionary.
 - Data mappings: `extract:mappings` maps source fields to normalized target fields.
@@ -1573,7 +1704,7 @@ php bin/mnb-scraper extract:patterns examples/extraction/sample-components.html 
 php bin/mnb-scraper extract:mappings records.json --mapping=article --output=storage/mapped-records.json
 ```
 
-### V1.0.0 Extraction Explainability, Recipes, and Quality Reports
+## Extraction explainability, recipes, and quality reports
 
 The extraction layer is designed to make output reusable and explainable:
 

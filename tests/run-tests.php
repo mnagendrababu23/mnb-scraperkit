@@ -1971,7 +1971,7 @@ $tests['v1.0.0 mail attachment manifest can write authorized base64 files safely
 
 $tests['native v1.0.0 QA smoke plan commands run offline on bundled examples'] = function (): void {
     $root = dirname(__DIR__);
-    $tmp = sys_get_temp_dir() . '/mnb_v431_smoke_' . bin2hex(random_bytes(4));
+    $tmp = sys_get_temp_dir() . '/mnb_v100_smoke_' . bin2hex(random_bytes(4));
     mkdir($tmp . '/storage/qa', 0775, true);
     $copyFile = static function (string $relative) use ($root, $tmp): void {
         $source = $root . '/' . $relative;
