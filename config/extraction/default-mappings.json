@@ -1,0 +1,20 @@
+{
+  "mapping_version": "4.2.0",
+  "description": "Reusable source-to-target field mappings used by extraction:map and extraction:extract.",
+  "mappings": {
+    "article": {
+      "title": ["title", "citation_title", "headline", "name"],
+      "authors": ["authors", "citation_author", "creator", "byline"],
+      "doi": ["doi", "citation_doi", "identifier"],
+      "published_at": ["published_at", "citation_publication_date", "datePublished", "date"],
+      "abstract": ["abstract", "description", "summary"],
+      "url": ["url", "canonical_url", "link"]
+    },
+    "business": {
+      "name": ["name", "title", "company", "organization"],
+      "email": ["email", "contact_email"],
+      "phone": ["phone", "telephone", "mobile"],
+      "address": ["address", "location"]
+    }
+  }
+}

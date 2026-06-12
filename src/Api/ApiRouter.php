@@ -27,6 +27,9 @@ use Mnb\ScraperKit\Enterprise\WorkspaceStore;
 use Mnb\ScraperKit\Publisher\PublisherCatalog;
 use Mnb\ScraperKit\Publisher\PublisherContentGraph;
 use Mnb\ScraperKit\Publisher\ArticleMetadataNormalizer;
+use Mnb\ScraperKit\Extraction\ExtractionOptions;
+use Mnb\ScraperKit\Extraction\PatternRegistry;
+use Mnb\ScraperKit\Extraction\DataMappingRegistry;
 
 /**
  * Lightweight read-mostly JSON API router used by the optional api:serve command.
@@ -37,7 +40,7 @@ use Mnb\ScraperKit\Publisher\ArticleMetadataNormalizer;
  */
 final class ApiRouter
 {
-    public const VERSION = '4.1.1';
+    public const VERSION = '4.2.0';
 
     public function __construct(
         private readonly string $rootDir,
@@ -66,6 +69,9 @@ final class ApiRouter
             ['method' => 'GET', 'path' => '/api/v1/datasets/{dataset_id}', 'description' => 'Read one dataset manifest.'],
             ['method' => 'GET', 'path' => '/api/v1/datasets/{dataset_id}/evaluation', 'description' => 'Evaluate one dataset for quality, completeness, and training readiness.'],
             ['method' => 'GET', 'path' => '/api/v1/rule-builder/templates', 'description' => 'List auto-profile rule builder template names and assistant version.'],
+            ['method' => 'GET', 'path' => '/api/v1/extraction/types', 'description' => 'List configurable extraction output types and modes.'],
+            ['method' => 'GET', 'path' => '/api/v1/extraction/patterns', 'description' => 'List registered extraction regex patterns.'],
+            ['method' => 'GET', 'path' => '/api/v1/extraction/mappings', 'description' => 'List reusable extraction data mappings.'],
             ['method' => 'GET', 'path' => '/api/v1/browser/sessions', 'description' => 'List authorized browser session profiles.'],
             ['method' => 'GET', 'path' => '/api/v1/publishers', 'description' => 'List safe academic publisher metadata crawl targets.'],
             ['method' => 'GET', 'path' => '/api/v1/publishers/schema', 'description' => 'Read normalized article metadata schema.'],
@@ -220,6 +226,32 @@ final class ApiRouter
                 'rule_builder_version' => self::VERSION,
                 'templates' => ['auto', 'seo', 'ecommerce', 'jobs', 'tender', 'academic'],
                 'commands' => ['rule:analyze', 'rule:generate', 'rule:test', 'rule:doctor', 'profile:scaffold'],
+            ]);
+        }
+
+
+
+        if ($method === 'GET' && $path === '/api/v1/extraction/types') {
+            return new ApiResponse(200, [
+                'ok' => true,
+                'extraction_version' => self::VERSION,
+                'types' => ExtractionOptions::TYPES,
+            ]);
+        }
+
+        if ($method === 'GET' && $path === '/api/v1/extraction/patterns') {
+            return new ApiResponse(200, [
+                'ok' => true,
+                'pattern_version' => self::VERSION,
+                'patterns' => (new PatternRegistry())->all(),
+            ]);
+        }
+
+        if ($method === 'GET' && $path === '/api/v1/extraction/mappings') {
+            return new ApiResponse(200, [
+                'ok' => true,
+                'mapping_version' => self::VERSION,
+                'mappings' => (new DataMappingRegistry())->all(),
             ]);
         }
 

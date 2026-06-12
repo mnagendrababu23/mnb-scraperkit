@@ -1,5 +1,5 @@
 {
-  "catalog_version": "4.1.1",
+  "catalog_version": "4.2.0",
   "name": "Academic Publisher Metadata Crawl Catalog",
   "policy": "Metadata-first source discovery. Respect robots, terms, rate limits, and authorization. Do not bypass paywalls, CAPTCHAs, authentication, or access controls.",
   "publishers": [
@@ -31,7 +31,7 @@
       "risk": "high",
       "notes": "API-first. Prefer Elsevier APIs, public sitemaps, RSS/TOC pages, and DOI metadata. Do not crawl paywalled full text.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -240,7 +240,7 @@
       "risk": "high",
       "notes": "Enterprise graph-ready: SpringerLink supports journal/book listing pages, book landing pages, journal volumes/issues pages, and article/chapter landing pages. Use metadata-only extraction and low rates.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -467,7 +467,7 @@
       "risk": "high",
       "notes": "Metadata-only crawl. Prefer public journal/TOC metadata, DOI/Crossref lookup, and low-rate sitemap discovery.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -674,7 +674,7 @@
       "risk": "high",
       "notes": "Metadata-only crawl. Prefer public journal/TOC metadata, DOI/Crossref lookup, and low-rate sitemap discovery.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -880,7 +880,7 @@
       "risk": "medium",
       "notes": "Corporate/catalog site. Lower article-data value; use only public pages and discovered sitemaps.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -1087,7 +1087,7 @@
       "risk": "high",
       "notes": "Metadata-only crawl. Prefer public journal metadata, DOI/Crossref lookup, and low-rate source discovery.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -1293,7 +1293,7 @@
       "risk": "medium",
       "notes": "Mixed corporate/product and journal content. Prefer public metadata pages and sitemap discovery.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -1499,7 +1499,7 @@
       "risk": "medium",
       "notes": "Corporate landing site. For journals prefer Oxford Academic/DOI metadata where authorized; crawl this seed as catalog metadata only.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -1705,7 +1705,7 @@
       "risk": "medium",
       "notes": "Mixed books/journals. Prefer public Cambridge Core metadata, DOI/Crossref lookup, and sitemap discovery.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -1912,7 +1912,7 @@
       "risk": "high",
       "notes": "API-first for IEEE Xplore when licensed. Use public pages only for metadata discovery; no paywall/full-text scraping.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -2119,7 +2119,7 @@
       "risk": "high",
       "notes": "Metadata-only crawl. Prefer ACS publications metadata, DOI/Crossref lookup, public feeds/sitemaps, and low rate limits.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -2325,7 +2325,7 @@
       "risk": "medium",
       "notes": "Society/corporate site. For AIP Publishing article metadata prefer public metadata/DOI workflows.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -2531,7 +2531,7 @@
       "risk": "medium",
       "notes": "Society/journal site. Prefer public journal/issue pages, DOI metadata, and cautious source discovery.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -2738,7 +2738,7 @@
       "risk": "high",
       "notes": "ACM organization site. For ACM DL metadata use authorized/API/DOI workflows; no full text scraping.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -2945,7 +2945,7 @@
       "risk": "high",
       "notes": "Metadata-only crawl. Prefer public journal metadata, DOI/Crossref, and source discovery.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -3151,7 +3151,7 @@
       "risk": "medium",
       "notes": "Society/publishing site. Prefer public metadata, DOI/Crossref, and cautious source discovery.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -3357,7 +3357,7 @@
       "risk": "medium",
       "notes": "Society/corporate site. For journal metadata prefer public APS journal pages and DOI workflows.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -3564,7 +3564,7 @@
       "risk": "high",
       "notes": "Article platform. Metadata-only, low-rate crawl of public pages; prefer DOI metadata.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -3770,7 +3770,7 @@
       "risk": "medium",
       "notes": "Organization site. For Science journal metadata prefer science.org public metadata/DOI workflows.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -3977,7 +3977,7 @@
       "risk": "high",
       "notes": "Highly restricted/publisher platform. Use metadata-only, official APIs/sitemaps/feeds where allowed, no AI training or full-text scraping without permission.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -4184,7 +4184,7 @@
       "risk": "high",
       "notes": "Metadata-only. Prefer public article metadata, DOI/Crossref, feeds/sitemaps where allowed; no paywall/full text scraping.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -4391,7 +4391,7 @@
       "risk": "high",
       "notes": "Metadata-only. Prefer public article pages, DOI metadata, and low-rate journal/TOC discovery.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -4597,7 +4597,7 @@
       "risk": "medium",
       "notes": "Journal platform seed. Prefer public TOC/article metadata and DOI/Crossref lookup.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -4803,7 +4803,7 @@
       "risk": "medium",
       "notes": "Mostly books/catalog plus journals. Prefer public metadata and low-rate sitemap discovery.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -5009,7 +5009,7 @@
       "risk": "medium",
       "notes": "Books/journals via partner platforms. Prefer public catalog metadata and DOI lookup.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -5215,7 +5215,7 @@
       "risk": "medium",
       "notes": "Books/journals. Prefer public metadata pages, DOI/Crossref, and cautious source discovery.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -5421,7 +5421,7 @@
       "risk": "low",
       "notes": "Mostly book catalog. Article-data flexibility is low; use catalog metadata only.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -5627,7 +5627,7 @@
       "risk": "low",
       "notes": "Mostly book catalog. Article-data flexibility is low; use catalog metadata only.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -5833,7 +5833,7 @@
       "risk": "medium",
       "notes": "Books/journals. Prefer public metadata pages and DOI/Crossref for journals.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -6039,7 +6039,7 @@
       "risk": "low",
       "notes": "Mostly book/journal catalog. Use public metadata only; article-data flexibility limited.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -6245,7 +6245,7 @@
       "risk": "low",
       "notes": "Mostly book catalog. Article-data flexibility is low; use catalog metadata only.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -6451,7 +6451,7 @@
       "risk": "low",
       "notes": "Mostly book catalog. Article-data flexibility is low; use catalog metadata only.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -6657,7 +6657,7 @@
       "risk": "low",
       "notes": "Mostly book/journal catalog. Use public metadata only; article-data flexibility limited.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -6863,7 +6863,7 @@
       "risk": "low",
       "notes": "Mostly book catalog. Article-data flexibility is low; use catalog metadata only.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -7069,7 +7069,7 @@
       "risk": "low",
       "notes": "Mostly book catalog. Article-data flexibility is low; use catalog metadata only.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -7275,7 +7275,7 @@
       "risk": "low",
       "notes": "Mostly book catalog. Article-data flexibility is low; use catalog metadata only.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {
@@ -7481,7 +7481,7 @@
       "risk": "low",
       "notes": "Mostly book catalog. Article-data flexibility is low; use catalog metadata only.",
       "content_graph": {
-        "graph_version": "4.1.1",
+        "graph_version": "4.2.0",
         "strategy": "publisher_to_collections_to_article_metadata",
         "levels": [
           {

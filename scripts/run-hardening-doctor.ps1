@@ -1,2 +1,2 @@
-# MNB ScraperKit V4.1.1 - production readiness diagnostics
+# MNB ScraperKit V4.2.0 - production readiness diagnostics
 php "$PSScriptRoot/../bin/mnb-scraper" hardening:doctor @args

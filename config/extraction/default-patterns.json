@@ -1,0 +1,16 @@
+{
+  "pattern_version": "4.2.0",
+  "description": "Reusable extraction pattern registry for common enterprise page data.",
+  "patterns": {
+    "email": "[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}",
+    "phone": "(?:\\+?\\d[\\d .()\\-]{7,}\\d)",
+    "doi": "10\\.[0-9]{4,9}/[-._;()/:A-Z0-9]+",
+    "issn": "\\b\\d{4}-\\d{3}[0-9Xx]\\b",
+    "isbn": "\\b(?:97[89][- ]?)?\\d[- 0-9]{8,}[0-9Xx]\\b",
+    "date_iso": "\\b\\d{4}-\\d{2}-\\d{2}\\b",
+    "price": "(?:₹|Rs\\.?|USD|EUR|GBP|\\$|€|£)\\s?\\d[\\d,]*(?:\\.\\d{1,2})?",
+    "registration_number": "(?:registration|reg\\.?|license|licence|gst|cin|pan|tender|application)\\s*(?:no\\.?|number|id)?\\s*[:#-]?\\s*[A-Z0-9][A-Z0-9\\-/]{4,}",
+    "pdf_url": "https?://[^\\s\"']+\\.pdf(?:\\?[^\\s\"']*)?",
+    "image_url": "https?://[^\\s\"']+\\.(?:png|jpe?g|gif|webp|svg)(?:\\?[^\\s\"']*)?"
+  }
+}

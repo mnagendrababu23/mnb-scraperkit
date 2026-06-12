@@ -107,7 +107,7 @@ final class PublisherCatalog
                 continue;
             }
             $jobs[] = [
-                'job_version' => '4.1.1',
+                'job_version' => '4.2.0',
                 'name' => 'publisher-' . $id . '-metadata',
                 'publisher_id' => $id,
                 'publisher' => (string) ($publisher['publisher'] ?? $id),

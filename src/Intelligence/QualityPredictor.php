@@ -23,7 +23,7 @@ final class QualityPredictor
         }
 
         return [
-            'intelligence_version' => '4.1.1',
+            'intelligence_version' => '4.2.0',
             'generated_at' => date(DATE_ATOM),
             'summary' => [
                 'page_quality_avg' => $this->average($pageRows, 'quality_score'),
