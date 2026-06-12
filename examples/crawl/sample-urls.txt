@@ -1,0 +1,4 @@
+# Safe sample URL list for Windows CMD/PowerShell crawl wrappers.
+# Replace these with URLs you are authorized to crawl.
+https://example.com/
+https://example.com/about

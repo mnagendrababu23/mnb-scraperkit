@@ -1,0 +1,41 @@
+{
+  "preset_version": "1.0.2",
+  "policy": "Use only for owned, allowed, or explicitly authorized websites. Respect robots and rate limits.",
+  "presets": [
+    {
+      "id": "single_safe_probe",
+      "description": "One small crawl for testing a site and output path.",
+      "script": "scripts/run-crawl.ps1",
+      "arguments": {
+        "MaxPages": 5,
+        "Depth": 1,
+        "DelayMs": 1000,
+        "BrowserMode": "auto"
+      }
+    },
+    {
+      "id": "bulk_metadata_low_rate",
+      "description": "Low-rate metadata crawl from a URL list.",
+      "script": "scripts/run-bulk-crawl.ps1",
+      "arguments": {
+        "MaxPages": 1,
+        "Depth": 0,
+        "GapMs": 3000,
+        "BatchSize": 5,
+        "BatchPause": 30,
+        "Pipeline": true
+      }
+    },
+    {
+      "id": "url_process_retry_ladder",
+      "description": "Retry/backoff URL processing with Windows method ladder.",
+      "script": "scripts/run-url-process.ps1",
+      "arguments": {
+        "Methods": "auto,curl,stream,cmd-curl,powershell",
+        "MaxAttempts": 3,
+        "GapMs": 1000,
+        "RetryDelaySeconds": 5
+      }
+    }
+  ]
+}

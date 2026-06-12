@@ -8,4 +8,4 @@ php bin/mnb-scraper mail:to-seeds storage/qa/mail-extracted.json --filter-domain
 php bin/mnb-scraper extract:components examples/extraction/qa-components.html --min-repeats=2 --output=storage/qa/components.json
 php bin/mnb-scraper extract:recipe examples/extraction/qa-components.html --recipe=config/extraction/recipes/generic-page.json --output=storage/qa/recipe.json
 php bin/mnb-scraper extract:quality storage/qa/recipe.json --required-field=title --output=storage/qa/quality.json
-Write-Host "v1.0.1 QA smoke examples completed. Outputs written to storage/qa"
+Write-Host "v1.0.2 QA smoke examples completed. Outputs written to storage/qa"

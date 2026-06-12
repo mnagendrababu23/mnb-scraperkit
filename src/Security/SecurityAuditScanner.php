@@ -47,7 +47,7 @@ final class SecurityAuditScanner
 
         return [
             'ok' => $summary['critical'] === 0 && $summary['high'] === 0,
-            'security_audit_version' => '1.0.1',
+            'security_audit_version' => '1.0.2',
             'generated_at' => date(DATE_ATOM),
             'root_dir' => $this->rootDir,
             'score' => $score,

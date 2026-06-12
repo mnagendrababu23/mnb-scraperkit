@@ -11,7 +11,7 @@ use Mnb\ScraperKit\Support\UrlNormalizer;
 /** Lightweight deterministic benchmarks that do not perform network calls. */
 final class BenchmarkRunner
 {
-    public const VERSION = '1.0.1';
+    public const VERSION = '1.0.2';
 
     /** @return array<string,mixed> */
     public function run(int $iterations = 1000): array

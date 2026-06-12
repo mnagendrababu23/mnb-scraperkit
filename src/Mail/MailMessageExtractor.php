@@ -6,7 +6,7 @@ namespace Mnb\ScraperKit\Mail;
 
 final class MailMessageExtractor
 {
-    public const VERSION = '1.0.1';
+    public const VERSION = '1.0.2';
 
     /** @return list<array<string,mixed>> */
     public function loadMessages(string $input): array

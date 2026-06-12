@@ -50,7 +50,7 @@ final class TemplateInstaller
         }
 
         $manifest = [
-            'project_template_version' => '1.0.1',
+            'project_template_version' => '1.0.2',
             'template' => $template->summary(),
             'project_name' => $vars['project_name'],
             'created_at' => $createdAt,
@@ -109,7 +109,7 @@ final class TemplateInstaller
 
         $manifest = $pack->toArray();
         $manifest['installed_at'] = date(DATE_ATOM);
-        $manifest['preset_pack_version'] = '1.0.1';
+        $manifest['preset_pack_version'] = '1.0.2';
         $manifestPath = $dir . '/mnb-preset-pack.json';
         if (!is_file($manifestPath) || $force) {
             file_put_contents($manifestPath, json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));

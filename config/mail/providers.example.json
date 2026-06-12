@@ -1,5 +1,5 @@
 {
-  "mail_connector_version": "1.0.1",
+  "mail_connector_version": "1.0.2",
   "policy": {
     "authorization_required": true,
     "no_password_storage": true,

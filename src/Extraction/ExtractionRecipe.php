@@ -37,7 +37,7 @@ final class ExtractionRecipe
                 'id' => (string) ($data['id'] ?? basename($path, '.json')),
                 'name' => (string) ($data['name'] ?? basename($path, '.json')),
                 'source_type' => (string) ($data['source_type'] ?? 'page'),
-                'version' => (string) ($data['recipe_version'] ?? '1.0.1'),
+                'version' => (string) ($data['recipe_version'] ?? '1.0.2'),
                 'fields_total' => count((array) ($data['fields'] ?? [])),
                 'path' => $path,
             ];

@@ -1,3 +1,3 @@
 @echo off
-REM MNB ScraperKit V1.0.1 - test authorized browser session
+REM MNB ScraperKit V1.0.2 - test authorized browser session
 php "%~dp0..\bin\mnb-scraper" browser:session-test client_portal https://example.com/dashboard --browser=auto --json

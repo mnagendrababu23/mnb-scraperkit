@@ -44,7 +44,7 @@ use Mnb\ScraperKit\Mail\MailProviderRegistry;
  */
 final class ApiRouter
 {
-    public const VERSION = '1.0.1';
+    public const VERSION = '1.0.2';
 
     public function __construct(
         private readonly string $rootDir,

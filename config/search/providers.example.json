@@ -1,5 +1,5 @@
 {
-  "search_provider_version": "1.0.1",
+  "search_provider_version": "1.0.2",
   "default_provider": "offline",
   "do_not_scrape_search_result_pages": true,
   "providers": {

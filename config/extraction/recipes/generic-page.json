@@ -1,5 +1,5 @@
 {
-  "recipe_version": "1.0.1",
+  "recipe_version": "1.0.2",
   "id": "generic-page",
   "name": "Generic Page Explainable Extraction Recipe",
   "source_type": "web_page",

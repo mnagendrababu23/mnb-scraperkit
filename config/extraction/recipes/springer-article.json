@@ -1,5 +1,5 @@
 {
-  "recipe_version": "1.0.1",
+  "recipe_version": "1.0.2",
   "id": "springer-article",
   "name": "Springer-style Article Metadata Recipe",
   "source_type": "academic_article",

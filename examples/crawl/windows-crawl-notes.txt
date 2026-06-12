@@ -1,0 +1,28 @@
+MNB ScraperKit Windows crawling helpers
+======================================
+
+PowerShell examples:
+  powershell -ExecutionPolicy Bypass -File scripts/run-crawl.ps1 -Url https://example.com -MaxPages 10 -Depth 1 -DryRun
+  powershell -ExecutionPolicy Bypass -File scripts/run-bulk-crawl.ps1 -UrlFile examples/crawl/sample-urls.txt -JobDir storage/jobs/sample-bulk -DryRun
+  powershell -ExecutionPolicy Bypass -File scripts/run-url-process.ps1 -UrlFile examples/crawl/sample-urls.txt -DryRun
+  powershell -ExecutionPolicy Bypass -File scripts/run-source-discover.ps1 -Url https://example.com -DryRun
+
+CMD examples:
+  scripts\run-crawl.cmd https://example.com storage\crawls\example\crawl.json 10 1 1000
+  scripts\run-bulk-crawl.cmd examples\crawl\sample-urls.txt storage\jobs\sample-bulk 1 0 3000
+  scripts\run-url-process.cmd examples\crawl\sample-urls.txt storage\url-process\sample
+  scripts\run-source-discover.cmd https://example.com storage\source-discovery\example.json
+
+CMD environment overrides:
+  set MNB_CRAWL_PROFILE=academic
+  set MNB_CRAWL_PIPELINE=1
+  set MNB_CRAWL_COMMON_DATA=1
+  set MNB_CRAWL_INCLUDE_HTML=1
+  set MNB_CRAWL_IGNORE_ROBOTS=1
+  set MNB_CRAWL_DRY_RUN=1
+
+Safety defaults:
+  - start with low MaxPages and Depth
+  - keep delays between requests
+  - do not bypass paywalls, CAPTCHA, login, or access controls
+  - use source discovery, APIs, feeds, and sitemaps where possible

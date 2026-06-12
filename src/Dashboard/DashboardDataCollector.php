@@ -24,7 +24,7 @@ use Mnb\ScraperKit\Enterprise\WorkspaceStore;
  */
 final class DashboardDataCollector
 {
-    public const VERSION = '1.0.1';
+    public const VERSION = '1.0.2';
 
     public function __construct(private readonly string $rootDir)
     {

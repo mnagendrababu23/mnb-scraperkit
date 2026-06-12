@@ -1,5 +1,5 @@
 {
-  "job_version": "1.0.1",
+  "job_version": "1.0.2",
   "name": "academic-publisher-metadata-safe-crawl",
   "command": "publisher:plan",
   "args": [],

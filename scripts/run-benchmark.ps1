@@ -1,2 +1,2 @@
-# MNB ScraperKit V1.0.1 - local benchmark smoke test
+# MNB ScraperKit V1.0.2 - local benchmark smoke test
 php "$PSScriptRoot/../bin/mnb-scraper" benchmark:run @args

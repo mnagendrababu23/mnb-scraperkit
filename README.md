@@ -1,8 +1,8 @@
-# MNB ScraperKit v1.0.1
+# MNB ScraperKit v1.0.2
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-v1.0.1 is a small public patch release for MNB ScraperKit. It keeps the v1.0.0 feature set and improves first-run usability from source archives with a native CLI fallback, clearer onboarding notes, and extra smoke-test helpers.
+v1.0.2 is a small public patch release for MNB ScraperKit. It keeps the v1.0.0 feature set and improves first-run usability from source archives with a native CLI fallback, clearer onboarding notes, and extra smoke-test helpers.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,9 +16,9 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## v1.0.1 patch release focus
+## v1.0.2 patch release focus
 
-v1.0.1 keeps the v1.0.0 public feature set and improves the release-package experience for new users. The main change is that `bin/mnb-scraper` now falls back to the native CLI when Composer/Symfony dependencies are not installed, so source-zip users can still run command discovery, compatibility checks, release checks, and offline QA examples before running `composer install`.
+v1.0.2 keeps the v1.0.0 public feature set and improves the release-package experience for new users. The main change is that `bin/mnb-scraper` now falls back to the native CLI when Composer/Symfony dependencies are not installed, so source-zip users can still run command discovery, compatibility checks, release checks, and offline QA examples before running `composer install`.
 
 - Added native CLI fallback in `bin/mnb-scraper` when Symfony Console is unavailable.
 - Added `scripts/run-native-smoke.sh`, `scripts/run-native-smoke.cmd`, and `scripts/run-native-smoke.ps1`.
@@ -60,7 +60,7 @@ v1.0.1 keeps the v1.0.0 public feature set and improves the release-package expe
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V1.0.1 CLI/library release.
+This section lists the main functionality available in the current V1.0.2 CLI/library release.
 
 ### Package and CLI
 
@@ -80,7 +80,7 @@ This section lists the main functionality available in the current V1.0.1 CLI/li
 - `compat:commands` prints or validates the public command and option compatibility contract.
 - `.github/workflows/ci.yml` validates Composer metadata, installs dependencies, lints PHP files, runs tests, runs `ci:check`, builds a `git archive`, runs `release:check` on that archive, and performs a benchmark smoke test on PHP 8.2, 8.3, and 8.4.
 - CLI errors now include command context, help guidance, and diagnostics hints. Unknown commands include best-effort suggestions.
-- V1.0.1 keeps the hardening trait boundary and fixes native CLI option parsing; future maintenance releases can continue splitting command groups.
+- V1.0.2 keeps the hardening trait boundary and fixes native CLI option parsing; future maintenance releases can continue splitting command groups.
 
 Examples:
 
@@ -94,13 +94,13 @@ php bin/mnb-scraper compat:commands --validate
 
 ### Backward compatibility policy
 
-- Patch releases such as V1.0.1 should not remove public commands, rename public options, or change default output behavior without a compatibility alias.
+- Patch releases such as V1.0.2 should not remove public commands, rename public options, or change default output behavior without a compatibility alias.
 - Minor releases may add new commands, options, profiles, connectors, and optional integrations while keeping older workflows usable.
 - Major releases may remove deprecated functionality only after migration guidance is added to README examples and command compatibility notes.
 
 ### Academic publisher metadata crawling
 
-V1.0.1 adds safe publisher metadata workflows for academic journal/article discovery. The default model is **metadata only**: prefer official APIs, public sitemaps, RSS/Atom feeds, DOI/Crossref-style metadata, and public article landing pages. Do not bypass paywalls, CAPTCHAs, authentication, or access controls.
+V1.0.2 adds safe publisher metadata workflows for academic journal/article discovery. The default model is **metadata only**: prefer official APIs, public sitemaps, RSS/Atom feeds, DOI/Crossref-style metadata, and public article landing pages. Do not bypass paywalls, CAPTCHAs, authentication, or access controls.
 
 Commands:
 
@@ -388,7 +388,7 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 - Plugin enable/disable controls by editing the manifest `enabled` flag.
 - Plugin doctor command for validating all discovered plugins.
 - Plugin-contributed profiles available to `profile:list`, `profile:show`, `extract:rules`, and pipeline/profile workflows.
-- Safe-by-default design: V1.0.1 does not automatically execute arbitrary plugin PHP code.
+- Safe-by-default design: V1.0.2 does not automatically execute arbitrary plugin PHP code.
 
 ### Lightweight API and webhooks
 
@@ -603,8 +603,8 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 
 ## Package direction
 
-- First public version: **1.0.1**
-- Current version: **1.0.1** — CLI Parser, Packaging, and CI Fix Update
+- First public version: **1.0.2**
+- Current version: **1.0.2** — CLI Parser, Packaging, and CI Fix Update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
@@ -730,7 +730,7 @@ Minimal plugin manifest shape:
 {
   "plugin_id": "vendor.project-addon",
   "name": "Project Add-on",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Reusable profile and extractor rules for one project.",
   "enabled": true,
   "profiles": ["profiles/project-profile.json"],
@@ -905,6 +905,71 @@ Run the professional pipeline on an existing crawl JSON file:
 
 ```bash
 php bin/mnb-scraper pipeline:run storage/jobs/example/crawl.json --output=storage/jobs/example/pipeline --format=both
+```
+
+## Windows CMD and PowerShell crawling helpers
+
+MNB ScraperKit includes Windows-friendly scripts for users who prefer not to type long CLI commands. They are designed for safe, low-rate crawling and local testing.
+
+PowerShell single crawl with dry run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/run-crawl.ps1 -Url https://example.com -MaxPages 10 -Depth 1 -DelayMs 1000 -DryRun
+```
+
+PowerShell single crawl with pipeline output:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/run-crawl.ps1 -Url https://example.com -MaxPages 10 -Depth 1 -Pipeline -Profile academic -JobDir storage/jobs/example
+```
+
+PowerShell bulk crawl from a URL list:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/run-bulk-crawl.ps1 -UrlFile examples/crawl/sample-urls.txt -JobDir storage/jobs/sample-bulk -GapMs 3000 -Pipeline -DryRun
+```
+
+PowerShell URL processing with retry/backoff and Windows method ladder:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/run-url-process.ps1 -UrlFile examples/crawl/sample-urls.txt -Methods auto,curl,stream,cmd-curl,powershell -DryRun
+```
+
+PowerShell source discovery before crawling:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/run-source-discover.ps1 -Url https://example.com -Output storage/source-discovery/example.json -DryRun
+```
+
+CMD single crawl:
+
+```cmd
+scripts\run-crawl.cmd https://example.com storage\crawls\example\crawl.json 10 1 1000
+```
+
+CMD bulk crawl:
+
+```cmd
+scripts\run-bulk-crawl.cmd examples\crawl\sample-urls.txt storage\jobs\sample-bulk 1 0 3000
+```
+
+CMD environment overrides:
+
+```cmd
+set MNB_CRAWL_PROFILE=academic
+set MNB_CRAWL_PIPELINE=1
+set MNB_CRAWL_COMMON_DATA=1
+set MNB_CRAWL_INCLUDE_HTML=1
+set MNB_CRAWL_DRY_RUN=1
+scripts\run-crawl.cmd https://example.com
+```
+
+See also:
+
+```text
+examples/crawl/sample-urls.txt
+examples/crawl/windows-crawl-presets.json
+examples/crawl/windows-crawl-notes.txt
 ```
 
 ## CLI commands
@@ -1309,7 +1374,7 @@ ScraperKit focuses on practical export-ready outputs:
 - pipeline summaries
 - job manifest summaries
 
-PDF reports and richer role-based enterprise orchestration remain future upgrade areas. The current V1.0.1 release already includes CLI workflows, source connectors, exports/reports/bundles, export delivery connectors, local and distributed queue/worker commands, optional Redis queue support, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
+PDF reports and richer role-based enterprise orchestration remain future upgrade areas. The current V1.0.2 release already includes CLI workflows, source connectors, exports/reports/bundles, export delivery connectors, local and distributed queue/worker commands, optional Redis queue support, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
 
 ## Windows CMD
 
@@ -1336,7 +1401,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V1.0.1 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V1.0.2 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 
@@ -1709,7 +1774,7 @@ The publisher graph supports journal/book listing pages, book landing URLs, jour
 
 ## Extraction options and component intelligence
 
-v1.0.1 adds reusable extraction controls for enterprise page data extraction:
+v1.0.2 adds reusable extraction controls for enterprise page data extraction:
 
 - Word dictionary learning: `extract:dictionary` can add newly discovered words to a reusable JSON dictionary.
 - Data mappings: `extract:mappings` maps source fields to normalized target fields.
