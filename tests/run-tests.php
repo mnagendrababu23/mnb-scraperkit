@@ -1902,6 +1902,112 @@ $tests['v4.3.1 API exposes mail provider route'] = function (): void {
     assert(($response->body['mail']['policy']['authorization_required'] ?? false) === true, 'mail API policy missing');
 };
 
+
+$tests['v4.3.1 native command list covers every registered public command'] = function (): void {
+    $source = (string) file_get_contents(dirname(__DIR__) . '/src/Cli/NativeCliApplication.php');
+    foreach (array_keys(CommandRegistry::commands()) as $command) {
+        assert(str_contains($source, "'" . $command . "' =>") || str_contains($source, "'" . $command . " <") || str_contains($source, "'" . $command . " ["), 'registered command missing from native CLI metadata/dispatch: ' . $command);
+    }
+};
+
+$tests['v4.3.1 added QA example JSON files parse and reference supported commands'] = function (): void {
+    $root = dirname(__DIR__);
+    $jsonFiles = [
+        'examples/mail/sample-webmail-export.json',
+        'examples/search/multi-provider-offline-results.json',
+        'examples/ai/site-analysis-targets.json',
+        'examples/qa/v431-command-smoke-plan.json',
+    ];
+    foreach ($jsonFiles as $relative) {
+        $path = $root . '/' . $relative;
+        assert(is_file($path), 'missing QA example JSON: ' . $relative);
+        $decoded = json_decode((string) file_get_contents($path), true);
+        assert(is_array($decoded), 'invalid QA example JSON: ' . $relative);
+    }
+
+    $plan = json_decode((string) file_get_contents($root . '/examples/qa/v431-command-smoke-plan.json'), true);
+    $registered = CommandRegistry::commands();
+    foreach ((array) ($plan['commands'] ?? []) as $row) {
+        $name = (string) ($row['name'] ?? '');
+        assert($name !== '' && isset($registered[$name]), 'smoke plan references unsupported command: ' . $name);
+        $argv = (array) ($row['argv'] ?? []);
+        foreach ($argv as $token) {
+            if (!is_string($token) || !str_starts_with($token, '--input=') && !str_starts_with($token, '--recipe=')) {
+                continue;
+            }
+            $file = preg_replace('/^--(?:input|recipe)=/', '', $token);
+            assert(is_string($file) && is_file($root . '/' . $file), 'smoke plan references missing input file: ' . $file);
+        }
+    }
+};
+
+$tests['v4.3.1 mail extractor supports authorized EML imports and domain-filtered seeds'] = function (): void {
+    $input = dirname(__DIR__) . '/examples/mail/sample-authorized-message.eml';
+    $extractor = new MailMessageExtractor();
+    $messages = $extractor->loadMessages($input);
+    assert(count($messages) === 1, 'authorized EML sample should load one message');
+    assert(str_contains((string) ($messages[0]['subject'] ?? ''), 'Springer'), 'EML subject was not parsed');
+    $data = $extractor->extract($messages, ['extract' => 'links,pdfs,text']);
+    assert(($data['links_total'] ?? 0) >= 3, 'EML link extraction failed');
+    assert(($data['pdfs_total'] ?? 0) >= 1, 'EML PDF extraction failed');
+    $seeds = (new MailSeedExporter())->seeds($data, 'link.springer.com');
+    assert(count($seeds) === 2, 'EML seed filtering should keep Springer article and PDF links');
+    foreach ($seeds as $seed) {
+        assert(str_contains((string) ($seed['url'] ?? ''), 'link.springer.com'), 'seed domain filtering leaked a non-Springer URL');
+    }
+};
+
+$tests['v4.3.1 mail attachment manifest can write authorized base64 files safely'] = function (): void {
+    $input = dirname(__DIR__) . '/examples/mail/sample-webmail-export.json';
+    $outputDir = sys_get_temp_dir() . '/mnb_mail_attach_write_' . bin2hex(random_bytes(4));
+    $extractor = new MailMessageExtractor();
+    $messages = $extractor->loadMessages($input);
+    $manifest = $extractor->attachmentManifest($messages, $outputDir, true);
+    assert(($manifest['files_total'] ?? 0) >= 1, 'authorized attachment manifest should include sample PDF');
+    $saved = $outputDir . '/springer-alert.pdf';
+    assert(is_file($saved), 'authorized base64 attachment was not written');
+    assert(str_contains((string) file_get_contents($saved), '%PDF-1.4'), 'written sample PDF content mismatch');
+};
+
+$tests['native v4.3.1 QA smoke plan commands run offline on bundled examples'] = function (): void {
+    $root = dirname(__DIR__);
+    $tmp = sys_get_temp_dir() . '/mnb_v431_smoke_' . bin2hex(random_bytes(4));
+    mkdir($tmp . '/storage/qa', 0775, true);
+    $copyFile = static function (string $relative) use ($root, $tmp): void {
+        $source = $root . '/' . $relative;
+        $target = $tmp . '/' . $relative;
+        if (!is_dir(dirname($target))) {
+            mkdir(dirname($target), 0775, true);
+        }
+        copy($source, $target);
+    };
+    foreach ([
+        'examples/search/multi-provider-offline-results.json',
+        'examples/mail/sample-webmail-export.json',
+        'examples/extraction/qa-components.html',
+        'config/extraction/recipes/generic-page.json',
+    ] as $relative) {
+        $copyFile($relative);
+    }
+
+    $app = new NativeCliApplication([], $tmp);
+    ob_start();
+    $search = $app->run(['mnb-scraper', 'search:discover', 'Springer journal 777', '--input=' . $tmp . '/examples/search/multi-provider-offline-results.json', '--filter-domain=link.springer.com', '--output=' . $tmp . '/storage/qa/search-discovered.json']);
+    $seeds = $app->run(['mnb-scraper', 'search:to-seeds', $tmp . '/storage/qa/search-discovered.json', '--filter-domain=link.springer.com', '--output=' . $tmp . '/storage/qa/search-seeds.txt']);
+    $mail = $app->run(['mnb-scraper', 'mail:extract', $tmp . '/examples/mail/sample-webmail-export.json', '--extract=links,pdfs,text,attachments', '--query=Springer', '--output=' . $tmp . '/storage/qa/mail-extracted.json']);
+    $mailSeeds = $app->run(['mnb-scraper', 'mail:to-seeds', $tmp . '/storage/qa/mail-extracted.json', '--filter-domain=link.springer.com', '--output=' . $tmp . '/storage/qa/mail-seeds.txt']);
+    $components = $app->run(['mnb-scraper', 'extract:components', $tmp . '/examples/extraction/qa-components.html', '--min-repeats=2', '--output=' . $tmp . '/storage/qa/components.json']);
+    $recipe = $app->run(['mnb-scraper', 'extract:recipe', $tmp . '/examples/extraction/qa-components.html', '--recipe=' . $tmp . '/config/extraction/recipes/generic-page.json', '--output=' . $tmp . '/storage/qa/recipe.json']);
+    $quality = $app->run(['mnb-scraper', 'extract:quality', $tmp . '/storage/qa/recipe.json', '--required-field=title', '--output=' . $tmp . '/storage/qa/quality.json']);
+    ob_end_clean();
+    foreach (['search' => $search, 'seeds' => $seeds, 'mail' => $mail, 'mailSeeds' => $mailSeeds, 'components' => $components, 'recipe' => $recipe, 'quality' => $quality] as $name => $code) {
+        assert($code === 0, 'offline QA smoke command failed: ' . $name);
+    }
+    foreach (['search-discovered.json', 'search-seeds.txt', 'mail-extracted.json', 'mail-seeds.txt', 'components.json', 'recipe.json', 'quality.json'] as $file) {
+        assert(is_file($tmp . '/storage/qa/' . $file), 'offline QA smoke output missing: ' . $file);
+    }
+};
+
 $passed = 0;
 foreach ($tests as $name => $test) {
     try {

@@ -1,0 +1,10 @@
+MNB ScraperKit v4.3.1 QA examples
+
+This folder contains offline-safe verification examples. They do not use live credentials or scrape search-result pages.
+
+Suggested local checks:
+1. php -d zend.assertions=1 -d assert.exception=1 tests/run-tests.php
+2. php bin/mnb-scraper ci:check --strict
+3. php bin/mnb-scraper search:discover "Springer journal 777" --input=examples/search/multi-provider-offline-results.json --filter-domain=link.springer.com --output=storage/qa/search-discovered.json
+4. php bin/mnb-scraper mail:extract examples/mail/sample-webmail-export.json --extract=links,pdfs,text,attachments --query=Springer --output=storage/qa/mail-extracted.json
+5. php bin/mnb-scraper extract:components examples/extraction/qa-components.html --min-repeats=2 --output=storage/qa/components.json

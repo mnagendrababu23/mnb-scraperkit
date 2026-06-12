@@ -1,0 +1,26 @@
+{
+  "analysis_examples_version": "4.3.1",
+  "targets": [
+    {
+      "name": "Springer journal volumes",
+      "url": "https://link.springer.com/journal/777/volumes-and-issues",
+      "goal": "article_metadata",
+      "expected_page_types": ["journal", "volume_issue"],
+      "safe_mode": "metadata_only"
+    },
+    {
+      "name": "Springer article",
+      "url": "https://link.springer.com/article/10.1007/s007770050003",
+      "goal": "article_metadata",
+      "expected_page_types": ["article"],
+      "safe_mode": "metadata_only"
+    },
+    {
+      "name": "Generic catalog page",
+      "url": "https://example.com/catalog",
+      "goal": "catalog_metadata",
+      "expected_page_types": ["generic"],
+      "safe_mode": "public_metadata"
+    }
+  ]
+}

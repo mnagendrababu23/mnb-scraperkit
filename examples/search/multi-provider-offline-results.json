@@ -1,0 +1,27 @@
+{
+  "search_version": "4.3.1",
+  "provider": "offline",
+  "query": "Springer journal 777 article DOI",
+  "results": [
+    {
+      "title": "Journal 777 volumes and issues",
+      "url": "https://link.springer.com/journal/777/volumes-and-issues",
+      "snippet": "SpringerLink journal volumes and issues page."
+    },
+    {
+      "title": "Issue 51-3 article list",
+      "url": "https://link.springer.com/journal/777/volumes-and-issues/51-3",
+      "snippet": "Table of contents for one issue."
+    },
+    {
+      "title": "Magnetostrictive effects in ferromagnetic domain structures",
+      "url": "https://link.springer.com/article/10.1007/s007770050003",
+      "snippet": "Springer article metadata page with DOI and abstract."
+    },
+    {
+      "title": "External help page",
+      "url": "https://example.com/help",
+      "snippet": "Should be filtered out by domain filters."
+    }
+  ]
+}

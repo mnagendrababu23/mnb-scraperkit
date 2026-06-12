@@ -1,0 +1,38 @@
+{
+  "export_type": "authorized_webmail_export",
+  "exported_by": "researcher@example.com",
+  "authorization_note": "Synthetic sample. Real exports must be provided by the mailbox owner or an authorized administrator.",
+  "messages": [
+    {
+      "message_id": "webmail-001",
+      "thread_id": "thread-springer-001",
+      "subject": "SpringerLink table of contents alert",
+      "from": "alerts@springernature.com",
+      "to": "researcher@example.com",
+      "date": "2026-06-12T10:00:00+00:00",
+      "labels": ["alerts", "publisher", "springer"],
+      "body_text": "New articles are available for journal 777. Article: https://link.springer.com/article/10.1007/s007770050003 DOI: https://doi.org/10.1007/s007770050003 PDF: https://link.springer.com/content/pdf/10.1007/s007770050003.pdf",
+      "body_html": "<p>New Springer articles are available.</p><a href=\"https://link.springer.com/journal/777/volumes-and-issues/51-3\">Issue 51-3</a><a href=\"https://link.springer.com/article/10.1007/s007770050003\">Article</a><a href=\"https://link.springer.com/content/pdf/10.1007/s007770050003.pdf\">PDF</a>",
+      "attachments": [
+        {
+          "filename": "springer-alert.pdf",
+          "mime_type": "application/pdf",
+          "size_bytes": 1024,
+          "attachment_id": "webmail-att-001",
+          "content_base64": "JVBERi0xLjQKJSBTYW1wbGUgUERGIGNvbnRlbnQgZm9yIHRlc3RzCg=="
+        }
+      ]
+    },
+    {
+      "message_id": "webmail-002",
+      "thread_id": "thread-science-001",
+      "subject": "Science research digest",
+      "from": "alerts@science.org",
+      "to": "researcher@example.com",
+      "date": "2026-06-12T11:00:00+00:00",
+      "labels": ["alerts", "publisher", "science"],
+      "body_text": "Science article metadata link https://www.science.org/doi/10.1126/science.example and PDF https://www.science.org/doi/pdf/10.1126/science.example",
+      "attachments": []
+    }
+  ]
+}
