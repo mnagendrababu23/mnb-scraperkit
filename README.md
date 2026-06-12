@@ -6,6 +6,258 @@ v1.0.3 improves the machine-learning crawl intelligence layer. It keeps the publ
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
+## Installation
+
+MNB ScraperKit is available on Packagist as the Composer package `mnb/scraperkit`.
+
+Requirements: PHP `>=8.2`, Composer, and the PHP extensions listed in `composer.json`.
+
+Install with:
+
+```bash
+composer require mnb/scraperkit
+```
+
+This is the recommended install method for normal users.
+
+### Simple install
+
+#### Windows CMD
+
+```cmd
+mkdir test-mnb-scraperkit
+cd test-mnb-scraperkit
+
+composer require mnb/scraperkit
+
+vendor\bin\mnb-scraper.bat list
+```
+
+#### Windows PowerShell
+
+```powershell
+mkdir test-mnb-scraperkit
+cd test-mnb-scraperkit
+
+composer require mnb/scraperkit
+
+.\vendor\bin\mnb-scraper.bat list
+```
+
+#### Linux/macOS/Git Bash
+
+```bash
+mkdir test-mnb-scraperkit
+cd test-mnb-scraperkit
+
+composer require mnb/scraperkit
+
+php vendor/bin/mnb-scraper list
+```
+
+### Verify installation
+
+Show available commands:
+
+```bash
+php vendor/bin/mnb-scraper list
+```
+
+On Windows CMD:
+
+```cmd
+vendor\bin\mnb-scraper.bat list
+```
+
+On PowerShell:
+
+```powershell
+.\vendor\bin\mnb-scraper.bat list
+```
+
+Run a basic crawl test:
+
+```bash
+php vendor/bin/mnb-scraper crawl "https://example.com" --max-pages=1 --depth=0 --format=json
+```
+
+On Windows CMD:
+
+```cmd
+vendor\bin\mnb-scraper.bat crawl "https://example.com" --max-pages=1 --depth=0 --format=json
+```
+
+### Install a specific version
+
+Install the latest stable `1.x` release:
+
+```bash
+composer require mnb/scraperkit:^1.0
+```
+
+Install an exact release:
+
+```bash
+composer require mnb/scraperkit:1.0.3
+```
+
+### Development install from source
+
+Use this when you want to work on MNB ScraperKit itself:
+
+```bash
+git clone https://github.com/mnagendrababu23/mnb-scraperkit.git
+cd mnb-scraperkit
+composer install
+php bin/mnb-scraper list
+php -d zend.assertions=1 -d assert.exception=1 tests/run-tests.php
+```
+
+Run readiness checks:
+
+```bash
+php bin/mnb-scraper ci:check --strict
+php bin/mnb-scraper release:check . --strict
+```
+
+### Advanced fallback: install directly from GitHub
+
+Most users should use:
+
+```bash
+composer require mnb/scraperkit
+```
+
+Use the GitHub VCS method only if you need the latest `main` branch before a tagged release is available on Packagist, or if you are testing unreleased changes.
+
+#### Windows CMD
+
+```cmd
+mkdir test-mnb-scraperkit-dev
+cd test-mnb-scraperkit-dev
+
+composer init --name="mnb/test-mnb-scraperkit" --description="Test project for MNB ScraperKit" --type="project" --license="MIT" --require="php:>=8.2" --no-interaction
+composer config minimum-stability dev
+composer config prefer-stable true
+composer config repositories.mnb-scraperkit vcs https://github.com/mnagendrababu23/mnb-scraperkit.git
+composer require mnb/scraperkit:dev-main -W
+
+vendor\bin\mnb-scraper.bat list
+```
+
+#### Windows PowerShell
+
+```powershell
+mkdir test-mnb-scraperkit-dev
+cd test-mnb-scraperkit-dev
+
+composer init --name="mnb/test-mnb-scraperkit" --description="Test project for MNB ScraperKit" --type="project" --license="MIT" --require="php:>=8.2" --no-interaction
+composer config minimum-stability dev
+composer config prefer-stable true
+composer config repositories.mnb-scraperkit vcs https://github.com/mnagendrababu23/mnb-scraperkit.git
+composer require mnb/scraperkit:dev-main -W
+
+.\vendor\bin\mnb-scraper.bat list
+```
+
+#### Linux/macOS/Git Bash
+
+```bash
+mkdir test-mnb-scraperkit-dev
+cd test-mnb-scraperkit-dev
+
+composer init --name="mnb/test-mnb-scraperkit" --description="Test project for MNB ScraperKit" --type="project" --license="MIT" --require="php:>=8.2" --no-interaction
+composer config minimum-stability dev
+composer config prefer-stable true
+composer config repositories.mnb-scraperkit vcs https://github.com/mnagendrababu23/mnb-scraperkit.git
+composer require mnb/scraperkit:dev-main -W
+
+php vendor/bin/mnb-scraper list
+```
+
+### Source ZIP quick check without Composer dependencies
+
+Source zip users can run basic diagnostics before Composer dependencies are installed. The public binary falls back to the native CLI when Symfony Console is not available:
+
+```bash
+php bin/mnb-scraper list
+php bin/mnb-scraper compat:commands --json
+php bin/mnb-scraper release:check . --strict
+```
+
+This fallback is intended for onboarding, source-archive smoke tests, and offline QA examples. Install Composer dependencies for the full Symfony Console experience and third-party integration paths.
+
+### Troubleshooting Composer install
+
+#### Error: `Could not find a matching version of package mnb/scraperkit`
+
+Try clearing Composer cache and installing again:
+
+```bash
+composer clear-cache
+composer require mnb/scraperkit
+```
+
+Also check that the package is visible to Composer:
+
+```bash
+composer show mnb/scraperkit --all
+```
+
+If Packagist has not updated yet, open the package page on Packagist and trigger an update, then retry the install.
+
+#### Error: `File "./composer.json" cannot be found`
+
+This only applies to the advanced GitHub VCS install method. Create a project first:
+
+```bash
+composer init --name="mnb/test-mnb-scraperkit" --description="Test project for MNB ScraperKit" --type="project" --license="MIT" --require="php:>=8.2" --no-interaction
+```
+
+Then add the VCS repository and require the development branch.
+
+#### Error: `You have to run this command in interactive mode, or specify at least some data`
+
+Use this instead of plain `composer init --no-interaction`:
+
+```bash
+composer init --name="mnb/test-mnb-scraperkit" --description="Test project for MNB ScraperKit" --type="project" --license="MIT" --require="php:>=8.2" --no-interaction
+```
+
+#### Error: `Could not open input file: vendor/bin/mnb-scraper`
+
+The package was not installed, so the vendor binary was not created. Fix the Composer install first. On Windows after a successful install, prefer:
+
+```cmd
+vendor\bin\mnb-scraper.bat list
+```
+
+## Quick start
+
+Crawl one page:
+
+```bash
+php bin/mnb-scraper crawl "https://example.com" --max-pages=1 --depth=0 --format=json
+```
+
+Run a small safe crawl:
+
+```bash
+php bin/mnb-scraper crawl "https://example.com" --max-pages=5 --depth=1 --delay-ms=1000 --format=json
+```
+
+Run crawl plus professional pipeline:
+
+```bash
+php bin/mnb-scraper crawl "https://example.com" --max-pages=5 --depth=1 --pipeline --pipeline-format=both --job-dir=storage/jobs/example
+```
+
+Run the professional pipeline on an existing crawl JSON file:
+
+```bash
+php bin/mnb-scraper pipeline:run storage/jobs/example/crawl.json --output=storage/jobs/example/pipeline --format=both
+```
+
 ## What makes it different
 
 Most PHP scraping tools focus on fetching HTML and extracting selectors. MNB ScraperKit is designed around a complete professional crawl flow:
@@ -856,254 +1108,6 @@ Create a portable project bundle:
 
 ```bash
 php bin/mnb-scraper bundle:create storage/jobs/job-id
-```
-
-## Installation
-
-MNB ScraperKit is available as the Composer package:
-
-```bash
-composer require mnb/scraperkit
-```
-
-This is the recommended install method for normal users. It works after the package is available on Packagist.
-
-### Simple install
-
-#### Windows CMD
-
-```cmd
-mkdir test-mnb-scraperkit
-cd test-mnb-scraperkit
-
-composer require mnb/scraperkit
-
-vendor\bin\mnb-scraper.bat list
-```
-
-#### Windows PowerShell
-
-```powershell
-mkdir test-mnb-scraperkit
-cd test-mnb-scraperkit
-
-composer require mnb/scraperkit
-
-.\vendor\bin\mnb-scraper.bat list
-```
-
-#### Linux/macOS/Git Bash
-
-```bash
-mkdir test-mnb-scraperkit
-cd test-mnb-scraperkit
-
-composer require mnb/scraperkit
-
-php vendor/bin/mnb-scraper list
-```
-
-### Verify installation
-
-Show available commands:
-
-```bash
-php vendor/bin/mnb-scraper list
-```
-
-On Windows CMD:
-
-```cmd
-vendor\bin\mnb-scraper.bat list
-```
-
-On PowerShell:
-
-```powershell
-.\vendor\bin\mnb-scraper.bat list
-```
-
-Run a basic crawl test:
-
-```bash
-php vendor/bin/mnb-scraper crawl "https://example.com" --max-pages=1 --depth=0 --format=json
-```
-
-On Windows CMD:
-
-```cmd
-vendor\bin\mnb-scraper.bat crawl "https://example.com" --max-pages=1 --depth=0 --format=json
-```
-
-### Install a specific version
-
-Install the latest stable `1.x` release:
-
-```bash
-composer require mnb/scraperkit:^1.0
-```
-
-Install an exact release:
-
-```bash
-composer require mnb/scraperkit:1.0.3
-```
-
-### Development install from source
-
-Use this when you want to work on MNB ScraperKit itself:
-
-```bash
-git clone https://github.com/mnagendrababu23/mnb-scraperkit.git
-cd mnb-scraperkit
-composer install
-php bin/mnb-scraper list
-php -d zend.assertions=1 -d assert.exception=1 tests/run-tests.php
-```
-
-Run readiness checks:
-
-```bash
-php bin/mnb-scraper ci:check --strict
-php bin/mnb-scraper release:check . --strict
-```
-
-### Advanced fallback: install directly from GitHub
-
-Most users should use:
-
-```bash
-composer require mnb/scraperkit
-```
-
-Use the GitHub VCS method only if you need the latest `main` branch before a tagged release is available on Packagist, or if you are testing unreleased changes.
-
-#### Windows CMD
-
-```cmd
-mkdir test-mnb-scraperkit-dev
-cd test-mnb-scraperkit-dev
-
-composer init --name="mnb/test-mnb-scraperkit" --description="Test project for MNB ScraperKit" --type="project" --license="MIT" --require="php:>=8.2" --no-interaction
-composer config minimum-stability dev
-composer config prefer-stable true
-composer config repositories.mnb-scraperkit vcs https://github.com/mnagendrababu23/mnb-scraperkit.git
-composer require mnb/scraperkit:dev-main -W
-
-vendor\bin\mnb-scraper.bat list
-```
-
-#### Windows PowerShell
-
-```powershell
-mkdir test-mnb-scraperkit-dev
-cd test-mnb-scraperkit-dev
-
-composer init --name="mnb/test-mnb-scraperkit" --description="Test project for MNB ScraperKit" --type="project" --license="MIT" --require="php:>=8.2" --no-interaction
-composer config minimum-stability dev
-composer config prefer-stable true
-composer config repositories.mnb-scraperkit vcs https://github.com/mnagendrababu23/mnb-scraperkit.git
-composer require mnb/scraperkit:dev-main -W
-
-.\vendor\bin\mnb-scraper.bat list
-```
-
-#### Linux/macOS/Git Bash
-
-```bash
-mkdir test-mnb-scraperkit-dev
-cd test-mnb-scraperkit-dev
-
-composer init --name="mnb/test-mnb-scraperkit" --description="Test project for MNB ScraperKit" --type="project" --license="MIT" --require="php:>=8.2" --no-interaction
-composer config minimum-stability dev
-composer config prefer-stable true
-composer config repositories.mnb-scraperkit vcs https://github.com/mnagendrababu23/mnb-scraperkit.git
-composer require mnb/scraperkit:dev-main -W
-
-php vendor/bin/mnb-scraper list
-```
-
-### Source ZIP quick check without Composer dependencies
-
-Source zip users can run basic diagnostics before Composer dependencies are installed. The public binary falls back to the native CLI when Symfony Console is not available:
-
-```bash
-php bin/mnb-scraper list
-php bin/mnb-scraper compat:commands --json
-php bin/mnb-scraper release:check . --strict
-```
-
-This fallback is intended for onboarding, source-archive smoke tests, and offline QA examples. Install Composer dependencies for the full Symfony Console experience and third-party integration paths.
-
-### Troubleshooting Composer install
-
-#### Error: `Could not find a matching version of package mnb/scraperkit`
-
-Try clearing Composer cache and installing again:
-
-```bash
-composer clear-cache
-composer require mnb/scraperkit
-```
-
-Also check that the package is visible to Composer:
-
-```bash
-composer show mnb/scraperkit --all
-```
-
-If Packagist has not updated yet, open the package page on Packagist and trigger an update, then retry the install.
-
-#### Error: `File "./composer.json" cannot be found`
-
-This only applies to the advanced GitHub VCS install method. Create a project first:
-
-```bash
-composer init --name="mnb/test-mnb-scraperkit" --description="Test project for MNB ScraperKit" --type="project" --license="MIT" --require="php:>=8.2" --no-interaction
-```
-
-Then add the VCS repository and require the development branch.
-
-#### Error: `You have to run this command in interactive mode, or specify at least some data`
-
-Use this instead of plain `composer init --no-interaction`:
-
-```bash
-composer init --name="mnb/test-mnb-scraperkit" --description="Test project for MNB ScraperKit" --type="project" --license="MIT" --require="php:>=8.2" --no-interaction
-```
-
-#### Error: `Could not open input file: vendor/bin/mnb-scraper`
-
-The package was not installed, so the vendor binary was not created. Fix the Composer install first. On Windows after a successful install, prefer:
-
-```cmd
-vendor\bin\mnb-scraper.bat list
-```
-
-## Quick start
-
-Crawl one page:
-
-```bash
-php bin/mnb-scraper crawl "https://example.com" --max-pages=1 --depth=0 --format=json
-```
-
-Run a small safe crawl:
-
-```bash
-php bin/mnb-scraper crawl "https://example.com" --max-pages=5 --depth=1 --delay-ms=1000 --format=json
-```
-
-Run crawl plus professional pipeline:
-
-```bash
-php bin/mnb-scraper crawl "https://example.com" --max-pages=5 --depth=1 --pipeline --pipeline-format=both --job-dir=storage/jobs/example
-```
-
-Run the professional pipeline on an existing crawl JSON file:
-
-```bash
-php bin/mnb-scraper pipeline:run storage/jobs/example/crawl.json --output=storage/jobs/example/pipeline --format=both
 ```
 
 ## Windows CMD and PowerShell crawling helpers
