@@ -1,5 +1,5 @@
 {
-  "export_connector_version": "4.2.0",
+  "export_connector_version": "4.2.1",
   "connectors": [
     {
       "id": "local_exports",

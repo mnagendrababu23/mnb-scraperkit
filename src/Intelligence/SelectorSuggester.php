@@ -42,7 +42,7 @@ final class SelectorSuggester
         }
 
         return [
-            'intelligence_version' => '4.2.0',
+            'intelligence_version' => '4.2.1',
             'generated_at' => date(DATE_ATOM),
             'profile' => $profile,
             'suggestions' => $suggestions,

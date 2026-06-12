@@ -1,20 +1,20 @@
 {
-  "mapping_version": "4.2.0",
-  "description": "Reusable source-to-target field mappings used by extraction:map and extraction:extract.",
+  "mapping_version": "4.2.1",
+  "description": "Reusable source-to-target field mappings with optional transforms used by extract:mappings and extract:recipe.",
   "mappings": {
     "article": {
-      "title": ["title", "citation_title", "headline", "name"],
-      "authors": ["authors", "citation_author", "creator", "byline"],
-      "doi": ["doi", "citation_doi", "identifier"],
-      "published_at": ["published_at", "citation_publication_date", "datePublished", "date"],
-      "abstract": ["abstract", "description", "summary"],
-      "url": ["url", "canonical_url", "link"]
+      "title": {"sources": ["title", "citation_title", "headline", "name"], "transform": ["strip_html", "normalize_space"]},
+      "authors": {"sources": ["authors", "citation_author", "creator", "byline"], "transform": ["dedupe_array"]},
+      "doi": {"sources": ["doi", "citation_doi", "identifier"], "transform": ["normalize_doi"]},
+      "published_at": {"sources": ["published_at", "citation_publication_date", "datePublished", "date"], "transform": ["parse_date"]},
+      "abstract": {"sources": ["abstract", "description", "summary"], "transform": ["strip_html", "normalize_space"]},
+      "url": {"sources": ["url", "canonical_url", "link"], "transform": ["clean_url"]}
     },
     "business": {
-      "name": ["name", "title", "company", "organization"],
+      "name": {"sources": ["name", "title", "company", "organization"], "transform": ["strip_html", "normalize_space"]},
       "email": ["email", "contact_email"],
       "phone": ["phone", "telephone", "mobile"],
-      "address": ["address", "location"]
+      "address": {"sources": ["address", "location"], "transform": ["strip_html", "normalize_space"]}
     }
   }
 }

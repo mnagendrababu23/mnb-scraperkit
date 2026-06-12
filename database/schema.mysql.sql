@@ -1,4 +1,4 @@
--- MNB ScraperKit V4.2.0 MySQL/MariaDB storage schema
+-- MNB ScraperKit V4.2.1 MySQL/MariaDB storage schema
 
 CREATE TABLE IF NOT EXISTS mnb_storage_jobs (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

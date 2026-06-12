@@ -6,7 +6,7 @@ namespace Mnb\ScraperKit\Evaluation;
 
 final class ProfileBenchmark
 {
-    public const VERSION = '4.2.0';
+    public const VERSION = '4.2.1';
 
     /** @param array<int,array<string,mixed>> $records @param array<string,mixed> $profileSchema @return array<string,mixed> */
     public function benchmark(array $records, array $profileSchema, string $profileName = ''): array

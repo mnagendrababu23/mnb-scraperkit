@@ -1,0 +1,28 @@
+{
+  "recipe_version": "4.2.1",
+  "id": "generic-page",
+  "name": "Generic Page Explainable Extraction Recipe",
+  "source_type": "web_page",
+  "description": "Reusable recipe for explainable common page extraction with provenance and quality reporting.",
+  "fields": {
+    "title": {"selectors": ["meta[property='og:title']@content", "h1", "title"], "transform": ["strip_html", "normalize_space"]},
+    "description": {"selectors": ["meta[name='description']@content", "meta[property='og:description']@content"], "transform": ["strip_html", "normalize_space"]},
+    "canonical_url": {"selectors": ["link[rel='canonical']@href"], "transform": ["clean_url"]}
+  },
+  "components": {
+    "links": true,
+    "images": true,
+    "tables": true,
+    "lists": true,
+    "headings": true,
+    "cards": true,
+    "download_links": true,
+    "social_links": true
+  },
+  "options": {
+    "types": "links,images,tables,lists,headings,components,download_links,social_links,dictionary,patterns",
+    "min_repeats": 2,
+    "include_images": true,
+    "include_html": false
+  }
+}

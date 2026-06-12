@@ -1,0 +1,70 @@
+{
+  "recipe_version": "4.2.1",
+  "id": "springer-article",
+  "name": "Springer-style Article Metadata Recipe",
+  "source_type": "academic_article",
+  "description": "Reusable recipe for public Springer-style article metadata pages. Metadata only; no paywall or access-control bypass.",
+  "required_fields": ["title", "doi"],
+  "fields": {
+    "title": {
+      "required": true,
+      "selectors": ["meta[name='citation_title']@content", "meta[property='og:title']@content", "h1", "title"],
+      "transform": ["strip_html", "normalize_space"]
+    },
+    "article_type": {
+      "selectors": ["meta[name='dc.type']@content", ".article-type"],
+      "transform": ["strip_html", "normalize_space"]
+    },
+    "published_at": {
+      "selectors": ["meta[name='citation_publication_date']@content", "time@datetime", ".published"],
+      "transform": ["parse_date"]
+    },
+    "authors": {
+      "multiple": true,
+      "selectors": ["meta[name='citation_author']@content", ".author"],
+      "transform": ["strip_html", "normalize_space", "dedupe_array"]
+    },
+    "abstract": {
+      "selectors": ["#Abs1", ".abstract"],
+      "transform": ["strip_html", "normalize_space"]
+    },
+    "doi": {
+      "required": true,
+      "selectors": ["meta[name='citation_doi']@content", "a[href*='doi.org/10.']@href"],
+      "transform": ["normalize_doi"]
+    },
+    "keywords": {
+      "multiple": true,
+      "selectors": [".keywords li", ".keywords a"],
+      "transform": ["strip_html", "normalize_space", "dedupe_array"]
+    },
+    "references": {
+      "multiple": true,
+      "selectors": [".references li"],
+      "transform": ["strip_html", "normalize_space", "dedupe_array"]
+    },
+    "journal": {
+      "selectors": ["meta[name='citation_journal_title']@content"],
+      "transform": ["strip_html", "normalize_space"]
+    },
+    "volume": {"selectors": ["meta[name='citation_volume']@content"]},
+    "issue": {"selectors": ["meta[name='citation_issue']@content"]},
+    "pdf_url": {
+      "selectors": ["meta[name='citation_pdf_url']@content", "a[href$='.pdf']@href"],
+      "transform": ["clean_url"]
+    }
+  },
+  "components": {
+    "links": true,
+    "pdfs": true,
+    "headings": true,
+    "cards": true,
+    "repeated_components": {"min_repeats": 2}
+  },
+  "options": {
+    "types": "links,pdfs,headings,components,patterns",
+    "min_repeats": 2,
+    "include_images": false,
+    "include_html": false
+  }
+}

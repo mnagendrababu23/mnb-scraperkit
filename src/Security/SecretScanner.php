@@ -58,7 +58,7 @@ final class SecretScanner
 
         return [
             'ok' => count($findings) === 0,
-            'scanner_version' => '4.2.0',
+            'scanner_version' => '4.2.1',
             'files_scanned' => $filesScanned,
             'findings_total' => count($findings),
             'findings' => $findings,

@@ -9,7 +9,7 @@
     {"path": "README.txt", "type": "text", "content": "{{project_name}}\nEcommerce monitoring starter. Add product URLs to urls.csv, then run commands.txt.\n"},
     {"path": "urls.csv", "type": "text", "content": "url,label\nhttps://example.com/product-1,seed\n"},
     {"path": "commands.txt", "type": "text", "content": "php bin/mnb-scraper source:csv urls.csv --url-column=url --format=txt --output=storage/{{project_name}}/urls.txt\nphp bin/mnb-scraper bulk:crawl storage/{{project_name}}/urls.txt --profile=ecommerce --pipeline --job-dir=storage/{{project_name}}\nphp bin/mnb-scraper dataset:create storage/{{project_name}}/pipeline/records.json --id={{project_name}}\nphp bin/mnb-scraper eval:dataset {{project_name}} --format=json\n"},
-    {"path": "jobs/ecommerce-monitor-job.json", "type": "json", "content": {"job_version": "4.2.0", "name": "{{project_name}}", "command": "bulk:crawl", "args": ["storage/{{project_name}}/urls.txt"], "options": {"profile": "ecommerce", "pipeline": true, "gap-ms": 1000, "job-dir": "storage/{{project_name}}"}}}
+    {"path": "jobs/ecommerce-monitor-job.json", "type": "json", "content": {"job_version": "4.2.1", "name": "{{project_name}}", "command": "bulk:crawl", "args": ["storage/{{project_name}}/urls.txt"], "options": {"profile": "ecommerce", "pipeline": true, "gap-ms": 1000, "job-dir": "storage/{{project_name}}"}}}
   ],
   "next_commands": ["php bin/mnb-scraper source:csv urls.csv --url-column=url --format=txt --output=storage/{{project_name}}/urls.txt", "php bin/mnb-scraper job:run jobs/ecommerce-monitor-job.json"]
 }

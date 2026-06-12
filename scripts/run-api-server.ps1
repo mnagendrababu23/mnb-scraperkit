@@ -1,4 +1,4 @@
-# MNB ScraperKit V4.2.0 - optional lightweight JSON API server
+# MNB ScraperKit V4.2.1 - optional lightweight JSON API server
 param(
     [string]$HostName = "127.0.0.1",
     [int]$Port = 8787

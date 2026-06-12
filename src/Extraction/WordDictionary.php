@@ -6,8 +6,8 @@ namespace Mnb\ScraperKit\Extraction;
 
 final class WordDictionary
 {
-    /** @var array<string,int> */
-    private array $words = [];
+    /** @var array<string,array<string,mixed>> */
+    private array $entries = [];
 
     public function __construct(private ?string $path = null)
     {
@@ -15,40 +15,52 @@ final class WordDictionary
             $data = json_decode((string) file_get_contents($path), true);
             if (is_array($data)) {
                 $source = is_array($data['words'] ?? null) ? $data['words'] : $data;
-                foreach ($source as $word => $count) {
+                foreach ($source as $word => $entry) {
                     if (is_int($word)) {
-                        $this->words[$this->normalize((string) $count)] = 1;
+                        $this->entries[$this->normalize((string) $entry)] = $this->entry(1);
+                    } elseif (is_array($entry)) {
+                        $this->entries[$this->normalize((string) $word)] = $entry + $this->entry((int) ($entry['count'] ?? 1));
                     } else {
-                        $this->words[$this->normalize((string) $word)] = max(1, (int) $count);
+                        $this->entries[$this->normalize((string) $word)] = $this->entry(max(1, (int) $entry));
                     }
                 }
-                unset($this->words['']);
+                unset($this->entries['']);
             }
         }
     }
 
-    /** @return array{new_words:list<string>,words:array<string,int>,new_total:int,total:int} */
-    public function learn(string $text, int $minLength = 3): array
+    /** @return array{new_words:list<string>,words:array<string,int>,entries:array<string,array<string,mixed>>,new_total:int,total:int} */
+    public function learn(string $text, int $minLength = 3, ?string $sourceUrl = null, ?string $category = null): array
     {
         $tokens = preg_split('/[^\pL\pN\-]+/u', $text) ?: [];
         $new = [];
+        $now = date(DATE_ATOM);
         foreach ($tokens as $token) {
             $word = $this->normalize($token);
-            if ($word === '' || strlen($word) < $minLength || is_numeric($word)) {
+            if ($word === '' || strlen($word) < $minLength || is_numeric($word) || $this->isStopWord($word)) {
                 continue;
             }
-            if (!isset($this->words[$word])) {
+            if (!isset($this->entries[$word])) {
                 $new[$word] = $word;
-                $this->words[$word] = 0;
+                $this->entries[$word] = $this->entry(0, $now, $category);
             }
-            $this->words[$word]++;
+            $this->entries[$word]['count'] = (int) ($this->entries[$word]['count'] ?? 0) + 1;
+            $this->entries[$word]['last_seen_at'] = $now;
+            if ($sourceUrl) {
+                $sources = array_values(array_unique(array_merge((array) ($this->entries[$word]['source_urls'] ?? []), [$sourceUrl])));
+                $this->entries[$word]['source_urls'] = array_slice($sources, -10);
+            }
+            if ($category && empty($this->entries[$word]['category'])) {
+                $this->entries[$word]['category'] = $category;
+            }
         }
-        ksort($this->words);
+        ksort($this->entries);
         return [
             'new_words' => array_values($new),
-            'words' => $this->words,
+            'words' => $this->words(),
+            'entries' => $this->entries,
             'new_total' => count($new),
-            'total' => count($this->words),
+            'total' => count($this->entries),
         ];
     }
 
@@ -63,10 +75,10 @@ final class WordDictionary
             mkdir($dir, 0775, true);
         }
         file_put_contents($path, json_encode([
-            'dictionary_version' => '4.2.0',
+            'dictionary_version' => '4.2.1',
             'updated_at' => date(DATE_ATOM),
-            'words_total' => count($this->words),
-            'words' => $this->words,
+            'words_total' => count($this->entries),
+            'words' => $this->entries,
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
         return $path;
     }
@@ -74,7 +86,37 @@ final class WordDictionary
     /** @return array<string,int> */
     public function words(): array
     {
-        return $this->words;
+        $words = [];
+        foreach ($this->entries as $word => $entry) {
+            $words[$word] = (int) ($entry['count'] ?? 0);
+        }
+        return $words;
+    }
+
+    /** @return array<string,array<string,mixed>> */
+    public function entries(): array
+    {
+        return $this->entries;
+    }
+
+    /** @return array<string,mixed> */
+    private function entry(int $count, ?string $now = null, ?string $category = null): array
+    {
+        $now = $now ?: date(DATE_ATOM);
+        return [
+            'count' => $count,
+            'category' => $category ?: 'general',
+            'approved' => false,
+            'first_seen_at' => $now,
+            'last_seen_at' => $now,
+            'source_urls' => [],
+        ];
+    }
+
+    private function isStopWord(string $word): bool
+    {
+        static $stop = ['the'=>true,'and'=>true,'for'=>true,'with'=>true,'from'=>true,'that'=>true,'this'=>true,'are'=>true,'was'=>true,'were'=>true,'you'=>true,'your'=>true,'into'=>true,'onto'=>true,'about'=>true,'http'=>true,'https'=>true,'www'=>true,'com'=>true];
+        return isset($stop[$word]);
     }
 
     private function normalize(string $word): string

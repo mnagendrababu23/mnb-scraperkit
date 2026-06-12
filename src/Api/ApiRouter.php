@@ -30,6 +30,7 @@ use Mnb\ScraperKit\Publisher\ArticleMetadataNormalizer;
 use Mnb\ScraperKit\Extraction\ExtractionOptions;
 use Mnb\ScraperKit\Extraction\PatternRegistry;
 use Mnb\ScraperKit\Extraction\DataMappingRegistry;
+use Mnb\ScraperKit\Extraction\ExtractionRecipe;
 
 /**
  * Lightweight read-mostly JSON API router used by the optional api:serve command.
@@ -40,7 +41,7 @@ use Mnb\ScraperKit\Extraction\DataMappingRegistry;
  */
 final class ApiRouter
 {
-    public const VERSION = '4.2.0';
+    public const VERSION = '4.2.1';
 
     public function __construct(
         private readonly string $rootDir,
@@ -72,6 +73,7 @@ final class ApiRouter
             ['method' => 'GET', 'path' => '/api/v1/extraction/types', 'description' => 'List configurable extraction output types and modes.'],
             ['method' => 'GET', 'path' => '/api/v1/extraction/patterns', 'description' => 'List registered extraction regex patterns.'],
             ['method' => 'GET', 'path' => '/api/v1/extraction/mappings', 'description' => 'List reusable extraction data mappings.'],
+            ['method' => 'GET', 'path' => '/api/v1/extraction/recipes', 'description' => 'List bundled explainable extraction recipe files.'],
             ['method' => 'GET', 'path' => '/api/v1/browser/sessions', 'description' => 'List authorized browser session profiles.'],
             ['method' => 'GET', 'path' => '/api/v1/publishers', 'description' => 'List safe academic publisher metadata crawl targets.'],
             ['method' => 'GET', 'path' => '/api/v1/publishers/schema', 'description' => 'Read normalized article metadata schema.'],
@@ -252,6 +254,14 @@ final class ApiRouter
                 'ok' => true,
                 'mapping_version' => self::VERSION,
                 'mappings' => (new DataMappingRegistry())->all(),
+            ]);
+        }
+
+        if ($method === 'GET' && $path === '/api/v1/extraction/recipes') {
+            return new ApiResponse(200, [
+                'ok' => true,
+                'recipe_catalog_version' => self::VERSION,
+                'recipes' => ExtractionRecipe::catalog($this->rootDir . '/config/extraction/recipes'),
             ]);
         }
 

@@ -35,7 +35,7 @@ final class PageComponentExtractor
         $text = $this->cleanText($dom->textContent ?: '');
 
         $result = [
-            'extractor_version' => '4.2.0',
+            'extractor_version' => '4.2.1',
             'base_url' => $baseUrl,
             'options' => $options->toArray(),
         ];
@@ -104,6 +104,7 @@ final class PageComponentExtractor
         }
 
         $result['counts'] = $this->counts($result);
+        $result['_provenance'] = $this->provenance($result);
         return $result;
     }
 
@@ -380,6 +381,8 @@ final class PageComponentExtractor
                 'links_total' => (int) ($group['links_total'] ?? 0),
                 'words_total' => (int) ($group['words_total'] ?? 0),
                 'sample_texts' => array_slice($samples, 0, 3),
+                'component_type' => $this->componentType((string) $group['key']),
+                'confidence' => min(0.99, round(0.55 + (((int) $group['count']) * 0.05), 2)),
             ];
         }
         usort($rows, static fn (array $a, array $b): int => ($b['count'] <=> $a['count']) ?: strcmp((string) $a['key'], (string) $b['key']));
@@ -392,7 +395,7 @@ final class PageComponentExtractor
     {
         $text = $this->cleanText(strip_tags($html));
         $result = [
-            'extractor_version' => '4.2.0',
+            'extractor_version' => '4.2.1',
             'base_url' => $baseUrl,
             'options' => $options->toArray(),
             'fallback' => 'regex_dom_extension_missing',
@@ -479,6 +482,7 @@ final class PageComponentExtractor
             $result['dictionary'] = ['new_total' => $learned['new_total'], 'total' => $learned['total'], 'new_words' => array_slice($learned['new_words'], 0, 100), 'dictionary_file' => $options->dictionaryFile];
         }
         $result['counts'] = $this->counts($result);
+        $result['_provenance'] = $this->provenance($result);
         return $result;
     }
 
@@ -533,7 +537,7 @@ final class PageComponentExtractor
         $rows = [];
         foreach ($groups as $group) {
             if (($group['count'] ?? 0) >= $minRepeats) {
-                $rows[] = ['key' => $group['key'], 'count' => (int) $group['count'], 'tags' => array_keys($group['tags'] ?? []), 'links_total' => 0, 'words_total' => 0, 'sample_texts' => []];
+                $rows[] = ['key' => $group['key'], 'count' => (int) $group['count'], 'tags' => array_keys($group['tags'] ?? []), 'links_total' => 0, 'words_total' => 0, 'sample_texts' => [], 'component_type' => $this->componentType((string) $group['key']), 'confidence' => min(0.99, round(0.55 + (((int) $group['count']) * 0.05), 2))];
             }
         }
         usort($rows, static fn (array $a, array $b): int => ($b['count'] <=> $a['count']) ?: strcmp((string) $a['key'], (string) $b['key']));
@@ -583,6 +587,61 @@ final class PageComponentExtractor
             return '"' . $value . '"';
         }
         return "concat('" . str_replace("'", "', \"'\", '", $value) . "')";
+    }
+
+    /** @param array<string,mixed> $result @return array<string,array<string,mixed>> */
+    private function provenance(array $result): array
+    {
+        $map = [
+            'plain_text' => ['method' => 'dom_text_content', 'selector' => 'document text'],
+            'whole_html' => ['method' => 'source_html', 'selector' => 'document'],
+            'selected' => ['method' => 'selector', 'selector' => (string) (($result['options']['selector'] ?? null) ?: '')],
+            'links' => ['method' => 'xpath', 'selector' => '//a[@href]'],
+            'images' => ['method' => 'xpath', 'selector' => '//img[@src]'],
+            'pdf_files' => ['method' => 'link_filter', 'selector' => '//a[contains(@href, ".pdf")]'],
+            'tables' => ['method' => 'xpath', 'selector' => '//table'],
+            'lists' => ['method' => 'xpath', 'selector' => '//ul|//ol'],
+            'headings' => ['method' => 'xpath', 'selector' => '//h1..//h6'],
+            'navigation_links' => ['method' => 'xpath', 'selector' => '//nav//a'],
+            'breadcrumbs' => ['method' => 'class_heuristic', 'selector' => '*[class*=breadcrumb]'],
+            'social_links' => ['method' => 'domain_filter', 'selector' => 'social domains'],
+            'download_links' => ['method' => 'extension_filter', 'selector' => 'download/document extensions'],
+            'bio_blocks' => ['method' => 'class_id_heuristic', 'selector' => '*[class/id*=bio|author]'],
+            'cards' => ['method' => 'class_heuristic', 'selector' => '*[class*=card|item|result]'],
+            'repeated_components' => ['method' => 'repetition_heuristic', 'selector' => 'tag/id/class frequency'],
+            'patterns' => ['method' => 'regex_registry', 'selector' => 'registered patterns'],
+            'dictionary' => ['method' => 'word_dictionary_learning', 'selector' => 'plain text tokens'],
+        ];
+        $out = [];
+        foreach ($map as $field => $meta) {
+            if (!array_key_exists($field, $result)) {
+                continue;
+            }
+            $value = $result[$field];
+            $count = is_array($value) ? count($value) : (($value === '' || $value === null) ? 0 : 1);
+            $out[$field] = [
+                'field' => $field,
+                'status' => $count > 0 ? 'found' : 'empty',
+                'count' => $count,
+                'method' => $meta['method'],
+                'selector' => $meta['selector'],
+                'confidence' => $count > 0 ? 0.84 : 0.0,
+            ];
+        }
+        return $out;
+    }
+
+    private function componentType(string $key): string
+    {
+        $lower = strtolower($key);
+        return match (true) {
+            str_contains($lower, 'card'), str_contains($lower, 'result'), str_contains($lower, 'item') => 'card_or_result_list',
+            str_contains($lower, 'nav'), str_contains($lower, 'menu') => 'navigation',
+            str_contains($lower, 'breadcrumb') => 'breadcrumb',
+            str_contains($lower, 'author'), str_contains($lower, 'bio') => 'bio_or_author_block',
+            str_contains($lower, 'table'), str_contains($lower, 'row') => 'table_or_rows',
+            default => str_starts_with($lower, 'tag:a') ? 'link_group' : 'repeated_dom_group',
+        };
     }
 
     private function cleanText(string $value): string
