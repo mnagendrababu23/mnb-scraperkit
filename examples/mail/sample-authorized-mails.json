@@ -1,0 +1,32 @@
+{
+  "mail_export_version": "4.3.1",
+  "source": "authorized_local_export",
+  "messages": [
+    {
+      "message_id": "msg-001",
+      "thread_id": "thread-001",
+      "subject": "Springer article alert: New issue available",
+      "from": "alerts@springernature.com",
+      "to": ["researcher@example.com"],
+      "date": "2026-06-12T10:00:00+00:00",
+      "labels": ["alerts", "publisher"],
+      "body_text": "New article: Magnetostrictive effects in ferromagnetic domain structures https://link.springer.com/article/10.1007/s007770050003 PDF https://link.springer.com/content/pdf/10.1007/s007770050003.pdf",
+      "body_html": "<p>New article alert</p><a href=\"https://link.springer.com/article/10.1007/s007770050003\">Article</a><a href=\"https://link.springer.com/content/pdf/10.1007/s007770050003.pdf\">PDF</a>",
+      "attachments": [
+        {"filename": "article-alert.pdf", "mime_type": "application/pdf", "size_bytes": 2048, "attachment_id": "att-001"}
+      ]
+    },
+    {
+      "message_id": "msg-002",
+      "thread_id": "thread-002",
+      "subject": "Weekly research digest",
+      "from": "digest@example.org",
+      "to": ["researcher@example.com"],
+      "date": "2026-06-12T11:00:00+00:00",
+      "labels": ["digest"],
+      "body_text": "Read related DOI metadata at https://doi.org/10.1007/s007770050003",
+      "body_html": "<a href=\"https://doi.org/10.1007/s007770050003\">DOI</a>",
+      "attachments": []
+    }
+  ]
+}

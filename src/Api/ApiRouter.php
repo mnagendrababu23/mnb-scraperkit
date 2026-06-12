@@ -33,6 +33,7 @@ use Mnb\ScraperKit\Extraction\DataMappingRegistry;
 use Mnb\ScraperKit\Extraction\ExtractionRecipe;
 use Mnb\ScraperKit\Ai\AiProviderRegistry;
 use Mnb\ScraperKit\Search\SearchProviderRegistry;
+use Mnb\ScraperKit\Mail\MailProviderRegistry;
 
 /**
  * Lightweight read-mostly JSON API router used by the optional api:serve command.
@@ -43,7 +44,7 @@ use Mnb\ScraperKit\Search\SearchProviderRegistry;
  */
 final class ApiRouter
 {
-    public const VERSION = '4.3.0';
+    public const VERSION = '4.3.1';
 
     public function __construct(
         private readonly string $rootDir,
@@ -60,6 +61,7 @@ final class ApiRouter
             ['method' => 'GET', 'path' => '/api/v1/commands', 'description' => 'Registered CLI command metadata.'],
             ['method' => 'GET', 'path' => '/api/v1/ai/providers', 'description' => 'List optional AI crawl-analysis providers and configuration status.'],
             ['method' => 'GET', 'path' => '/api/v1/search/providers', 'description' => 'List safe search discovery providers and configuration status.'],
+            ['method' => 'GET', 'path' => '/api/v1/mail/providers', 'description' => 'List authorized mail/webmail connector slots and privacy policy.'],
             ['method' => 'GET', 'path' => '/api/v1/queue/status', 'description' => 'Local queue counts and lock totals.'],
             ['method' => 'GET', 'path' => '/api/v1/distributed/status', 'description' => 'Distributed queue counts, adapter, namespace, and worker group.'],
             ['method' => 'GET', 'path' => '/api/v1/distributed/doctor', 'description' => 'Distributed queue adapter and Redis capability check.'],
@@ -158,6 +160,10 @@ final class ApiRouter
 
         if ($method === 'GET' && $path === '/api/v1/search/providers') {
             return new ApiResponse(200, ['ok' => true, 'search' => SearchProviderRegistry::summary()]);
+        }
+
+        if ($method === 'GET' && $path === '/api/v1/mail/providers') {
+            return new ApiResponse(200, ['ok' => true, 'mail' => MailProviderRegistry::summary($this->rootDir . '/config/mail/providers.example.json')]);
         }
 
         if ($method === 'GET' && $path === '/api/v1/queue/status') {

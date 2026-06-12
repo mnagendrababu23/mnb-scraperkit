@@ -6,7 +6,7 @@ namespace Mnb\ScraperKit\Search;
 
 final class SearchProviderRegistry
 {
-    public const VERSION = '4.3.0';
+    public const VERSION = '4.3.1';
 
     /** @return array<string,array<string,mixed>> */
     public static function providers(): array

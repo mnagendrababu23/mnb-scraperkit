@@ -13,7 +13,7 @@ namespace Mnb\ScraperKit\Distributed;
  */
 final class DistributedQueueConfig
 {
-    public const VERSION = '4.3.0';
+    public const VERSION = '4.3.1';
 
     public function __construct(
         public readonly string $adapter = 'auto',

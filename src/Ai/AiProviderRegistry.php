@@ -7,13 +7,13 @@ namespace Mnb\ScraperKit\Ai;
 /**
  * Describes optional AI providers without forcing SDK dependencies.
  *
- * v4.3.0 intentionally keeps provider execution pluggable. The core analyzer
+ * v4.3.1 intentionally keeps provider execution pluggable. The core analyzer
  * always has a deterministic rule-based fallback, and provider keys are only
  * read from environment variables or explicit local config.
  */
 final class AiProviderRegistry
 {
-    public const VERSION = '4.3.0';
+    public const VERSION = '4.3.1';
 
     /** @return array<string,array<string,mixed>> */
     public static function providers(): array
@@ -47,7 +47,7 @@ final class AiProviderRegistry
                 'requires_api_key' => false,
                 'env' => [],
                 'capabilities' => ['offline_classification', 'feature_scoring'],
-                'notes' => 'Optional local inference/training provider. v4.3.0 exposes the provider slot; production models can be added without changing crawler commands.',
+                'notes' => 'Optional local inference/training provider. v4.3.1 exposes the provider slot; production models can be added without changing crawler commands.',
             ],
             'ollama' => [
                 'id' => 'ollama',

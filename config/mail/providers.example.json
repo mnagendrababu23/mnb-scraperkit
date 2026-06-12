@@ -1,0 +1,42 @@
+{
+  "mail_connector_version": "4.3.1",
+  "policy": {
+    "authorization_required": true,
+    "no_password_storage": true,
+    "no_hidden_login": true,
+    "no_webmail_screen_scraping": true,
+    "prefer_provider_api_or_user_export": true,
+    "pii_review_required": true
+  },
+  "providers": {
+    "local_json": {
+      "enabled": true,
+      "description": "Use approved/exported mailbox JSON files for offline extraction tests and enterprise review workflows."
+    },
+    "gmail_api": {
+      "enabled": false,
+      "description": "Use Gmail API OAuth tokens managed outside the package. Do not store raw passwords.",
+      "env": {
+        "client_id": "GOOGLE_CLIENT_ID",
+        "client_secret": "GOOGLE_CLIENT_SECRET",
+        "token_file": "GMAIL_OAUTH_TOKEN_FILE"
+      },
+      "scopes_hint": [
+        "gmail.readonly"
+      ]
+    },
+    "imap": {
+      "enabled": false,
+      "description": "Authorized IMAP connector slot. Store secrets in environment variables or secret managers only.",
+      "env": {
+        "host": "MNB_MAIL_IMAP_HOST",
+        "user": "MNB_MAIL_IMAP_USER",
+        "password": "MNB_MAIL_IMAP_SECRET"
+      }
+    },
+    "webmail_export": {
+      "enabled": false,
+      "description": "User-provided/exported webmail archive; no browser automation or hidden webmail login."
+    }
+  }
+}

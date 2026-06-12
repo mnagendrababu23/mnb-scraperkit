@@ -6,7 +6,7 @@ namespace Mnb\ScraperKit\Search;
 
 final class SearchDiscoveryEngine
 {
-    public const VERSION = '4.3.0';
+    public const VERSION = '4.3.1';
 
     /**
      * @param array<string,mixed> $options

@@ -70,7 +70,7 @@ final class PublisherContentGraph
         }
 
         return [[
-            'plan_version' => '4.3.0',
+            'plan_version' => '4.3.1',
             'publisher_id' => $publisherId,
             'publisher' => $publisherName,
             'workflow' => 'enterprise_publisher_metadata_graph',
@@ -91,7 +91,7 @@ final class PublisherContentGraph
     public static function defaultGraph(): array
     {
         return [
-            'graph_version' => '4.3.0',
+            'graph_version' => '4.3.1',
             'strategy' => 'publisher_to_collections_to_article_metadata',
             'levels' => [
                 [
