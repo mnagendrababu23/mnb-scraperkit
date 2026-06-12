@@ -7,7 +7,7 @@ namespace Mnb\ScraperKit\Plugin;
 /**
  * Lightweight config-only plugin manifest.
  *
- * V4.0.2 deliberately does not auto-execute arbitrary plugin PHP code.
+ * V4.1.0 deliberately does not auto-execute arbitrary plugin PHP code.
  * Plugins can contribute metadata, profile schemas, extractor rule files,
  * source templates, export templates, and command aliases that are resolved by
  * ScraperKit commands.

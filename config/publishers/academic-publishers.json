@@ -1,0 +1,1019 @@
+{
+  "catalog_version": "4.1.0",
+  "name": "Academic Publisher Metadata Crawl Catalog",
+  "policy": "Metadata-first source discovery. Respect robots, terms, rate limits, and authorization. Do not bypass paywalls, CAPTCHAs, authentication, or access controls.",
+  "publishers": [
+    {
+      "id": "elsevier",
+      "publisher": "Elsevier",
+      "website": "https://www.elsevier.com/",
+      "profile": "academic",
+      "recommended_modes": [
+        "api",
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://www.elsevier.com/"
+      ],
+      "sitemap_candidates": [
+        "https://www.elsevier.com/sitemap.xml",
+        "https://www.elsevier.com/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://www.elsevier.com/feed",
+        "https://www.elsevier.com/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 3500,
+      "default_max_pages": 10,
+      "risk": "high",
+      "notes": "API-first. Prefer Elsevier APIs, public sitemaps, RSS/TOC pages, and DOI metadata. Do not crawl paywalled full text."
+    },
+    {
+      "id": "springer",
+      "publisher": "Springer",
+      "website": "https://www.springer.com/",
+      "profile": "academic",
+      "recommended_modes": [
+        "api",
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://www.springer.com/"
+      ],
+      "sitemap_candidates": [
+        "https://www.springer.com/sitemap.xml",
+        "https://www.springer.com/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://www.springer.com/feed",
+        "https://www.springer.com/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 3500,
+      "default_max_pages": 10,
+      "risk": "high",
+      "notes": "API-first where authorized. Prefer Springer/Nature metadata APIs, public journal pages, feeds, and DOI metadata."
+    },
+    {
+      "id": "wiley-blackwell",
+      "publisher": "Wiley-Blackwell",
+      "website": "https://www.wiley.com/",
+      "profile": "academic",
+      "recommended_modes": [
+        "api",
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://www.wiley.com/"
+      ],
+      "sitemap_candidates": [
+        "https://www.wiley.com/sitemap.xml",
+        "https://www.wiley.com/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://www.wiley.com/feed",
+        "https://www.wiley.com/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 3500,
+      "default_max_pages": 10,
+      "risk": "high",
+      "notes": "Metadata-only crawl. Prefer public journal/TOC metadata, DOI/Crossref lookup, and low-rate sitemap discovery."
+    },
+    {
+      "id": "taylor-francis",
+      "publisher": "Taylor & Francis",
+      "website": "https://taylorandfrancis.com/",
+      "profile": "academic",
+      "recommended_modes": [
+        "api",
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://taylorandfrancis.com/"
+      ],
+      "sitemap_candidates": [
+        "https://taylorandfrancis.com/sitemap.xml",
+        "https://taylorandfrancis.com/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://taylorandfrancis.com/feed",
+        "https://taylorandfrancis.com/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 3500,
+      "default_max_pages": 10,
+      "risk": "high",
+      "notes": "Metadata-only crawl. Prefer public journal/TOC metadata, DOI/Crossref lookup, and low-rate sitemap discovery."
+    },
+    {
+      "id": "reed-elsevier",
+      "publisher": "Reed Elsevier",
+      "website": "https://www.reedelsevier.com.ph/",
+      "profile": "academic",
+      "recommended_modes": [
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://www.reedelsevier.com.ph/"
+      ],
+      "sitemap_candidates": [
+        "https://www.reedelsevier.com.ph/sitemap.xml",
+        "https://www.reedelsevier.com.ph/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://www.reedelsevier.com.ph/feed",
+        "https://www.reedelsevier.com.ph/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 2500,
+      "default_max_pages": 25,
+      "risk": "medium",
+      "notes": "Corporate/catalog site. Lower article-data value; use only public pages and discovered sitemaps."
+    },
+    {
+      "id": "sage-publishing",
+      "publisher": "Sage Publishing",
+      "website": "https://us.sagepub.com/en-us/nam/home",
+      "profile": "academic",
+      "recommended_modes": [
+        "api",
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://us.sagepub.com/en-us/nam/home"
+      ],
+      "sitemap_candidates": [
+        "https://us.sagepub.com/en-us/nam/home/sitemap.xml",
+        "https://us.sagepub.com/en-us/nam/home/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://us.sagepub.com/en-us/nam/home/feed",
+        "https://us.sagepub.com/en-us/nam/home/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 3500,
+      "default_max_pages": 10,
+      "risk": "high",
+      "notes": "Metadata-only crawl. Prefer public journal metadata, DOI/Crossref lookup, and low-rate source discovery."
+    },
+    {
+      "id": "wolters-kluwer",
+      "publisher": "Wolters Kluwer",
+      "website": "https://www.wolterskluwer.com/en",
+      "profile": "academic",
+      "recommended_modes": [
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://www.wolterskluwer.com/en"
+      ],
+      "sitemap_candidates": [
+        "https://www.wolterskluwer.com/en/sitemap.xml",
+        "https://www.wolterskluwer.com/en/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://www.wolterskluwer.com/en/feed",
+        "https://www.wolterskluwer.com/en/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 2500,
+      "default_max_pages": 25,
+      "risk": "medium",
+      "notes": "Mixed corporate/product and journal content. Prefer public metadata pages and sitemap discovery."
+    },
+    {
+      "id": "oxford-university-press",
+      "publisher": "Oxford University Press",
+      "website": "https://corp.oup.com/",
+      "profile": "academic",
+      "recommended_modes": [
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://corp.oup.com/"
+      ],
+      "sitemap_candidates": [
+        "https://corp.oup.com/sitemap.xml",
+        "https://corp.oup.com/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://corp.oup.com/feed",
+        "https://corp.oup.com/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 2500,
+      "default_max_pages": 25,
+      "risk": "medium",
+      "notes": "Corporate landing site. For journals prefer Oxford Academic/DOI metadata where authorized; crawl this seed as catalog metadata only."
+    },
+    {
+      "id": "cambridge-university-press",
+      "publisher": "Cambridge University Press",
+      "website": "https://www.cambridge.org/",
+      "profile": "academic",
+      "recommended_modes": [
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://www.cambridge.org/"
+      ],
+      "sitemap_candidates": [
+        "https://www.cambridge.org/sitemap.xml",
+        "https://www.cambridge.org/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://www.cambridge.org/feed",
+        "https://www.cambridge.org/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 2500,
+      "default_max_pages": 25,
+      "risk": "medium",
+      "notes": "Mixed books/journals. Prefer public Cambridge Core metadata, DOI/Crossref lookup, and sitemap discovery."
+    },
+    {
+      "id": "ieee",
+      "publisher": "IEEE",
+      "website": "https://www.ieee.org/",
+      "profile": "academic",
+      "recommended_modes": [
+        "api",
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://www.ieee.org/"
+      ],
+      "sitemap_candidates": [
+        "https://www.ieee.org/sitemap.xml",
+        "https://www.ieee.org/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://www.ieee.org/feed",
+        "https://www.ieee.org/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 3500,
+      "default_max_pages": 10,
+      "risk": "high",
+      "notes": "API-first for IEEE Xplore when licensed. Use public pages only for metadata discovery; no paywall/full-text scraping."
+    },
+    {
+      "id": "american-chemical-society",
+      "publisher": "American Chemical Society",
+      "website": "https://www.acs.org/",
+      "profile": "academic",
+      "recommended_modes": [
+        "api",
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://www.acs.org/"
+      ],
+      "sitemap_candidates": [
+        "https://www.acs.org/sitemap.xml",
+        "https://www.acs.org/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://www.acs.org/feed",
+        "https://www.acs.org/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 3500,
+      "default_max_pages": 10,
+      "risk": "high",
+      "notes": "Metadata-only crawl. Prefer ACS publications metadata, DOI/Crossref lookup, public feeds/sitemaps, and low rate limits."
+    },
+    {
+      "id": "american-institute-of-physics",
+      "publisher": "American Institute of Physics",
+      "website": "https://www.aip.org/",
+      "profile": "academic",
+      "recommended_modes": [
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://www.aip.org/"
+      ],
+      "sitemap_candidates": [
+        "https://www.aip.org/sitemap.xml",
+        "https://www.aip.org/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://www.aip.org/feed",
+        "https://www.aip.org/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 2500,
+      "default_max_pages": 25,
+      "risk": "medium",
+      "notes": "Society/corporate site. For AIP Publishing article metadata prefer public metadata/DOI workflows."
+    },
+    {
+      "id": "american-mathematical-society",
+      "publisher": "American Mathematical Society",
+      "website": "https://www.ams.org/",
+      "profile": "academic",
+      "recommended_modes": [
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://www.ams.org/"
+      ],
+      "sitemap_candidates": [
+        "https://www.ams.org/sitemap.xml",
+        "https://www.ams.org/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://www.ams.org/feed",
+        "https://www.ams.org/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 2500,
+      "default_max_pages": 25,
+      "risk": "medium",
+      "notes": "Society/journal site. Prefer public journal/issue pages, DOI metadata, and cautious source discovery."
+    },
+    {
+      "id": "association-for-computing-machinery",
+      "publisher": "Association for Computing Machinery",
+      "website": "https://www.acm.org/",
+      "profile": "academic",
+      "recommended_modes": [
+        "api",
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://www.acm.org/"
+      ],
+      "sitemap_candidates": [
+        "https://www.acm.org/sitemap.xml",
+        "https://www.acm.org/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://www.acm.org/feed",
+        "https://www.acm.org/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 3500,
+      "default_max_pages": 10,
+      "risk": "high",
+      "notes": "ACM organization site. For ACM DL metadata use authorized/API/DOI workflows; no full text scraping."
+    },
+    {
+      "id": "institute-of-physics-publishing",
+      "publisher": "Institute of Physics Publishing",
+      "website": "https://ioppublishing.org/",
+      "profile": "academic",
+      "recommended_modes": [
+        "api",
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://ioppublishing.org/"
+      ],
+      "sitemap_candidates": [
+        "https://ioppublishing.org/sitemap.xml",
+        "https://ioppublishing.org/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://ioppublishing.org/feed",
+        "https://ioppublishing.org/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 3500,
+      "default_max_pages": 10,
+      "risk": "high",
+      "notes": "Metadata-only crawl. Prefer public journal metadata, DOI/Crossref, and source discovery."
+    },
+    {
+      "id": "royal-society-of-chemistry",
+      "publisher": "Royal Society of Chemistry",
+      "website": "https://www.rsc.org/",
+      "profile": "academic",
+      "recommended_modes": [
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://www.rsc.org/"
+      ],
+      "sitemap_candidates": [
+        "https://www.rsc.org/sitemap.xml",
+        "https://www.rsc.org/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://www.rsc.org/feed",
+        "https://www.rsc.org/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 2500,
+      "default_max_pages": 25,
+      "risk": "medium",
+      "notes": "Society/publishing site. Prefer public metadata, DOI/Crossref, and cautious source discovery."
+    },
+    {
+      "id": "american-physical-society",
+      "publisher": "American Physical Society",
+      "website": "https://www.aps.org/",
+      "profile": "academic",
+      "recommended_modes": [
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://www.aps.org/"
+      ],
+      "sitemap_candidates": [
+        "https://www.aps.org/sitemap.xml",
+        "https://www.aps.org/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://www.aps.org/feed",
+        "https://www.aps.org/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 2500,
+      "default_max_pages": 25,
+      "risk": "medium",
+      "notes": "Society/corporate site. For journal metadata prefer public APS journal pages and DOI workflows."
+    },
+    {
+      "id": "optical-society-of-america",
+      "publisher": "Optical Society of America",
+      "website": "https://opg.optica.org/",
+      "profile": "academic",
+      "recommended_modes": [
+        "api",
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://opg.optica.org/"
+      ],
+      "sitemap_candidates": [
+        "https://opg.optica.org/sitemap.xml",
+        "https://opg.optica.org/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://opg.optica.org/feed",
+        "https://opg.optica.org/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 3500,
+      "default_max_pages": 10,
+      "risk": "high",
+      "notes": "Article platform. Metadata-only, low-rate crawl of public pages; prefer DOI metadata."
+    },
+    {
+      "id": "aaas",
+      "publisher": "American Association for the Advancement of Science",
+      "website": "https://www.aaas.org/",
+      "profile": "academic",
+      "recommended_modes": [
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://www.aaas.org/"
+      ],
+      "sitemap_candidates": [
+        "https://www.aaas.org/sitemap.xml",
+        "https://www.aaas.org/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://www.aaas.org/feed",
+        "https://www.aaas.org/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 2500,
+      "default_max_pages": 25,
+      "risk": "medium",
+      "notes": "Organization site. For Science journal metadata prefer science.org public metadata/DOI workflows."
+    },
+    {
+      "id": "nature-publishing-group",
+      "publisher": "Nature Publishing Group",
+      "website": "https://www.nature.com/",
+      "profile": "academic",
+      "recommended_modes": [
+        "api",
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://www.nature.com/"
+      ],
+      "sitemap_candidates": [
+        "https://www.nature.com/sitemap.xml",
+        "https://www.nature.com/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://www.nature.com/feed",
+        "https://www.nature.com/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 3500,
+      "default_max_pages": 10,
+      "risk": "high",
+      "notes": "Highly restricted/publisher platform. Use metadata-only, official APIs/sitemaps/feeds where allowed, no AI training or full-text scraping without permission."
+    },
+    {
+      "id": "science",
+      "publisher": "Science",
+      "website": "https://www.science.org/",
+      "profile": "academic",
+      "recommended_modes": [
+        "api",
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://www.science.org/"
+      ],
+      "sitemap_candidates": [
+        "https://www.science.org/sitemap.xml",
+        "https://www.science.org/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://www.science.org/feed",
+        "https://www.science.org/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 3500,
+      "default_max_pages": 10,
+      "risk": "high",
+      "notes": "Metadata-only. Prefer public article metadata, DOI/Crossref, feeds/sitemaps where allowed; no paywall/full text scraping."
+    },
+    {
+      "id": "cell-press",
+      "publisher": "Cell Press",
+      "website": "https://www.cell.com/",
+      "profile": "academic",
+      "recommended_modes": [
+        "api",
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://www.cell.com/"
+      ],
+      "sitemap_candidates": [
+        "https://www.cell.com/sitemap.xml",
+        "https://www.cell.com/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://www.cell.com/feed",
+        "https://www.cell.com/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 3500,
+      "default_max_pages": 10,
+      "risk": "high",
+      "notes": "Metadata-only. Prefer public article pages, DOI metadata, and low-rate journal/TOC discovery."
+    },
+    {
+      "id": "mit-press",
+      "publisher": "MIT Press",
+      "website": "https://direct.mit.edu/journals",
+      "profile": "academic",
+      "recommended_modes": [
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://direct.mit.edu/journals"
+      ],
+      "sitemap_candidates": [
+        "https://direct.mit.edu/journals/sitemap.xml",
+        "https://direct.mit.edu/journals/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://direct.mit.edu/journals/feed",
+        "https://direct.mit.edu/journals/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 2500,
+      "default_max_pages": 25,
+      "risk": "medium",
+      "notes": "Journal platform seed. Prefer public TOC/article metadata and DOI/Crossref lookup."
+    },
+    {
+      "id": "university-of-chicago-press",
+      "publisher": "University of Chicago Press",
+      "website": "https://press.uchicago.edu/",
+      "profile": "academic",
+      "recommended_modes": [
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://press.uchicago.edu/"
+      ],
+      "sitemap_candidates": [
+        "https://press.uchicago.edu/sitemap.xml",
+        "https://press.uchicago.edu/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://press.uchicago.edu/feed",
+        "https://press.uchicago.edu/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 2500,
+      "default_max_pages": 25,
+      "risk": "medium",
+      "notes": "Mostly books/catalog plus journals. Prefer public metadata and low-rate sitemap discovery."
+    },
+    {
+      "id": "johns-hopkins-university-press",
+      "publisher": "Johns Hopkins University Press",
+      "website": "https://www.press.jhu.edu/",
+      "profile": "academic",
+      "recommended_modes": [
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://www.press.jhu.edu/"
+      ],
+      "sitemap_candidates": [
+        "https://www.press.jhu.edu/sitemap.xml",
+        "https://www.press.jhu.edu/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://www.press.jhu.edu/feed",
+        "https://www.press.jhu.edu/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 2500,
+      "default_max_pages": 25,
+      "risk": "medium",
+      "notes": "Books/journals via partner platforms. Prefer public catalog metadata and DOI lookup."
+    },
+    {
+      "id": "duke-university-press",
+      "publisher": "Duke University Press",
+      "website": "https://www.dukeupress.edu/",
+      "profile": "academic",
+      "recommended_modes": [
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://www.dukeupress.edu/"
+      ],
+      "sitemap_candidates": [
+        "https://www.dukeupress.edu/sitemap.xml",
+        "https://www.dukeupress.edu/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://www.dukeupress.edu/feed",
+        "https://www.dukeupress.edu/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 2500,
+      "default_max_pages": 25,
+      "risk": "medium",
+      "notes": "Books/journals. Prefer public metadata pages, DOI/Crossref, and cautious source discovery."
+    },
+    {
+      "id": "princeton-university-press",
+      "publisher": "Princeton University Press",
+      "website": "https://press.princeton.edu/",
+      "profile": "academic",
+      "recommended_modes": [
+        "catalog",
+        "sitemap",
+        "metadata"
+      ],
+      "seed_urls": [
+        "https://press.princeton.edu/"
+      ],
+      "sitemap_candidates": [
+        "https://press.princeton.edu/sitemap.xml",
+        "https://press.princeton.edu/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://press.princeton.edu/feed",
+        "https://press.princeton.edu/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 2000,
+      "default_max_pages": 15,
+      "risk": "low",
+      "notes": "Mostly book catalog. Article-data flexibility is low; use catalog metadata only."
+    },
+    {
+      "id": "stanford-university-press",
+      "publisher": "Stanford University Press",
+      "website": "https://www.sup.org/",
+      "profile": "academic",
+      "recommended_modes": [
+        "catalog",
+        "sitemap",
+        "metadata"
+      ],
+      "seed_urls": [
+        "https://www.sup.org/"
+      ],
+      "sitemap_candidates": [
+        "https://www.sup.org/sitemap.xml",
+        "https://www.sup.org/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://www.sup.org/feed",
+        "https://www.sup.org/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 2000,
+      "default_max_pages": 15,
+      "risk": "low",
+      "notes": "Mostly book catalog. Article-data flexibility is low; use catalog metadata only."
+    },
+    {
+      "id": "university-of-california-press",
+      "publisher": "University of California Press",
+      "website": "https://www.ucpress.edu/",
+      "profile": "academic",
+      "recommended_modes": [
+        "metadata",
+        "sitemap",
+        "doi"
+      ],
+      "seed_urls": [
+        "https://www.ucpress.edu/"
+      ],
+      "sitemap_candidates": [
+        "https://www.ucpress.edu/sitemap.xml",
+        "https://www.ucpress.edu/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://www.ucpress.edu/feed",
+        "https://www.ucpress.edu/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 2500,
+      "default_max_pages": 25,
+      "risk": "medium",
+      "notes": "Books/journals. Prefer public metadata pages and DOI/Crossref for journals."
+    },
+    {
+      "id": "university-of-texas-press",
+      "publisher": "University of Texas Press",
+      "website": "https://utpress.utexas.edu/",
+      "profile": "academic",
+      "recommended_modes": [
+        "catalog",
+        "sitemap",
+        "metadata"
+      ],
+      "seed_urls": [
+        "https://utpress.utexas.edu/"
+      ],
+      "sitemap_candidates": [
+        "https://utpress.utexas.edu/sitemap.xml",
+        "https://utpress.utexas.edu/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://utpress.utexas.edu/feed",
+        "https://utpress.utexas.edu/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 2000,
+      "default_max_pages": 15,
+      "risk": "low",
+      "notes": "Mostly book/journal catalog. Use public metadata only; article-data flexibility limited."
+    },
+    {
+      "id": "university-of-minnesota-press",
+      "publisher": "University of Minnesota Press",
+      "website": "https://www.upress.umn.edu/",
+      "profile": "academic",
+      "recommended_modes": [
+        "catalog",
+        "sitemap",
+        "metadata"
+      ],
+      "seed_urls": [
+        "https://www.upress.umn.edu/"
+      ],
+      "sitemap_candidates": [
+        "https://www.upress.umn.edu/sitemap.xml",
+        "https://www.upress.umn.edu/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://www.upress.umn.edu/feed",
+        "https://www.upress.umn.edu/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 2000,
+      "default_max_pages": 15,
+      "risk": "low",
+      "notes": "Mostly book catalog. Article-data flexibility is low; use catalog metadata only."
+    },
+    {
+      "id": "university-of-wisconsin-press",
+      "publisher": "University of Wisconsin Press",
+      "website": "https://uwpress.wisc.edu/",
+      "profile": "academic",
+      "recommended_modes": [
+        "catalog",
+        "sitemap",
+        "metadata"
+      ],
+      "seed_urls": [
+        "https://uwpress.wisc.edu/"
+      ],
+      "sitemap_candidates": [
+        "https://uwpress.wisc.edu/sitemap.xml",
+        "https://uwpress.wisc.edu/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://uwpress.wisc.edu/feed",
+        "https://uwpress.wisc.edu/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 2000,
+      "default_max_pages": 15,
+      "risk": "low",
+      "notes": "Mostly book catalog. Article-data flexibility is low; use catalog metadata only."
+    },
+    {
+      "id": "university-of-pennsylvania-press",
+      "publisher": "University of Pennsylvania Press",
+      "website": "https://www.pennpress.org/",
+      "profile": "academic",
+      "recommended_modes": [
+        "catalog",
+        "sitemap",
+        "metadata"
+      ],
+      "seed_urls": [
+        "https://www.pennpress.org/"
+      ],
+      "sitemap_candidates": [
+        "https://www.pennpress.org/sitemap.xml",
+        "https://www.pennpress.org/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://www.pennpress.org/feed",
+        "https://www.pennpress.org/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 2000,
+      "default_max_pages": 15,
+      "risk": "low",
+      "notes": "Mostly book/journal catalog. Use public metadata only; article-data flexibility limited."
+    },
+    {
+      "id": "new-york-university-press",
+      "publisher": "New York University Press",
+      "website": "https://nyupress.org/",
+      "profile": "academic",
+      "recommended_modes": [
+        "catalog",
+        "sitemap",
+        "metadata"
+      ],
+      "seed_urls": [
+        "https://nyupress.org/"
+      ],
+      "sitemap_candidates": [
+        "https://nyupress.org/sitemap.xml",
+        "https://nyupress.org/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://nyupress.org/feed",
+        "https://nyupress.org/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 2000,
+      "default_max_pages": 15,
+      "risk": "low",
+      "notes": "Mostly book catalog. Article-data flexibility is low; use catalog metadata only."
+    },
+    {
+      "id": "yale-university-press",
+      "publisher": "Yale University Press",
+      "website": "https://yalebooks.yale.edu/",
+      "profile": "academic",
+      "recommended_modes": [
+        "catalog",
+        "sitemap",
+        "metadata"
+      ],
+      "seed_urls": [
+        "https://yalebooks.yale.edu/"
+      ],
+      "sitemap_candidates": [
+        "https://yalebooks.yale.edu/sitemap.xml",
+        "https://yalebooks.yale.edu/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://yalebooks.yale.edu/feed",
+        "https://yalebooks.yale.edu/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 2000,
+      "default_max_pages": 15,
+      "risk": "low",
+      "notes": "Mostly book catalog. Article-data flexibility is low; use catalog metadata only."
+    },
+    {
+      "id": "cornell-university-press",
+      "publisher": "Cornell University Press",
+      "website": "https://www.cornellpress.cornell.edu/",
+      "profile": "academic",
+      "recommended_modes": [
+        "catalog",
+        "sitemap",
+        "metadata"
+      ],
+      "seed_urls": [
+        "https://www.cornellpress.cornell.edu/"
+      ],
+      "sitemap_candidates": [
+        "https://www.cornellpress.cornell.edu/sitemap.xml",
+        "https://www.cornellpress.cornell.edu/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://www.cornellpress.cornell.edu/feed",
+        "https://www.cornellpress.cornell.edu/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 2000,
+      "default_max_pages": 15,
+      "risk": "low",
+      "notes": "Mostly book catalog. Article-data flexibility is low; use catalog metadata only."
+    },
+    {
+      "id": "columbia-university-press",
+      "publisher": "Columbia University Press",
+      "website": "https://cup.columbia.edu/",
+      "profile": "academic",
+      "recommended_modes": [
+        "catalog",
+        "sitemap",
+        "metadata"
+      ],
+      "seed_urls": [
+        "https://cup.columbia.edu/"
+      ],
+      "sitemap_candidates": [
+        "https://cup.columbia.edu/sitemap.xml",
+        "https://cup.columbia.edu/robots.txt"
+      ],
+      "feed_candidates": [
+        "https://cup.columbia.edu/feed",
+        "https://cup.columbia.edu/rss"
+      ],
+      "api_hint": "Use official publisher APIs when available/authorized; otherwise prefer Crossref/DOI metadata and public sitemap/RSS/TOC pages.",
+      "default_delay_ms": 2000,
+      "default_max_pages": 15,
+      "risk": "low",
+      "notes": "Mostly book catalog. Article-data flexibility is low; use catalog metadata only."
+    }
+  ]
+}

@@ -1,31 +1,51 @@
 {
   "profile": "academic",
   "record_type": "article",
+  "profile_version": "4.1.0",
   "required_fields": ["title", "url"],
-  "optional_fields": ["doi", "authors", "journal", "published_date", "pdf_url", "issn"],
-  "dedupe_keys": ["doi", "canonical_url", "url", "title"],
+  "optional_fields": ["subtitle", "doi", "normalized_doi", "authors", "authors_text", "journal", "publisher", "issn", "eissn", "volume", "issue", "page_range", "published_at", "published_date", "article_type", "abstract", "pdf_url", "html_url", "canonical_url", "license", "open_access"],
+  "dedupe_keys": ["normalized_doi", "doi", "canonical_url", "url", "title"],
   "validators": {
     "url": "url",
+    "html_url": "url",
     "canonical_url": "url",
     "pdf_url": "url",
     "doi": "doi",
+    "normalized_doi": "doi",
     "issn": "issn",
+    "eissn": "issn",
+    "published_at": "date",
     "published_date": "date"
   },
   "transformations": {
     "title": ["normalize_space"],
-    "doi": ["lowercase"],
+    "subtitle": ["normalize_space"],
+    "doi": ["lowercase", "trim"],
+    "normalized_doi": ["lowercase", "trim"],
+    "published_at": ["date"],
     "published_date": ["date"],
-    "pdf_url": ["clean_url"]
+    "url": ["clean_url"],
+    "html_url": ["clean_url"],
+    "pdf_url": ["clean_url"],
+    "canonical_url": ["clean_url"]
   },
-  "export_columns": ["record_id", "title", "doi", "authors", "journal", "published_date", "pdf_url", "url", "quality_score"],
+  "export_columns": ["record_id", "title", "subtitle", "authors", "authors_text", "doi", "normalized_doi", "journal", "publisher", "issn", "eissn", "volume", "issue", "page_range", "published_at", "url", "html_url", "pdf_url", "license", "open_access", "quality_score"],
   "extraction_rules": {
-    "title": {"fallback": [{"meta": "citation_title"}, {"og": "title"}, "h1"]},
-    "doi": {"fallback": [{"meta": "citation_doi"}, {"text": true, "regex": "(10\\.[0-9]{4,9}/[^\\s]+)"}]},
-    "authors": {"css": "meta[name=citation_author]", "attr": "content", "many": true},
-    "journal": {"fallback": [{"meta": "citation_journal_title"}, {"meta": "citation_conference_title"}]},
-    "published_date": {"fallback": [{"meta": "citation_publication_date"}, {"meta": "citation_online_date"}]},
-    "pdf_url": {"css": "meta[name=citation_pdf_url]", "attr": "content", "url": true},
-    "canonical_url": {"css": "link[rel=canonical]", "attr": "href", "url": true}
+    "title": {"fallback": [{"meta": "citation_title"}, {"meta": "dc.title"}, {"og": "title"}, "h1", "title"]},
+    "subtitle": {"fallback": [{"meta": "citation_subtitle"}, ".subtitle"]},
+    "doi": {"fallback": [{"meta": "citation_doi"}, {"meta": "dc.identifier"}, {"text": true, "regex": "(10\\.[0-9]{4,9}/[^\\s]+)"}]},
+    "authors": {"fallback": [{"css": "meta[name=citation_author]", "attr": "content", "many": true}, {"css": "meta[name=dc.creator]", "attr": "content", "many": true}, ".authors, .author-list"]},
+    "journal": {"fallback": [{"meta": "citation_journal_title"}, {"meta": "citation_conference_title"}, {"meta": "prism.publicationName"}]},
+    "publisher": {"fallback": [{"meta": "citation_publisher"}, {"meta": "dc.publisher"}]},
+    "issn": {"fallback": [{"meta": "citation_issn"}, {"meta": "prism.issn"}]},
+    "volume": {"fallback": [{"meta": "citation_volume"}, {"meta": "prism.volume"}]},
+    "issue": {"fallback": [{"meta": "citation_issue"}, {"meta": "prism.number"}]},
+    "page_range": {"fallback": [{"meta": "citation_firstpage"}, {"meta": "prism.startingPage"}]},
+    "published_at": {"fallback": [{"meta": "citation_publication_date"}, {"meta": "citation_online_date"}, {"meta": "dc.date"}, {"meta": "prism.publicationDate"}]},
+    "abstract": {"fallback": [{"meta": "dc.description"}, {"meta": "description"}, ".abstract, #abstract, section.abstract"]},
+    "pdf_url": {"fallback": [{"css": "meta[name=citation_pdf_url]", "attr": "content", "url": true}, {"css": "a[href$='.pdf']", "attr": "href", "url": true}]},
+    "canonical_url": {"css": "link[rel=canonical]", "attr": "href", "url": true},
+    "html_url": {"fallback": [{"css": "link[rel=canonical]", "attr": "href", "url": true}, {"og": "url"}]},
+    "license": {"fallback": [{"css": "meta[name=citation_license]", "attr": "content"}, {"css": "a[rel=license]", "attr": "href", "url": true}]}
   }
 }

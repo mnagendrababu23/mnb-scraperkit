@@ -165,6 +165,12 @@ final class CommandRegistry
             'source:json' => 'Read crawl URLs from JSON using a dot path such as items.*.url.',
             'source:api' => 'Fetch a JSON API endpoint and extract URLs using a dot path.',
             'source:urls' => 'Export a URL list from source connector JSON output.',
+            'publisher:list' => 'List safe academic publisher metadata crawl targets and flexibility notes.',
+            'publisher:show' => 'Show one academic publisher crawl profile, seed URLs, modes, and safety defaults.',
+            'publisher:seeds' => 'Export academic publisher seed URLs as TXT, CSV, or JSON.',
+            'publisher:plan' => 'Generate metadata-only crawl job plans for academic publisher seeds.',
+            'publisher:schema' => 'Show or export the normalized article metadata schema.',
+            'publisher:normalize' => 'Normalize source/API/feed/sitemap records into scholarly article metadata rows.',
             'plos:journals' => 'List known PLOS journals, API names, homepages, and feed candidates.',
             'plos:search' => 'Use the PLOS Search API and return normalized article records.',
             'plos:feed' => 'Fetch a PLOS journal RSS/Atom feed and normalize article records.',
@@ -465,6 +471,9 @@ final class CommandRegistry
             'strict',
             'mode',
             'iterations',
+            'publisher',
+            'risk',
+            'respect-robots',
             'validate',
         ];
     }
@@ -533,6 +542,9 @@ final class CommandRegistry
             'fail-on-high',
             'active-only',
             'strict',
+            'publisher',
+            'risk',
+            'respect-robots',
             'validate',
         ];
     }

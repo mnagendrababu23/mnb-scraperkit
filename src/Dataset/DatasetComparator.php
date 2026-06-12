@@ -23,7 +23,7 @@ final class DatasetComparator
             }
         }
         return [
-            'diff_version' => '4.0.2',
+            'diff_version' => '4.1.0',
             'generated_at' => date(DATE_ATOM),
             'old_total' => count($oldRecords),
             'new_total' => count($newRecords),

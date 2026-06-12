@@ -13,7 +13,7 @@ namespace Mnb\ScraperKit\Enterprise;
  */
 final class UserStore
 {
-    public const VERSION = '4.0.2';
+    public const VERSION = '4.1.0';
     public const ROLES = ['owner', 'admin', 'operator', 'analyst', 'viewer'];
 
     public function __construct(private readonly string $rootDir)

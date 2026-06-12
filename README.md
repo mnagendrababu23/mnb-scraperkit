@@ -1,8 +1,8 @@
-# MNB ScraperKit V4.0.2
+# MNB ScraperKit V4.1.0
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-V4.0.2 is the CLI Parser, Packaging, and CI Fix Update. It keeps the V4.0.1 hardening foundation and focuses on trust polish: CI-safe repo checks, final archive hygiene checks, clean export rules, boolean flag parsing before positional arguments, and working short output alias support.
+V4.1.0 is the Real Publisher Metadata Crawling Pack. It builds on the V4.0.2 stability release and adds safe academic-publisher metadata workflows, a 37-publisher catalog, article metadata normalization, publisher seed exports, metadata-only crawl plans, and API/CLI coverage for scholarly article data pipelines.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,20 +16,19 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## V4.0.2 update focus
+## V4.1.0 update focus
 
-V4.0.2 is a maintenance and release-hygiene patch. It does not add another big crawling feature. Instead, it fixes command parsing and separates repo/CI checks from final archive/package checks.
+V4.1.0 is a focused academic metadata upgrade. It does not try to bypass publisher protections or scrape paywalled full text. Instead, it adds safe, metadata-first crawling and normalization tools for journals, articles, DOI records, public TOC pages, sitemaps, feeds, and official APIs where available.
 
-- Added `.github/workflows/ci.yml` for Composer validation, PHP linting, tests, production-readiness checks, and benchmark smoke tests across PHP 8.2, 8.3, and 8.4.
-- Added release-hygiene command: `release:check`, alongside `hardening:doctor`, `ci:check`, `benchmark:run`, and `compat:commands`.
-- Added production-readiness inspection for CI workflow presence, release hygiene, command contract checks, duplicate dispatch cases, storage cleanliness, and optional runtime availability.
-- Added public command/option compatibility contract checks so patch releases do not accidentally remove or rename CLI surface area.
-- Added deterministic local benchmarks for URL normalization, safety checks, JSON handling, and command registry metadata.
-- Improved CLI error messages with command context, help hints, diagnostics guidance, and suggestions for unknown commands.
-- Kept the first CLI refactor boundary and hardened the native parser so value-less flags like `--json` and `--dry-run` no longer consume following positional arguments.
-- Fixed a duplicate native CLI dispatch entry for `job:pause` and added checks to catch future duplicates.
-- Added backward compatibility notes for patch, minor, and major release expectations.
-- Kept V4.0.0 enterprise workspaces/access control, V3.8.0 security/compliance, V3.7.0 project templates/preset packs, V3.6.0 advanced export connectors, V3.5.0 distributed workers/Redis queue, V3.4.0 browser sessions/authorized login workflows, V3.3.0 rule builder/auto-profile assistant, V3.2.0 evaluation/benchmarking/training quality, V3.1.0 dataset versioning/annotations, V3.0.0 ML-ready intelligence, V2.0.0 dashboard/admin UI, V1.9.0 API/webhooks, V1.8.0 plugins, V1.7.0 retry/scheduling/monitoring, V1.6.0 database storage, V1.5.0 browser-assisted crawling, V1.4.0 queue/worker commands, V1.3.0 profile schemas/extractor rules, V1.2.0 exports/reports/bundles, and V1.1.0 source connectors.
+- Added `config/publishers/academic-publishers.json` with 37 publisher crawl targets from Elsevier through Columbia University Press.
+- Added `publisher:list`, `publisher:show`, `publisher:seeds`, `publisher:plan`, `publisher:schema`, and `publisher:normalize`.
+- Added `PublisherCatalog` for crawl-flexibility metadata, seed export rows, safe crawl defaults, and job-plan generation.
+- Added `ArticleMetadataNormalizer` for DOI normalization, ISSN cleanup, author normalization, and export-ready scholarly article rows.
+- Expanded the built-in `academic` profile with citation meta tags, DOI, ISSN/eISSN, journal, publisher, volume, issue, abstract, PDF, canonical URL, license, and open-access metadata fields.
+- Added `/api/v1/publishers`, `/api/v1/publishers/{publisher_id}`, and `/api/v1/publishers/schema` routes for local dashboard/API use.
+- Added publisher seed examples under `examples/publisher-seeds/` plus a ready metadata plan job example.
+- Added real tests for publisher catalog validation, article metadata normalization, native publisher commands, and API publisher routes.
+- Kept V4.0.2 CLI parser, packaging, CI, release-hygiene, command compatibility, and production-readiness hardening.
 
 ## Highlights
 
@@ -65,7 +64,7 @@ V4.0.2 is a maintenance and release-hygiene patch. It does not add another big c
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V4.0.2 CLI/library release.
+This section lists the main functionality available in the current V4.1.0 CLI/library release.
 
 ### Package and CLI
 
@@ -85,7 +84,7 @@ This section lists the main functionality available in the current V4.0.2 CLI/li
 - `compat:commands` prints or validates the public command and option compatibility contract.
 - `.github/workflows/ci.yml` validates Composer metadata, installs dependencies, lints PHP files, runs tests, runs `ci:check`, builds a `git archive`, runs `release:check` on that archive, and performs a benchmark smoke test on PHP 8.2, 8.3, and 8.4.
 - CLI errors now include command context, help guidance, and diagnostics hints. Unknown commands include best-effort suggestions.
-- V4.0.2 keeps the hardening trait boundary and fixes native CLI option parsing; future maintenance releases can continue splitting command groups.
+- V4.1.0 keeps the hardening trait boundary and fixes native CLI option parsing; future maintenance releases can continue splitting command groups.
 
 Examples:
 
@@ -99,9 +98,35 @@ php bin/mnb-scraper compat:commands --validate
 
 ### Backward compatibility policy
 
-- Patch releases such as V4.0.2 should not remove public commands, rename public options, or change default output behavior without a compatibility alias.
+- Patch releases such as V4.1.0 should not remove public commands, rename public options, or change default output behavior without a compatibility alias.
 - Minor releases may add new commands, options, profiles, connectors, and optional integrations while keeping older workflows usable.
 - Major releases may remove deprecated functionality only after migration guidance is added to README examples and command compatibility notes.
+
+### Academic publisher metadata crawling
+
+V4.1.0 adds safe publisher metadata workflows for academic journal/article discovery. The default model is **metadata only**: prefer official APIs, public sitemaps, RSS/Atom feeds, DOI/Crossref-style metadata, and public article landing pages. Do not bypass paywalls, CAPTCHAs, authentication, or access controls.
+
+Commands:
+
+```bash
+php bin/mnb-scraper publisher:list --json
+php bin/mnb-scraper publisher:show elsevier
+php bin/mnb-scraper publisher:seeds --format=txt --output=storage/publisher-seeds.txt
+php bin/mnb-scraper publisher:plan --max-pages=10 --delay-ms=3500 --output=storage/publisher-crawl-jobs.json
+php bin/mnb-scraper publisher:schema --format=csv --output=storage/article-schema.csv
+php bin/mnb-scraper publisher:normalize storage/source-records.json --publisher=elsevier --output=storage/article-metadata.json
+```
+
+Included catalog:
+
+```text
+config/publishers/academic-publishers.json
+examples/publisher-seeds/academic-publishers.csv
+examples/publisher-seeds/*.txt
+examples/publisher-metadata-plan-job.json
+```
+
+The normalized article metadata schema covers title, subtitle, authors, DOI, normalized DOI, ISSN/eISSN, journal, publisher, volume, issue, page range, publication date, article type, abstract, URL, HTML/PDF URL, license, open-access marker, source, and quality score.
 
 ### Enterprise project workspaces and access control
 
@@ -367,7 +392,7 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 - Plugin enable/disable controls by editing the manifest `enabled` flag.
 - Plugin doctor command for validating all discovered plugins.
 - Plugin-contributed profiles available to `profile:list`, `profile:show`, `extract:rules`, and pipeline/profile workflows.
-- Safe-by-default design: V4.0.2 does not automatically execute arbitrary plugin PHP code.
+- Safe-by-default design: V4.1.0 does not automatically execute arbitrary plugin PHP code.
 
 ### Lightweight API and webhooks
 
@@ -583,7 +608,7 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 ## Package direction
 
 - First public version: **1.0.0**
-- Current version: **4.0.2** — CLI Parser, Packaging, and CI Fix Update
+- Current version: **4.1.0** — CLI Parser, Packaging, and CI Fix Update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
@@ -1278,7 +1303,7 @@ ScraperKit focuses on practical export-ready outputs:
 - pipeline summaries
 - job manifest summaries
 
-PDF reports and richer role-based enterprise orchestration remain future upgrade areas. The current V4.0.2 release already includes CLI workflows, source connectors, exports/reports/bundles, export delivery connectors, local and distributed queue/worker commands, optional Redis queue support, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
+PDF reports and richer role-based enterprise orchestration remain future upgrade areas. The current V4.1.0 release already includes CLI workflows, source connectors, exports/reports/bundles, export delivery connectors, local and distributed queue/worker commands, optional Redis queue support, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
 
 ## Windows CMD
 
@@ -1305,7 +1330,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V4.0.2 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V4.1.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 

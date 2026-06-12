@@ -24,6 +24,8 @@ use Mnb\ScraperKit\Enterprise\AccessPolicy;
 use Mnb\ScraperKit\Enterprise\AuditLog;
 use Mnb\ScraperKit\Enterprise\UserStore;
 use Mnb\ScraperKit\Enterprise\WorkspaceStore;
+use Mnb\ScraperKit\Publisher\PublisherCatalog;
+use Mnb\ScraperKit\Publisher\ArticleMetadataNormalizer;
 
 /**
  * Lightweight read-mostly JSON API router used by the optional api:serve command.
@@ -34,7 +36,7 @@ use Mnb\ScraperKit\Enterprise\WorkspaceStore;
  */
 final class ApiRouter
 {
-    public const VERSION = '4.0.2';
+    public const VERSION = '4.1.0';
 
     public function __construct(
         private readonly string $rootDir,
@@ -64,6 +66,9 @@ final class ApiRouter
             ['method' => 'GET', 'path' => '/api/v1/datasets/{dataset_id}/evaluation', 'description' => 'Evaluate one dataset for quality, completeness, and training readiness.'],
             ['method' => 'GET', 'path' => '/api/v1/rule-builder/templates', 'description' => 'List auto-profile rule builder template names and assistant version.'],
             ['method' => 'GET', 'path' => '/api/v1/browser/sessions', 'description' => 'List authorized browser session profiles.'],
+            ['method' => 'GET', 'path' => '/api/v1/publishers', 'description' => 'List safe academic publisher metadata crawl targets.'],
+            ['method' => 'GET', 'path' => '/api/v1/publishers/schema', 'description' => 'Read normalized article metadata schema.'],
+            ['method' => 'GET', 'path' => '/api/v1/publishers/{publisher_id}', 'description' => 'Read one publisher crawl profile.'],
             ['method' => 'GET', 'path' => '/api/v1/export-connectors', 'description' => 'List configured export delivery connectors.'],
             ['method' => 'GET', 'path' => '/api/v1/export-connectors/{connector_id}', 'description' => 'Read one export delivery connector.'],
             ['method' => 'GET', 'path' => '/api/v1/project-templates', 'description' => 'List bundled project templates.'],
@@ -216,6 +221,34 @@ final class ApiRouter
             ]);
         }
 
+
+
+        if ($method === 'GET' && $path === '/api/v1/publishers') {
+            $catalog = new PublisherCatalog($this->rootDir);
+            return new ApiResponse(200, [
+                'ok' => true,
+                'publisher_catalog_version' => self::VERSION,
+                'publishers' => $catalog->filter(),
+                'validation' => $catalog->validate(),
+            ]);
+        }
+
+        if ($method === 'GET' && $path === '/api/v1/publishers/schema') {
+            return new ApiResponse(200, [
+                'ok' => true,
+                'article_schema_version' => self::VERSION,
+                'fields' => ArticleMetadataNormalizer::schemaFields(),
+            ]);
+        }
+
+        if ($method === 'GET' && preg_match('#^/api/v1/publishers/([^/]+)$#', $path, $m)) {
+            $catalog = new PublisherCatalog($this->rootDir);
+            return new ApiResponse(200, [
+                'ok' => true,
+                'publisher_catalog_version' => self::VERSION,
+                'publisher' => $catalog->find(rawurldecode($m[1])),
+            ]);
+        }
 
 
         if ($method === 'GET' && $path === '/api/v1/export-connectors') {

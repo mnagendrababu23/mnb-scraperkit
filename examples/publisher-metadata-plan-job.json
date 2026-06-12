@@ -1,0 +1,18 @@
+{
+  "job_version": "4.1.0",
+  "name": "academic-publisher-metadata-safe-crawl",
+  "command": "publisher:plan",
+  "args": [],
+  "options": {
+    "mode": "metadata",
+    "max-pages": 10,
+    "delay-ms": 3500,
+    "output": "storage/publisher-crawl-jobs.json"
+  },
+  "policy": {
+    "metadata_only": true,
+    "respect_robots": true,
+    "no_paywall_bypass": true,
+    "no_captcha_bypass": true
+  }
+}

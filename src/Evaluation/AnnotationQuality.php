@@ -6,7 +6,7 @@ namespace Mnb\ScraperKit\Evaluation;
 
 final class AnnotationQuality
 {
-    public const VERSION = '4.0.2';
+    public const VERSION = '4.1.0';
 
     /** @param array<int,array<string,mixed>> $records @param array<string,mixed> $annotations @return array<string,mixed> */
     public function stats(array $records, array $annotations): array

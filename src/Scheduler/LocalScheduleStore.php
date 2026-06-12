@@ -13,7 +13,7 @@ namespace Mnb\ScraperKit\Scheduler;
  */
 final class LocalScheduleStore
 {
-    public const VERSION = '4.0.2';
+    public const VERSION = '4.1.0';
 
     private string $scheduleDir;
 

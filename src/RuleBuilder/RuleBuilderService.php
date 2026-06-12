@@ -33,7 +33,7 @@ final class RuleBuilderService
         $doc = $parser->load($html, $baseUrl);
         $fields = (new RuleBasedExtractor($parser, new UrlNormalizer()))->extract($doc, $rules, $baseUrl);
         return [
-            'test_version' => '4.0.2',
+            'test_version' => '4.1.0',
             'base_url' => $baseUrl,
             'rules_total' => count($rules),
             'fields_total' => count($fields),

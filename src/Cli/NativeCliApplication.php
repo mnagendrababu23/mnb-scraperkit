@@ -105,6 +105,8 @@ use Mnb\ScraperKit\Support\Logger;
 use Mnb\ScraperKit\Support\UrlNormalizer;
 use Mnb\ScraperKit\Template\TemplateCatalog;
 use Mnb\ScraperKit\Template\TemplateInstaller;
+use Mnb\ScraperKit\Publisher\PublisherCatalog;
+use Mnb\ScraperKit\Publisher\ArticleMetadataNormalizer;
 
 final class NativeCliApplication
 {
@@ -285,6 +287,12 @@ final class NativeCliApplication
                 'source:json' => $this->sourceJson($args, $opts),
                 'source:api' => $this->sourceApi($args, $opts),
                 'source:urls' => $this->sourceUrls($args, $opts),
+                'publisher:list' => $this->publisherList($args, $opts),
+                'publisher:show' => $this->publisherShow($args, $opts),
+                'publisher:seeds' => $this->publisherSeeds($args, $opts),
+                'publisher:plan' => $this->publisherPlan($args, $opts),
+                'publisher:schema' => $this->publisherSchema($args, $opts),
+                'publisher:normalize' => $this->publisherNormalize($args, $opts),
                 'plos:journals' => $this->plosJournals($opts),
                 'plos:search' => $this->plosSearch($args, $opts),
                 'plos:feed' => $this->plosFeed($args, $opts),
@@ -305,7 +313,7 @@ final class NativeCliApplication
 
     private function help(): int
     {
-        $this->out('MNB ScraperKit 4.0.2 - Professional Symfony Console CLI');
+        $this->out('MNB ScraperKit 4.1.0 - Professional Symfony Console CLI');
         $this->out('Symfony Console front-end with framework-independent native PHP crawler and pipeline core.');
         $this->out('');
         return $this->listCommands();
@@ -466,6 +474,12 @@ final class NativeCliApplication
             'source:json <file.json>' => 'Read crawl URLs from JSON using a dot path such as items.*.url.',
             'source:api <endpoint>' => 'Fetch a JSON API endpoint and extract URLs using a dot path.',
             'source:urls <source.json>' => 'Export URL list from a source connector JSON output.',
+            'publisher:list' => 'List safe academic publisher metadata crawl targets.',
+            'publisher:show <publisher>' => 'Show one publisher crawl profile, safe modes, and seed URLs.',
+            'publisher:seeds' => 'Export publisher seed URLs as JSON, CSV, or TXT.',
+            'publisher:plan' => 'Generate safe metadata-only crawl job plans for publisher seeds.',
+            'publisher:schema' => 'Show/export the normalized article metadata schema.',
+            'publisher:normalize <records.json>' => 'Normalize source connector records into article metadata rows.',
             'plos:journals' => 'List known PLOS journals, API names, homepages, and feed candidates.',
             'plos:search <query>' => 'Use the official PLOS Search API and return normalized article records.',
             'plos:feed <journal>' => 'Fetch a PLOS journal RSS/Atom feed and normalize article records.',
@@ -779,7 +793,7 @@ final class NativeCliApplication
     {
         $templates = array_map(static fn($template): array => $template->summary(), (new TemplateCatalog($this->rootDir))->templates());
         if ($this->bool($opts, 'json')) {
-            $this->outJson(['ok' => true, 'template_version' => '4.0.2', 'templates' => $templates]);
+            $this->outJson(['ok' => true, 'template_version' => '4.1.0', 'templates' => $templates]);
             return 0;
         }
         $this->out('Project templates:');
@@ -847,7 +861,7 @@ final class NativeCliApplication
     {
         $packs = array_map(static fn($pack): array => $pack->summary(), (new TemplateCatalog($this->rootDir))->presetPacks());
         if ($this->bool($opts, 'json')) {
-            $this->outJson(['ok' => true, 'preset_pack_version' => '4.0.2', 'preset_packs' => $packs]);
+            $this->outJson(['ok' => true, 'preset_pack_version' => '4.1.0', 'preset_packs' => $packs]);
             return 0;
         }
         $this->out('Preset packs:');
@@ -1610,7 +1624,7 @@ final class NativeCliApplication
         $manifest = $context['manifest'];
         $datasetDir = (string) ($manifest['_dataset_dir'] ?? $this->rootDir . '/storage/datasets');
         $output = $this->optString($opts, 'output') ?: rtrim($datasetDir, '/\\') . '/annotations-export.' . ($format === 'csv' ? 'csv' : ($format === 'json' ? 'json' : 'jsonl'));
-        $this->exportRows($rows, $output, $format, ['annotation_export_version' => '4.0.2', 'rows_total' => count($rows)]);
+        $this->exportRows($rows, $output, $format, ['annotation_export_version' => '4.1.0', 'rows_total' => count($rows)]);
         $this->outJson(['ok' => true, 'rows_exported' => count($rows), 'format' => $format, 'output' => $output]);
         return 0;
     }
@@ -1746,7 +1760,7 @@ final class NativeCliApplication
         $output = $this->optString($opts, 'output') ?: $this->storagePath('webhooks/test-' . date('Ymd-His') . '.json');
         $payload = [
             'message' => 'MNB ScraperKit webhook test event',
-            'version' => '4.0.2',
+            'version' => '4.1.0',
             'generated_at' => date(DATE_ATOM),
         ];
         $dispatcher = new WebhookDispatcher($this->safetyGuard());
@@ -2517,7 +2531,7 @@ final class NativeCliApplication
         $store = new ExportConnectorStore($this->rootDir);
         $connectors = $store->list($this->optString($opts, 'config'));
         $data = [
-            'export_connector_version' => '4.0.2',
+            'export_connector_version' => '4.1.0',
             'connectors_total' => count($connectors),
             'connectors' => $connectors,
         ];
@@ -2545,7 +2559,7 @@ final class NativeCliApplication
             throw new \InvalidArgumentException('Usage: php bin/mnb-scraper export:connector-show <connector-id>');
         }
         $connector = (new ExportConnectorStore($this->rootDir))->show($id, $this->optString($opts, 'config'));
-        $this->outJson(['ok' => true, 'export_connector_version' => '4.0.2', 'connector' => $connector]);
+        $this->outJson(['ok' => true, 'export_connector_version' => '4.1.0', 'connector' => $connector]);
         return 0;
     }
 
@@ -2574,7 +2588,7 @@ final class NativeCliApplication
         $sample = $this->storagePath('export-connector-test/sample-export.json');
         $this->writeJson($sample, [
             'export_connector_test' => true,
-            'version' => '4.0.2',
+            'version' => '4.1.0',
             'generated_at' => date(DATE_ATOM),
             'message' => 'Sample export artifact for connector dry run.',
         ]);
@@ -2661,7 +2675,7 @@ final class NativeCliApplication
         $audit = new AuditLog($this->rootDir);
         $data = [
             'ok' => true,
-            'enterprise_version' => '4.0.2',
+            'enterprise_version' => '4.1.0',
             'storage_dir' => $this->rootDir . '/storage/enterprise',
             'workspaces' => $workspaceStore->summary(),
             'users' => $userStore->summary(),
@@ -3657,6 +3671,165 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         return 0;
     }
 
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function publisherList(array $args, array $opts): int
+    {
+        $catalog = new PublisherCatalog($this->rootDir);
+        $rows = $catalog->filter($this->optString($opts, 'risk'), $this->optString($opts, 'mode'));
+        $data = [
+            'ok' => true,
+            'publisher_catalog_version' => '4.1.0',
+            'publishers_total' => count($rows),
+            'policy' => (string) ($catalog->meta()['policy'] ?? ''),
+            'publishers' => array_map(static function (array $row): array {
+                return [
+                    'id' => $row['id'] ?? null,
+                    'publisher' => $row['publisher'] ?? null,
+                    'website' => $row['website'] ?? null,
+                    'recommended_modes' => $row['recommended_modes'] ?? [],
+                    'risk' => $row['risk'] ?? null,
+                    'delay_ms' => $row['default_delay_ms'] ?? null,
+                    'max_pages' => $row['default_max_pages'] ?? null,
+                    'notes' => $row['notes'] ?? null,
+                ];
+            }, $rows),
+        ];
+        $output = $this->optString($opts, 'output');
+        $format = strtolower($this->optString($opts, 'format', 'json') ?? 'json');
+        if ($output) {
+            $this->exportRows((array) $data['publishers'], $output, $format, $data);
+            $this->out('Publisher catalog exported: ' . $output);
+        }
+        if ($this->bool($opts, 'json') || !$output) {
+            $this->outJson($data);
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function publisherShow(array $args, array $opts): int
+    {
+        $id = $args[0] ?? $this->optString($opts, 'publisher') ?? $this->optString($opts, 'id');
+        if (!$id) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper publisher:show <publisher-id|name> [--json]');
+        }
+        $catalog = new PublisherCatalog($this->rootDir);
+        $publisher = $catalog->find((string) $id);
+        $data = [
+            'ok' => true,
+            'publisher_catalog_version' => '4.1.0',
+            'publisher' => $publisher,
+            'safe_defaults' => [
+                'metadata_only' => true,
+                'respect_robots' => true,
+                'no_paywall_bypass' => true,
+                'no_captcha_bypass' => true,
+                'prefer_api_feeds_sitemaps' => true,
+            ],
+        ];
+        $this->outJson($data);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function publisherSeeds(array $args, array $opts): int
+    {
+        $catalog = new PublisherCatalog($this->rootDir);
+        $rows = $catalog->seedRows($this->optString($opts, 'risk'), $this->optString($opts, 'mode'));
+        $format = strtolower($this->optString($opts, 'format', 'txt') ?? 'txt');
+        $output = $this->optString($opts, 'output') ?: $this->storagePath('publisher-seeds-' . date('Ymd-His') . '.' . ($format === 'csv' ? 'csv' : ($format === 'json' ? 'json' : 'txt')));
+        if ($format === 'txt') {
+            $this->writeTextLines($output, array_values(array_unique(array_map(static fn (array $row): string => (string) $row['url'], $rows))));
+        } else {
+            $this->exportRows($rows, $output, $format, ['publisher_seed_version' => '4.1.0', 'rows_total' => count($rows)]);
+        }
+        $data = ['ok' => true, 'publisher_seed_version' => '4.1.0', 'seeds_total' => count($rows), 'format' => $format, 'output' => $output];
+        $this->bool($opts, 'json') ? $this->outJson($data) : $this->out('Publisher seeds exported: ' . $output);
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function publisherPlan(array $args, array $opts): int
+    {
+        $catalog = new PublisherCatalog($this->rootDir);
+        $jobs = $catalog->planJobs(
+            (int) $this->opt($opts, 'max-pages', 10),
+            (int) $this->opt($opts, 'delay-ms', $this->opt($opts, 'gap-ms', 3500)),
+            $this->optString($opts, 'risk'),
+            $this->optString($opts, 'mode')
+        );
+        $data = [
+            'ok' => true,
+            'publisher_plan_version' => '4.1.0',
+            'jobs_total' => count($jobs),
+            'jobs' => $jobs,
+            'policy' => (string) ($catalog->meta()['policy'] ?? ''),
+        ];
+        $output = $this->optString($opts, 'output') ?: $this->storagePath('publisher-crawl-jobs-' . date('Ymd-His') . '.json');
+        $this->writeJson($output, $data);
+        if ($this->bool($opts, 'json')) {
+            $this->outJson($data + ['output' => $output]);
+        } else {
+            $this->out('Publisher crawl plan: ' . $output);
+            $this->out('Jobs: ' . count($jobs));
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function publisherSchema(array $args, array $opts): int
+    {
+        $rows = ArticleMetadataNormalizer::schemaFields();
+        $data = ['ok' => true, 'article_schema_version' => '4.1.0', 'fields_total' => count($rows), 'fields' => $rows];
+        $output = $this->optString($opts, 'output');
+        $format = strtolower($this->optString($opts, 'format', 'json') ?? 'json');
+        if ($output) {
+            $this->exportRows($rows, $output, $format, $data);
+            $this->out('Article schema exported: ' . $output);
+        }
+        if ($this->bool($opts, 'json') || !$output) {
+            $this->outJson($data);
+        }
+        return 0;
+    }
+
+    /** @param array<int,string> $args @param array<string,mixed> $opts */
+    private function publisherNormalize(array $args, array $opts): int
+    {
+        $input = $args[0] ?? $this->optString($opts, 'input') ?? $this->optString($opts, 'file');
+        if (!$input || !is_file($input)) {
+            throw new \InvalidArgumentException('Usage: php bin/mnb-scraper publisher:normalize <records.json> [--publisher=id] [--format=json|csv|jsonl] [--output=file]');
+        }
+        $data = json_decode((string) file_get_contents($input), true);
+        if (!is_array($data)) {
+            throw new \RuntimeException('Invalid JSON records file: ' . $input);
+        }
+        $records = $this->recordsFromData($data);
+        $publisherId = $this->optString($opts, 'publisher') ?: $this->optString($opts, 'id');
+        $publisherName = null;
+        if ($publisherId) {
+            try {
+                $publisherName = (string) ((new PublisherCatalog($this->rootDir))->find((string) $publisherId)['publisher'] ?? $publisherId);
+            } catch (\Throwable) {
+                $publisherName = (string) $publisherId;
+            }
+        }
+        $rows = (new ArticleMetadataNormalizer())->normalizeMany($records, $publisherName);
+        $format = strtolower($this->optString($opts, 'format', 'json') ?? 'json');
+        $output = $this->optString($opts, 'output') ?: $this->storagePath('article-metadata-' . date('Ymd-His') . '.' . ($format === 'csv' ? 'csv' : ($format === 'jsonl' ? 'jsonl' : 'json')));
+        $this->exportRows($rows, $output, $format, [
+            'article_metadata_version' => '4.1.0',
+            'source' => $input,
+            'records_total' => count($records),
+            'normalized_total' => count($rows),
+            'publisher' => $publisherName,
+        ]);
+        $result = ['ok' => true, 'article_metadata_version' => '4.1.0', 'records_total' => count($records), 'normalized_total' => count($rows), 'output' => $output];
+        $this->bool($opts, 'json') ? $this->outJson($result) : $this->out('Article metadata normalized: ' . $output);
+        return 0;
+    }
+
     /** @param array<string,mixed> $opts */
     private function plosJournals(array $opts): int
     {
@@ -4615,7 +4788,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $result = (new DatabaseMigrator($pdo, $config->driver()))->migrate();
         $this->outJson([
             'ok' => true,
-            'version' => '4.0.2',
+            'version' => '4.1.0',
             'driver' => $result['driver'],
             'statements_executed' => $result['statements'],
             'tables' => $result['tables'],
@@ -4631,7 +4804,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         $pdo = (new DatabaseConnectionFactory())->connect($config);
         $this->outJson([
             'ok' => true,
-            'version' => '4.0.2',
+            'version' => '4.1.0',
             'driver' => $config->driver(),
             'pdo_driver' => (string) $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME),
             'dsn' => $this->safeDsn($config->dsn),
@@ -5192,7 +5365,7 @@ untimeException('Usage: php bin/mnb-scraper schedule:disable <schedule-id>'); }
         }
         $pending = array_values(array_slice($urls, $nextIndex));
         $this->writeJson($path, [
-            'checkpoint_version' => '4.0.2',
+            'checkpoint_version' => '4.1.0',
             'next_index' => $nextIndex,
             'urls_total' => count($urls),
             'updated_at' => date(DATE_ATOM),
