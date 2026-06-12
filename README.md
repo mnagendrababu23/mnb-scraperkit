@@ -860,21 +860,111 @@ php bin/mnb-scraper bundle:create storage/jobs/job-id
 
 ## Installation
 
-For normal Composer usage:
+MNB ScraperKit is a Composer package. There are two common install paths:
+
+1. **Packagist install** — use this after `mnb/scraperkit` is published on Packagist.
+2. **GitHub VCS install** — use this now for development/testing before Packagist publishing.
+
+### Option 1: Install from Packagist
+
+After the package is available on Packagist, install it normally:
 
 ```bash
 composer require mnb/scraperkit
 ```
 
-For local development from this package:
+Then verify the binary:
 
 ```bash
-composer install
-php bin/mnb-scraper list
-php tests/run-tests.php
+php vendor/bin/mnb-scraper list
 ```
 
-Source zip users can also run many diagnostics before Composer dependencies are installed. The public binary now falls back to the native CLI when Symfony Console is not available:
+On Windows PowerShell, use:
+
+```powershell
+php vendor/bin/mnb-scraper list
+```
+
+If Composer says it cannot find `mnb/scraperkit`, the package is not published on Packagist yet. Use Option 2.
+
+### Option 2: Install directly from GitHub
+
+Use this method for development, testing, or private/internal installs before the Packagist package is live.
+
+Create a clean test project:
+
+```bash
+mkdir test-mnb-scraperkit
+cd test-mnb-scraperkit
+composer init --no-interaction
+```
+
+Add the GitHub repository as a Composer VCS source:
+
+```bash
+composer config repositories.mnb-scraperkit vcs https://github.com/mnagendrababu23/mnb-scraperkit.git
+```
+
+Install the latest development branch:
+
+```bash
+composer require mnb/scraperkit:dev-main
+```
+
+Verify the CLI:
+
+```bash
+php vendor/bin/mnb-scraper list
+```
+
+For Windows PowerShell:
+
+```powershell
+mkdir test-mnb-scraperkit
+cd test-mnb-scraperkit
+composer init --no-interaction
+composer config repositories.mnb-scraperkit vcs https://github.com/mnagendrababu23/mnb-scraperkit.git
+composer require mnb/scraperkit:dev-main
+php vendor/bin/mnb-scraper list
+```
+
+### Option 3: Install a tagged release from GitHub
+
+If a tag such as `v1.0.3` exists in GitHub, require the stable `1.x` line:
+
+```bash
+composer config repositories.mnb-scraperkit vcs https://github.com/mnagendrababu23/mnb-scraperkit.git
+composer require mnb/scraperkit:^1.0
+```
+
+Or install one exact tag version:
+
+```bash
+composer require mnb/scraperkit:1.0.3
+```
+
+### Development install from source
+
+Use this when you clone the repository and want to work on MNB ScraperKit itself:
+
+```bash
+git clone https://github.com/mnagendrababu23/mnb-scraperkit.git
+cd mnb-scraperkit
+composer install
+php bin/mnb-scraper list
+php -d zend.assertions=1 -d assert.exception=1 tests/run-tests.php
+```
+
+Run readiness checks:
+
+```bash
+php bin/mnb-scraper ci:check --strict
+php bin/mnb-scraper release:check . --strict
+```
+
+### Source ZIP quick check without Composer dependencies
+
+Source zip users can run basic diagnostics before Composer dependencies are installed. The public binary falls back to the native CLI when Symfony Console is not available:
 
 ```bash
 php bin/mnb-scraper list
@@ -884,10 +974,32 @@ php bin/mnb-scraper release:check . --strict
 
 This fallback is intended for onboarding, source-archive smoke tests, and offline QA examples. Install Composer dependencies for the full Symfony Console experience and third-party integration paths.
 
-After installing as a dependency, the binary is available as:
+### Troubleshooting Composer install
+
+If this command fails:
 
 ```bash
-vendor/bin/mnb-scraper list
+composer require mnb/scraperkit
+```
+
+with an error like:
+
+```text
+Could not find a matching version of package mnb/scraperkit
+```
+
+it usually means the package is not published on Packagist yet. Use the GitHub VCS install method:
+
+```bash
+composer init --no-interaction
+composer config repositories.mnb-scraperkit vcs https://github.com/mnagendrababu23/mnb-scraperkit.git
+composer require mnb/scraperkit:dev-main
+```
+
+If Composer complains that no `composer.json` is present, initialize the project first:
+
+```bash
+composer init --no-interaction
 ```
 
 ## Quick start
