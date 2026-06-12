@@ -6,7 +6,7 @@ namespace Mnb\ScraperKit\Mail;
 
 final class MailSeedExporter
 {
-    public const VERSION = '1.0.0';
+    public const VERSION = '1.0.1';
 
     /** @param array<string,mixed> $extraction @return list<array<string,mixed>> */
     public function seeds(array $extraction, ?string $domain = null): array

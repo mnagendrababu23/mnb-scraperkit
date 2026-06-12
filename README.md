@@ -1,8 +1,8 @@
-# MNB ScraperKit v1.0.0
+# MNB ScraperKit v1.0.1
 
 **MNB ScraperKit** is a PHP-first professional crawling and data extraction framework for safe, resumable, pipeline-based web scraping.
 
-v1.0.0 is the first public release of MNB ScraperKit. It includes crawler workflows, extraction recipes, publisher metadata crawling, AI crawl analysis, search discovery, and authorized mail/webmail extraction connectors without storing passwords.
+v1.0.1 is a small public patch release for MNB ScraperKit. It keeps the v1.0.0 feature set and improves first-run usability from source archives with a native CLI fallback, clearer onboarding notes, and extra smoke-test helpers.
 
 ScraperKit is designed for developers, SEO analysts, research teams, academic metadata collectors, ecommerce monitors, tender/job/government data teams, and server automation users who need safe CLI crawling, bulk jobs, resumable checkpoints, normalized records, validation, transformations, exports, and reports.
 
@@ -16,20 +16,15 @@ URL -> Safe Request -> Crawl Result -> Normalized Record -> Validate -> Dedupe -
 
 The strongest part of the library is the **professional crawl pipeline**. It turns crawled pages into structured records with metadata, validation status, quality scoring, deduplication keys, failed URL handling, and export-ready output.
 
-## v1.0.0 first public release focus
+## v1.0.1 patch release focus
 
-v1.0.0 is the first public release line for the full MNB ScraperKit feature set, including authorized mail/webmail extraction. It does not scrape webmail UIs, store mailbox passwords, or bypass account protections. Instead, it adds safe connector slots and offline import workflows so teams can extract useful crawl seeds and document links from approved mail exports or future OAuth/API connectors.
+v1.0.1 keeps the v1.0.0 public feature set and improves the release-package experience for new users. The main change is that `bin/mnb-scraper` now falls back to the native CLI when Composer/Symfony dependencies are not installed, so source-zip users can still run command discovery, compatibility checks, release checks, and offline QA examples before running `composer install`.
 
-- Added `mail:providers` for Gmail API, IMAP, webmail export, local JSON, and `.eml` connector status.
-- Added `mail:search` for searching approved local mail exports without live credentials.
-- Added `mail:extract` for extracting links, PDF URLs, plain text, HTML, and attachment metadata.
-- Added `mail:attachments` to build safe attachment manifests and optionally save provided base64 attachment content.
-- Added `mail:to-seeds` to convert article alerts, DOI links, publisher notifications, and research digests into crawl seed URL lists.
-- Added `MailProviderRegistry`, `MailMessageExtractor`, and `MailSeedExporter`.
-- Added `config/mail/providers.example.json` and `examples/mail/sample-authorized-mails.json`.
-- Added `/api/v1/mail/providers` for local API/dashboard discovery.
-- Added tests for provider policy, local authorized extraction, native mail commands, seed export, and API route coverage.
-- Keeps AI crawl analysis and search discovery safe by default: no direct search-result-page scraping and no external AI call unless configured.
+- Added native CLI fallback in `bin/mnb-scraper` when Symfony Console is unavailable.
+- Added `scripts/run-native-smoke.sh`, `scripts/run-native-smoke.cmd`, and `scripts/run-native-smoke.ps1`.
+- Added tests proving the public binary can run through the native fallback without `vendor/`.
+- Updated README onboarding notes for source-zip users and Composer users.
+- Kept existing safety posture: no webmail UI scraping, no password storage, no paywall/CAPTCHA bypass, and no direct search-result-page scraping.
 
 ## Highlights
 
@@ -65,7 +60,7 @@ v1.0.0 is the first public release line for the full MNB ScraperKit feature set,
 
 ## Complete feature list
 
-This section lists the main functionality available in the current V1.0.0 CLI/library release.
+This section lists the main functionality available in the current V1.0.1 CLI/library release.
 
 ### Package and CLI
 
@@ -85,7 +80,7 @@ This section lists the main functionality available in the current V1.0.0 CLI/li
 - `compat:commands` prints or validates the public command and option compatibility contract.
 - `.github/workflows/ci.yml` validates Composer metadata, installs dependencies, lints PHP files, runs tests, runs `ci:check`, builds a `git archive`, runs `release:check` on that archive, and performs a benchmark smoke test on PHP 8.2, 8.3, and 8.4.
 - CLI errors now include command context, help guidance, and diagnostics hints. Unknown commands include best-effort suggestions.
-- V1.0.0 keeps the hardening trait boundary and fixes native CLI option parsing; future maintenance releases can continue splitting command groups.
+- V1.0.1 keeps the hardening trait boundary and fixes native CLI option parsing; future maintenance releases can continue splitting command groups.
 
 Examples:
 
@@ -99,13 +94,13 @@ php bin/mnb-scraper compat:commands --validate
 
 ### Backward compatibility policy
 
-- Patch releases such as V1.0.0 should not remove public commands, rename public options, or change default output behavior without a compatibility alias.
+- Patch releases such as V1.0.1 should not remove public commands, rename public options, or change default output behavior without a compatibility alias.
 - Minor releases may add new commands, options, profiles, connectors, and optional integrations while keeping older workflows usable.
 - Major releases may remove deprecated functionality only after migration guidance is added to README examples and command compatibility notes.
 
 ### Academic publisher metadata crawling
 
-V1.0.0 adds safe publisher metadata workflows for academic journal/article discovery. The default model is **metadata only**: prefer official APIs, public sitemaps, RSS/Atom feeds, DOI/Crossref-style metadata, and public article landing pages. Do not bypass paywalls, CAPTCHAs, authentication, or access controls.
+V1.0.1 adds safe publisher metadata workflows for academic journal/article discovery. The default model is **metadata only**: prefer official APIs, public sitemaps, RSS/Atom feeds, DOI/Crossref-style metadata, and public article landing pages. Do not bypass paywalls, CAPTCHAs, authentication, or access controls.
 
 Commands:
 
@@ -393,7 +388,7 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 - Plugin enable/disable controls by editing the manifest `enabled` flag.
 - Plugin doctor command for validating all discovered plugins.
 - Plugin-contributed profiles available to `profile:list`, `profile:show`, `extract:rules`, and pipeline/profile workflows.
-- Safe-by-default design: V1.0.0 does not automatically execute arbitrary plugin PHP code.
+- Safe-by-default design: V1.0.1 does not automatically execute arbitrary plugin PHP code.
 
 ### Lightweight API and webhooks
 
@@ -608,8 +603,8 @@ php bin/mnb-scraper rule:doctor config/profiles/my-product.json --input=examples
 
 ## Package direction
 
-- First public version: **1.0.0**
-- Current version: **1.0.0** — CLI Parser, Packaging, and CI Fix Update
+- First public version: **1.0.1**
+- Current version: **1.0.1** — CLI Parser, Packaging, and CI Fix Update
 - Professional PHP CLI framework
 - Composer package with PSR-4 autoloading
 - Symfony Console command layer for public usage
@@ -735,7 +730,7 @@ Minimal plugin manifest shape:
 {
   "plugin_id": "vendor.project-addon",
   "name": "Project Add-on",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Reusable profile and extractor rules for one project.",
   "enabled": true,
   "profiles": ["profiles/project-profile.json"],
@@ -870,6 +865,16 @@ php bin/mnb-scraper list
 php tests/run-tests.php
 ```
 
+Source zip users can also run many diagnostics before Composer dependencies are installed. The public binary now falls back to the native CLI when Symfony Console is not available:
+
+```bash
+php bin/mnb-scraper list
+php bin/mnb-scraper compat:commands --json
+php bin/mnb-scraper release:check . --strict
+```
+
+This fallback is intended for onboarding, source-archive smoke tests, and offline QA examples. Install Composer dependencies for the full Symfony Console experience and third-party integration paths.
+
 After installing as a dependency, the binary is available as:
 
 ```bash
@@ -902,7 +907,7 @@ Run the professional pipeline on an existing crawl JSON file:
 php bin/mnb-scraper pipeline:run storage/jobs/example/crawl.json --output=storage/jobs/example/pipeline --format=both
 ```
 
-## Symfony Console commands
+## CLI commands
 
 ```text
 crawl <url>                 Crawl one URL/site
@@ -1304,7 +1309,7 @@ ScraperKit focuses on practical export-ready outputs:
 - pipeline summaries
 - job manifest summaries
 
-PDF reports and richer role-based enterprise orchestration remain future upgrade areas. The current V1.0.0 release already includes CLI workflows, source connectors, exports/reports/bundles, export delivery connectors, local and distributed queue/worker commands, optional Redis queue support, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
+PDF reports and richer role-based enterprise orchestration remain future upgrade areas. The current V1.0.1 release already includes CLI workflows, source connectors, exports/reports/bundles, export delivery connectors, local and distributed queue/worker commands, optional Redis queue support, optional browser-assisted crawling, API/webhooks, dashboard UI, ML-ready intelligence, dataset versioning, and annotation tools.
 
 ## Windows CMD
 
@@ -1331,7 +1336,7 @@ ScraperKit includes source connector commands for API/feed-first workflows:
 
 ## Release package rules
 
-This V1.0.0 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
+This V1.0.1 package intentionally keeps documentation simple: **README.md is the only project documentation file**.
 
 The release package should not include generated runtime files:
 
@@ -1623,6 +1628,24 @@ PowerShell:
 ./scripts/run-qa-smoke.ps1
 ```
 
+Run the native source-zip smoke helper when you want to verify the public archive before installing Composer dependencies:
+
+```bash
+./scripts/run-native-smoke.sh
+```
+
+Windows CMD:
+
+```cmd
+scripts\run-native-smoke.cmd
+```
+
+PowerShell:
+
+```powershell
+./scripts/run-native-smoke.ps1
+```
+
 The smoke plan covers search discovery, AI analysis, mail extraction, extraction options, recipes, quality reports, and seed generation using local example data only.
 
 ## License
@@ -1686,7 +1709,7 @@ The publisher graph supports journal/book listing pages, book landing URLs, jour
 
 ## Extraction options and component intelligence
 
-v1.0.0 adds reusable extraction controls for enterprise page data extraction:
+v1.0.1 adds reusable extraction controls for enterprise page data extraction:
 
 - Word dictionary learning: `extract:dictionary` can add newly discovered words to a reusable JSON dictionary.
 - Data mappings: `extract:mappings` maps source fields to normalized target fields.

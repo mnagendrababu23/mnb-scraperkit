@@ -18,7 +18,7 @@ trait HardeningCommandTrait
         if ($this->bool($opts, 'json')) {
             $this->outJson($report);
         } else {
-            $this->out('MNB ScraperKit ' . ($report['hardening_version'] ?? '1.0.0') . ' production readiness');
+            $this->out('MNB ScraperKit ' . ($report['hardening_version'] ?? '1.0.1') . ' production readiness');
             $this->out('Status: ' . strtoupper((string) ($report['status'] ?? 'unknown')) . ' | Score: ' . (string) ($report['score'] ?? 0) . '/100 | Mode: ' . strtoupper((string) ($report['project']['mode'] ?? 'repo')));
             $this->out('');
             foreach ((array) ($report['checks'] ?? []) as $check) {

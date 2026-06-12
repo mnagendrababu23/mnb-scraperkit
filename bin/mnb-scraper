@@ -12,16 +12,18 @@ if (is_file($composerAutoload)) {
     require $root . '/autoload.php';
 }
 
-if (!class_exists(Symfony\Component\Console\Application::class)) {
-    fwrite(STDERR, "MNB ScraperKit requires Symfony Console for this CLI build.\n");
-    fwrite(STDERR, "Run: composer install\n");
-    fwrite(STDERR, "Then: php bin/mnb-scraper list\n");
-    exit(1);
-}
-
-use Mnb\ScraperKit\Console\ScraperKitApplication;
-
 $configFile = $root . '/config/scraper.php';
 $config = is_file($configFile) ? require $configFile : [];
 
-exit(ScraperKitApplication::create($config, $root)->run());
+if (class_exists(Symfony\Component\Console\Application::class)) {
+    exit(Mnb\ScraperKit\Console\ScraperKitApplication::create($config, $root)->run());
+}
+
+if (class_exists(Mnb\ScraperKit\Cli\NativeCliApplication::class)) {
+    exit((new Mnb\ScraperKit\Cli\NativeCliApplication($config, $root))->run($_SERVER['argv'] ?? []));
+}
+
+fwrite(STDERR, "MNB ScraperKit could not start because no CLI application is available.\n");
+fwrite(STDERR, "Run: composer install\n");
+fwrite(STDERR, "Then: php bin/mnb-scraper list\n");
+exit(1);

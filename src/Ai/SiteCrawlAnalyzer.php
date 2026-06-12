@@ -13,7 +13,7 @@ use Mnb\ScraperKit\Safety\UrlSafetyGuard;
 
 final class SiteCrawlAnalyzer
 {
-    public const VERSION = '1.0.0';
+    public const VERSION = '1.0.1';
 
     public function __construct(private readonly string $rootDir)
     {
@@ -51,7 +51,7 @@ final class SiteCrawlAnalyzer
             'provider' => $provider,
             'provider_status' => AiProviderRegistry::providers()[$provider] ?? AiProviderRegistry::providers()['rule_based'],
             'external_ai_invoked' => false,
-            'external_ai_note' => 'v1.0.0 ships deterministic analysis by default. Wire an enterprise-approved adapter before sending page content to external AI services.',
+            'external_ai_note' => 'v1.0.1 ships deterministic analysis by default. Wire an enterprise-approved adapter before sending page content to external AI services.',
             'url' => $url,
             'domain' => $host,
             'path' => $path,

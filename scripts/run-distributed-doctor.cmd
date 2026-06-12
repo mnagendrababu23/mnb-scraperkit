@@ -1,3 +1,3 @@
 @echo off
-REM MNB ScraperKit V1.0.0 - distributed queue doctor
+REM MNB ScraperKit V1.0.1 - distributed queue doctor
 php "%~dp0..\bin\mnb-scraper" distributed:doctor %*

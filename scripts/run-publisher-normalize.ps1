@@ -1,2 +1,2 @@
-# MNB ScraperKit V1.0.0 - normalize source records into article metadata
+# MNB ScraperKit V1.0.1 - normalize source records into article metadata
 php "$PSScriptRoot/../bin/mnb-scraper" publisher:normalize @args

@@ -1,7 +1,7 @@
 {
   "plugin_id": "mnb.example.profile-addon",
   "name": "Example Profile Add-on",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Example config-only plugin that contributes one custom profile schema.",
   "enabled": true,
   "profiles": [

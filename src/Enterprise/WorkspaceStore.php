@@ -9,7 +9,7 @@ namespace Mnb\ScraperKit\Enterprise;
  */
 final class WorkspaceStore
 {
-    public const VERSION = '1.0.0';
+    public const VERSION = '1.0.1';
     public const ROLES = ['owner', 'admin', 'operator', 'analyst', 'viewer'];
 
     public function __construct(private readonly string $rootDir)

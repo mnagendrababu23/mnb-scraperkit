@@ -14,7 +14,7 @@ namespace Mnb\ScraperKit\Mail;
  */
 final class MailProviderRegistry
 {
-    public const VERSION = '1.0.0';
+    public const VERSION = '1.0.1';
 
     /** @return array<string,mixed> */
     public static function summary(?string $configFile = null): array
